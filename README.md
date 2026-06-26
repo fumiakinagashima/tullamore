@@ -37,8 +37,8 @@ AIファーストなチャットベースの CRM/SFA。ユーザーはチャッ�
 ### 1. インストール
 
 ```sh
-git clone https://github.com/your-org/midleton.git
-cd midleton
+git clone https://github.com/your-org/tullamore.git
+cd tullamore
 bun install
 ```
 

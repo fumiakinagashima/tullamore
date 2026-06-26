@@ -1,7 +1,7 @@
 // 本番D1（wrangler d1 execute --remote）へ投入するデモデータのSQLファイルを生成する。
 // 使い方:
 //   bun run scripts/generate-seed-sql.ts
-//   bunx wrangler d1 execute midleton --remote --file ./seed-data.sql
+//   bunx wrangler d1 execute tullamore --remote --file ./seed-data.sql
 //   rm seed-data.sql
 
 import { writeFileSync } from 'fs';

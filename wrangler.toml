@@ -8,7 +8,7 @@ assets = { directory = ".svelte-kit/cloudflare/", binding = "ASSETS" }
 [[d1_databases]]
 binding = "DB"
 database_name = "tullamore"
-database_id = ""
+database_id = "local-placeholder"
 migrations_dir = "drizzle"
 
 # KV: 本番デプロイ前に `wrangler kv namespace create tullamore` を実行し id を本番用の値に置き換えること

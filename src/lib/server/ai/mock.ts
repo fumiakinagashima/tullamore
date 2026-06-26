@@ -45,7 +45,7 @@ const MOCK_RESPONSES: MessageContent[][] = [
 		}
 	],
 	[
-		{ type: 'text', text: 'こんにちは！Midleton CRMです。何をお手伝いしましょうか？' },
+		{ type: 'text', text: 'こんにちは！Tullamoreです。何をお手伝いしましょうか？' },
 		{
 			type: 'actions',
 			title: '操作を選択してください',

@@ -13,7 +13,6 @@
 	import ClipboardCheck from '$lib/components/icon/ClipboardCheck.svelte';
 	import Users from '$lib/components/icon/Users.svelte';
 	import Clock from '$lib/components/icon/Clock.svelte';
-	import CreditCard from '$lib/components/icon/CreditCard.svelte';
 	import Settings from '$lib/components/icon/Settings.svelte';
 	import LogOut from '$lib/components/icon/LogOut.svelte';
 	import type { AccountRow } from '$lib/server/db/account-service';
@@ -135,7 +134,7 @@
 
 <aside class="sidebar">
 	<div class="sidebar-header">
-		<span class="logo">MIDLETON</span>
+		<span class="logo">TULLAMORE</span>
 	</div>
 
 	<a href="/" class="new-chat-row" onclick={() => chatSession.startNew()}>
@@ -199,9 +198,9 @@
 			{/if}
 		</button>
 
-		<a href="/database" class="settings-row">
+		<a href="/data" class="settings-row">
 			<Database size={15} />
-			データ管理
+			データソース
 		</a>
 
 		{#if account.permission === 'admin'}
@@ -214,11 +213,6 @@
 		<a href="/database/reminders" class="settings-row">
 			<Clock size={15} />
 			リマインダー
-		</a>
-
-		<a href="/bizcard" class="settings-row">
-			<CreditCard size={15} />
-			名刺取り込み
 		</a>
 
 		<a href="/settings" class="settings-row">

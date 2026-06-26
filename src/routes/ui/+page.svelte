@@ -19,7 +19,6 @@
 	import DateTimePicker from '$lib/components/ui/DateTimePicker.svelte';
 	import NumberInput from '$lib/components/ui/NumberInput.svelte';
 	import DataGrid from '$lib/components/ui/DataGrid.svelte';
-	import Kanban from '$lib/components/chat/Kanban.svelte';
 	import Chart from '$lib/components/chat/Chart.svelte';
 	import TypingIndicator from '$lib/components/ui/TypingIndicator.svelte';
 	
@@ -37,31 +36,6 @@
 	let timeVal = $state('');
 	let datetimeVal = $state('');
 	let numVal = $state(0);
-
-	let generatingDoc = $state('');
-	let docError = $state('');
-
-	async function generateDocument(format: 'docx' | 'xlsx' | 'pptx') {
-		generatingDoc = format;
-		docError = '';
-		try {
-			const res = await fetch('/api/documents/test', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ format })
-			});
-			if (!res.ok) {
-				const body = (await res.json().catch(() => null)) as { error?: string } | null;
-				throw new Error(body?.error ?? '生成に失敗しました');
-			}
-			const { href } = (await res.json()) as { href: string };
-			window.location.href = href;
-		} catch (e) {
-			docError = e instanceof Error ? e.message : '生成に失敗しました';
-		} finally {
-			generatingDoc = '';
-		}
-	}
 
 	type GridRow = Record<string, string | number | null>;
 	let gridRows = $state<GridRow[]>([
@@ -177,20 +151,6 @@
 		]}
 	];
 
-	const kanbanColumns = [
-		{ id: 'prospect', label: '見込み' },
-		{ id: 'proposal', label: '提案中' },
-		{ id: 'negotiation', label: '交渉中' },
-		{ id: 'won', label: '受注' }
-	];
-
-	const kanbanCards = [
-		{ id: '1', title: '株式会社アルコジー ERPシステム', subtitle: '田中様', amount: 2000000, columnId: 'proposal' },
-		{ id: '2', title: '合同会社テスト商事 保守契約', subtitle: '鈴木様', amount: 500000, columnId: 'negotiation' },
-		{ id: '3', title: 'サンプル株式会社 初期導入', subtitle: '佐藤様', amount: 800000, columnId: 'prospect' },
-		{ id: '4', title: '株式会社フューチャー 追加開発', subtitle: '山本様', amount: 1200000, columnId: 'won' },
-		{ id: '5', title: 'テック株式会社 コンサルティング', subtitle: '中村様', amount: 350000, columnId: 'proposal' }
-	];
 </script>
 
 <div class="page">
@@ -325,12 +285,6 @@
 		</div>
 	</section>
 
-	<!-- カンバン -->
-	<section>
-		<h2>カンバン（AIチャット用）</h2>
-		<Kanban title="営業パイプライン" columns={kanbanColumns} cards={kanbanCards} />
-	</section>
-
 	<!-- チャート（チャット用ラッパー） -->
 	<section>
 		<h2>チャート（AIチャット用ラッパー）</h2>
@@ -341,24 +295,6 @@
 		</div>
 	</section>
 
-	<!-- 資料生成 -->
-	<section>
-		<h2>資料生成（Word / Excel / PowerPoint）</h2>
-		<div class="stack">
-			<div class="row">
-				<button class="btn-primary" onclick={() => generateDocument('docx')} disabled={!!generatingDoc}>
-					{generatingDoc === 'docx' ? '生成中...' : 'Word生成'}
-				</button>
-				<button class="btn-primary" onclick={() => generateDocument('xlsx')} disabled={!!generatingDoc}>
-					{generatingDoc === 'xlsx' ? '生成中...' : 'Excel生成'}
-				</button>
-				<button class="btn-primary" onclick={() => generateDocument('pptx')} disabled={!!generatingDoc}>
-					{generatingDoc === 'pptx' ? '生成中...' : 'PowerPoint生成'}
-				</button>
-			</div>
-			{#if docError}<p class="val error">{docError}</p>{/if}
-		</div>
-	</section>
 </div>
 
 <style lang="scss">

@@ -2,7 +2,6 @@ import { z } from 'zod';
 import type { Tool } from '@anthropic-ai/sdk/resources/messages';
 import type { Db } from '../db';
 import { sendEmail, getEmailSetup } from '../email';
-import { recordActivity } from '../db/table-service';
 import { createReminder, listReminders, resolveChannelLabels, deleteSentReminders } from '../db/reminder-service';
 import { deleteReadNotifications, createNotification } from '../db/notification-service';
 import { getSlackIntegration, sendSlackMessage } from '../slack';
@@ -155,15 +154,6 @@ export async function handleSendEmail(db: Db, input: unknown, env?: ToolEnv) {
 		subject: data.subject,
 		text: body
 	});
-	if (data.customer_id) {
-		await recordActivity(
-			db,
-			data.customer_id,
-			'email',
-			`メール「${data.subject}」を送信しました`,
-			env?.accountId
-		);
-	}
 	return { to: data.to, subject: data.subject };
 }
 
