@@ -93,7 +93,7 @@
 	<section class="section">
 		<h2 class="section-title">スキーマ</h2>
 		<table class="schema-table">
-			<thead><tr><th>キー</th><th>ラベル</th><th>型</th></tr></thead>
+			<thead><tr><th>フィールド名（物理名）</th><th>ラベル</th><th>型</th></tr></thead>
 			<tbody>
 				{#each columns as col}
 					<tr><td class="mono">{col.key}</td><td>{col.label}</td><td class="type-badge">{col.type}</td></tr>
