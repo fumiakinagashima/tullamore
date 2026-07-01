@@ -1,6 +1,7 @@
 import { z } from 'zod/v4';
 import type { Tool } from '@anthropic-ai/sdk/resources/messages';
 import { listDataSources, getDataSource, parseSchema } from '../db/data-source-service';
+import { validateSelectOnly, validateNoSystemTables } from '../db/sql-guard';
 import type { Db } from '../db';
 
 export const tools: Tool[] = [
@@ -73,16 +74,13 @@ const executeSqlInputSchema = z.object({
 export async function handleExecuteSql(db: Db, input: unknown, env?: { DB?: D1Database }) {
 	const { sql } = executeSqlInputSchema.parse(input);
 
-	const normalized = sql.trim().toUpperCase();
-	if (!normalized.startsWith('SELECT') && !normalized.startsWith('WITH')) {
-		return { error: 'SELECT文のみ実行できます' };
-	}
-	const dangerous = /\b(INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|TRUNCATE|REPLACE|ATTACH|DETACH)\b/i;
-	if (dangerous.test(sql)) {
-		return { error: 'SELECT以外のSQL文は実行できません' };
-	}
+	const selectError = validateSelectOnly(sql);
+	if (selectError) return { error: selectError };
 
 	if (!env?.DB) return { error: 'データベースに接続できません' };
+
+	const systemError = await validateNoSystemTables(db, sql);
+	if (systemError) return { error: systemError };
 
 	try {
 		const result = await env.DB.prepare(sql).all();

@@ -2,6 +2,8 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { z } from 'zod/v4';
 import { errors } from '$lib/server/errors';
+import { createDb } from '$lib/server/db';
+import { validateSelectOnly, validateNoSystemTables } from '$lib/server/db/sql-guard';
 
 const schema = z.object({ sql: z.string().min(1) });
 
@@ -9,12 +11,12 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const { sql } = schema.parse(await request.json());
 
-	const normalized = sql.trim().toUpperCase();
-	if (!normalized.startsWith('SELECT') && !normalized.startsWith('WITH')) {
-		return errors.badRequest('SELECT文のみ実行できます');
-	}
-	const dangerous = /\b(INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|TRUNCATE|REPLACE|ATTACH|DETACH)\b/i;
-	if (dangerous.test(sql)) return errors.badRequest('SELECT以外のSQL文は実行できません');
+	const selectError = validateSelectOnly(sql);
+	if (selectError) return errors.badRequest(selectError);
+
+	const db = createDb(platform.env.DB);
+	const systemError = await validateNoSystemTables(db, sql);
+	if (systemError) return errors.badRequest(systemError);
 
 	try {
 		const result = await platform.env.DB.prepare(sql).all();
