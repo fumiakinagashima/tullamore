@@ -65,7 +65,7 @@ export async function designVariables(
 		targetColumn,
 		otherContinuous.map((c) => c.key)
 	);
-	const ranked = rankFeaturesByCorrelation(stats, targetColumn, otherContinuous.map((c) => c.key));
+	const ranked = rankFeaturesByCorrelation(stats, otherContinuous.map((c) => c.key));
 	const labelByKey = new Map(otherContinuous.map((c) => [c.key, c.label]));
 
 	return {

@@ -25,6 +25,8 @@ export type ToolName =
 	| 'list_simulators'
 	| 'get_simulator'
 	| 'update_simulator'
+	| 'predict_simulator'
+	| 'review_simulator'
 	| 'get_help';
 
 export const tools: Tool[] = [
@@ -59,6 +61,8 @@ export async function dispatchTool(
 		case 'list_simulators':           return simulator.handleListSimulators(db);
 		case 'get_simulator':             return simulator.handleGetSimulator(db, input);
 		case 'update_simulator':          return simulator.handleUpdateSimulator(db, input, env);
+		case 'predict_simulator':         return simulator.handlePredictSimulator(db, input);
+		case 'review_simulator':          return simulator.handleReviewSimulator(db, input, env);
 		case 'get_help':                  return help.handleGetHelp(input);
 		default:
 			throw new Error(`Unknown tool: ${name}`);

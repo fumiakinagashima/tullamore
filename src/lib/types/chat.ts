@@ -77,13 +77,20 @@ export type ValuesContent = {
 
 export type ChartSeries = { name: string; data: { label: string; value: number }[] };
 
+export type ScatterPoint = { x: number; y: number; label?: string };
+export type ScatterSeries = { name: string; points: ScatterPoint[] };
+
 export type ChartContent = {
 	type: 'chart';
-	chartType: 'bar' | 'line' | 'pie';
+	chartType: 'bar' | 'line' | 'pie' | 'scatter';
 	title?: string;
 	mode?: 'normal' | 'stacked' | 'grouped';
 	data?: { label: string; value: number }[];
 	series?: ChartSeries[];
+	xLabel?: string;
+	yLabel?: string;
+	points?: ScatterPoint[];
+	pointSeries?: ScatterSeries[];
 };
 
 export type LinkContent = {

@@ -68,8 +68,10 @@ export function parseUITag(tag: string): MessageContent | null {
 	const tool = /tool="([^"]+)"/.exec(attrStr)?.[1];
 	const entity = /entity="([^"]+)"/.exec(attrStr)?.[1];
 	const submitLabel = /submitLabel="([^"]+)"/.exec(attrStr)?.[1];
-	const chartType = /chartType="([^"]+)"/.exec(attrStr)?.[1] as 'bar' | 'line' | 'pie' | undefined;
+	const chartType = /chartType="([^"]+)"/.exec(attrStr)?.[1] as 'bar' | 'line' | 'pie' | 'scatter' | undefined;
 	const chartMode = /mode="([^"]+)"/.exec(attrStr)?.[1] as 'normal' | 'stacked' | 'grouped' | undefined;
+	const xLabel = /xLabel="([^"]+)"/.exec(attrStr)?.[1];
+	const yLabel = /yLabel="([^"]+)"/.exec(attrStr)?.[1];
 	const href = /href="([^"]+)"/.exec(attrStr)?.[1];
 	const label = /label="([^"]+)"/.exec(attrStr)?.[1];
 	const description = /description="([^"]+)"/.exec(attrStr)?.[1];
@@ -85,6 +87,12 @@ export function parseUITag(tag: string): MessageContent | null {
 			return { type: 'actions', title, actions: JSON.parse(body) };
 		} else if (type === 'values') {
 			return { type: 'values', title, items: JSON.parse(body) };
+		} else if (type === 'chart' && chartType === 'scatter') {
+			const raw = JSON.parse(body);
+			if (Array.isArray(raw) && raw.length > 0 && 'points' in raw[0]) {
+				return { type: 'chart', chartType, title, xLabel, yLabel, pointSeries: raw };
+			}
+			return { type: 'chart', chartType, title, xLabel, yLabel, points: raw };
 		} else if (type === 'chart' && chartType) {
 			const raw = JSON.parse(body);
 			if (Array.isArray(raw) && raw.length > 0 && 'name' in raw[0]) {

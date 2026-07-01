@@ -10,7 +10,7 @@
 	import MoreVertical from '$lib/components/icon/MoreVertical.svelte';
 	import Bell from '$lib/components/icon/Bell.svelte';
 	import Database from '$lib/components/icon/Database.svelte';
-	import ClipboardCheck from '$lib/components/icon/ClipboardCheck.svelte';
+	import Sparkles from '$lib/components/icon/Sparkles.svelte';
 	import Users from '$lib/components/icon/Users.svelte';
 	import Settings from '$lib/components/icon/Settings.svelte';
 	import LogOut from '$lib/components/icon/LogOut.svelte';
@@ -200,6 +200,11 @@
 		<a href="/data" class="settings-row">
 			<Database size={15} />
 			データソース
+		</a>
+
+		<a href="/simulators" class="settings-row">
+			<Sparkles size={15} />
+			シミュレーター
 		</a>
 
 		{#if account.permission === 'admin'}

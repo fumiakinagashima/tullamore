@@ -11,6 +11,8 @@ import {
 	updateSimulator
 } from '../db/simulator-service';
 import { fitModelFromDataSource } from '../analysis/engine';
+import { predict } from '$lib/analysis/registry';
+import { reviewSimulator } from '../analysis/review';
 
 export const tools: Tool[] = [
 	{
@@ -65,6 +67,35 @@ export const tools: Tool[] = [
 					description: '説明変数を変更して再学習する場合に指定'
 				}
 			},
+			required: ['simulator_id']
+		}
+	},
+	{
+		name: 'predict_simulator',
+		description:
+			'シミュレーターの説明変数に具体的な値を指定して予測値を計算する。' +
+			'「〇〇シナリオだとどうなる？」「楽観的/悲観的なケースを試して」等、' +
+			'複数シナリオを提示する場合はこのツールを複数回呼び出して比較する。',
+		input_schema: {
+			type: 'object',
+			properties: {
+				simulator_id: { type: 'string', description: 'シミュレーターID' },
+				variables: {
+					type: 'object',
+					description: '説明変数の列名をキーにした値のマップ（全ての説明変数を指定すること）'
+				}
+			},
+			required: ['simulator_id', 'variables']
+		}
+	},
+	{
+		name: 'review_simulator',
+		description:
+			'シミュレーターの妥当性をチェックする（当てはまりの良さ・サンプル数の十分性・説明変数間の多重共線性）。' +
+			'シミュレーター生成直後や、精度について聞かれた時に使う。',
+		input_schema: {
+			type: 'object',
+			properties: { simulator_id: { type: 'string', description: 'シミュレーターID' } },
 			required: ['simulator_id']
 		}
 	}
@@ -195,4 +226,57 @@ export async function handleUpdateSimulator(db: Db, input: unknown, env?: { DB?:
 
 	const row = await updateSimulator(db, data.simulator_id, patch);
 	return summarize(row);
+}
+
+const predictSimulatorInputSchema = z.object({
+	simulator_id: z.string(),
+	variables: z.record(z.string(), z.number())
+});
+
+export async function handlePredictSimulator(db: Db, input: unknown) {
+	const { simulator_id, variables } = predictSimulatorInputSchema.parse(input);
+	const row = await getSimulator(db, simulator_id);
+	if (!row) return { error: 'シミュレーターが見つかりません' };
+	const model = parseModel(row.modelJson);
+
+	const missing = model.featureColumns.filter((c) => !(c in variables));
+	if (missing.length > 0) return { error: `以下の説明変数の値が指定されていません: ${missing.join(', ')}` };
+
+	let predictedValue: number;
+	try {
+		predictedValue = predict(model, variables);
+	} catch (e) {
+		return { error: e instanceof Error ? e.message : String(e) };
+	}
+
+	const outOfRangeVariables = model.featureColumns.filter((c) => {
+		const range = model.featureRanges[c];
+		const v = variables[c];
+		return range && (v < range.min || v > range.max);
+	});
+
+	return {
+		simulator_id,
+		predicted_value: predictedValue,
+		variables_used: variables,
+		out_of_range_variables: outOfRangeVariables,
+		extrapolation_warning:
+			outOfRangeVariables.length > 0
+				? `${outOfRangeVariables.join(', ')} が実測データの範囲外です。予測の信頼性は低くなります`
+				: null
+	};
+}
+
+const reviewSimulatorInputSchema = z.object({ simulator_id: z.string() });
+
+export async function handleReviewSimulator(db: Db, input: unknown, env?: { DB?: D1Database }) {
+	const { simulator_id } = reviewSimulatorInputSchema.parse(input);
+	const row = await getSimulator(db, simulator_id);
+	if (!row) return { error: 'シミュレーターが見つかりません' };
+	if (!env?.DB) return { error: 'データベースに接続できません' };
+	const source = await getDataSource(db, row.dataSourceId);
+	if (!source) return { error: 'データソースが見つかりません' };
+
+	const model = parseModel(row.modelJson);
+	return reviewSimulator(env.DB, source.tableName, model);
 }

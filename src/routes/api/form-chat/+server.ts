@@ -49,7 +49,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	if (!apiKey) return json({ error: 'ANTHROPIC_API_KEY not set' }, { status: 500 });
 
 	const sections: string[] = [
-		'あなたはダイアログのフォーム入力をサポートするAIアシスタントです。'
+		'あなたはダイアログの左側に表示されるAIアシスタントです。'
 	];
 
 	if (body.formFields.length > 0) {
@@ -58,6 +58,14 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 			`このダイアログは「${body.formTitle}」フォームです。ユーザーが各フィールドを正しく入力できるよう、具体的なアドバイスを提供してください。
 フォームのフィールド一覧:
 ${fieldList}`
+		);
+	}
+
+	if (body.recordContext) {
+		const { typeLabel, label, data } = body.recordContext;
+		sections.push(
+			`現在表示中の${typeLabel}「${label}」について質問された場合はこの情報を参照して答えてください（指示語「これ」「この〇〇」は上記を指す）:
+${JSON.stringify(data ?? {}, null, 2)}`
 		);
 	}
 
