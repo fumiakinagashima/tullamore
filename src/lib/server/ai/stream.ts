@@ -93,6 +93,8 @@ export function parseUITag(tag: string): MessageContent | null {
 			return { type: 'chart', chartType, title, mode: chartMode, data: raw };
 		} else if (type === 'link' && href && label) {
 			return { type: 'link', label, href, description, newTab: newTab || undefined };
+		} else if (type === 'simulator') {
+			return { type: 'simulator', ...JSON.parse(body) };
 		} else if (type === 'reply') {
 			return { type: 'reply', title, fields: JSON.parse(body), submitLabel };
 		}

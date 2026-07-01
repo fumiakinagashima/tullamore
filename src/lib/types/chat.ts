@@ -115,6 +115,33 @@ export type ReplyContent = {
 	completed?: boolean;
 };
 
+export type SimulatorFeature = {
+	key: string;
+	label: string;
+	coefficient: number;
+	min: number;
+	max: number;
+	mean: number;
+};
+
+export type SimulatorMetrics = {
+	r2: number;
+	adjustedR2: number;
+	sampleSize: number;
+	residualStdError: number;
+};
+
+export type SimulatorContent = {
+	type: 'simulator';
+	simulatorId: string;
+	name: string;
+	description?: string;
+	targetLabel: string;
+	intercept: number;
+	features: SimulatorFeature[];
+	metrics: SimulatorMetrics;
+};
+
 export type MessageContent =
 	| TextContent
 	| FormContent
@@ -122,6 +149,7 @@ export type MessageContent =
 	| ActionContent
 	| ValuesContent
 	| ChartContent
+	| SimulatorContent
 	| LinkContent
 	| ReplyContent;
 

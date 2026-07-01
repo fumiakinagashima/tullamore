@@ -4,6 +4,7 @@ import * as bi from './bi';
 import * as communication from './communication';
 import * as integrations from './integrations';
 import * as analysis from './analysis';
+import * as simulator from './simulator';
 import * as help from './help';
 
 export type { ToolEnv } from './shared';
@@ -20,6 +21,10 @@ export type ToolName =
 	| 'send_email'
 	| 'design_variables'
 	| 'select_analysis_method'
+	| 'create_simulator'
+	| 'list_simulators'
+	| 'get_simulator'
+	| 'update_simulator'
 	| 'get_help';
 
 export const tools: Tool[] = [
@@ -27,6 +32,7 @@ export const tools: Tool[] = [
 	...integrations.tools,
 	...communication.tools,
 	...analysis.tools,
+	...simulator.tools,
 	...help.tools
 ];
 
@@ -49,6 +55,10 @@ export async function dispatchTool(
 		case 'send_email':                return communication.handleSendEmail(db, input, env);
 		case 'design_variables':          return analysis.handleDesignVariables(db, input, env);
 		case 'select_analysis_method':    return analysis.handleSelectAnalysisMethod(db, input);
+		case 'create_simulator':          return simulator.handleCreateSimulator(db, input, env);
+		case 'list_simulators':           return simulator.handleListSimulators(db);
+		case 'get_simulator':             return simulator.handleGetSimulator(db, input);
+		case 'update_simulator':          return simulator.handleUpdateSimulator(db, input, env);
 		case 'get_help':                  return help.handleGetHelp(input);
 		default:
 			throw new Error(`Unknown tool: ${name}`);

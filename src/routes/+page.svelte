@@ -6,10 +6,11 @@
 	import Link from '$lib/components/chat/Link.svelte';
 	import FormButton from '$lib/components/chat/FormButton.svelte';
 	import Reply from '$lib/components/chat/Reply.svelte';
+	import Simulator from '$lib/components/chat/Simulator.svelte';
 	import FormDialog from '$lib/components/dialog/FormDialog.svelte';
 	import TurnHistoryDrawer from '$lib/components/chat/TurnHistoryDrawer.svelte';
 	import TypingIndicator from '$lib/components/ui/TypingIndicator.svelte';
-	import type { Message, MessageContent, FormContent, ActionItem, ValuesContent, ChartContent, LinkContent, ReplyContent } from '$lib/types/chat';
+	import type { Message, MessageContent, FormContent, ActionItem, ValuesContent, ChartContent, LinkContent, ReplyContent, SimulatorContent } from '$lib/types/chat';
 	import type { StreamEvent } from '$lib/server/ai/stream';
 	import * as m from '$lib/paraglide/messages.js';
 	import { tick, untrack } from 'svelte';
@@ -553,13 +554,23 @@
 										onselect={handleActionSelect}
 									/>
 								{:else}
-									{@const extra = content as ValuesContent | ChartContent | LinkContent | ReplyContent}
+									{@const extra = content as ValuesContent | ChartContent | LinkContent | ReplyContent | SimulatorContent}
 									{#if extra.type === 'values'}
 										<Values title={extra.title} items={extra.items} />
 									{:else if extra.type === 'chart'}
 										<Chart chartType={extra.chartType} title={extra.title} mode={extra.mode} data={extra.data} series={extra.series} />
 									{:else if extra.type === 'link'}
 										<Link label={extra.label} href={extra.href} description={extra.description} newTab={extra.newTab} />
+									{:else if extra.type === 'simulator'}
+										<Simulator
+											simulatorId={extra.simulatorId}
+											name={extra.name}
+											description={extra.description}
+											targetLabel={extra.targetLabel}
+											intercept={extra.intercept}
+											features={extra.features}
+											metrics={extra.metrics}
+										/>
 									{:else if extra.type === 'reply'}
 										{#if !extra.completed}
 											<Reply

@@ -29,16 +29,11 @@
 		table: '一覧',
 		actions: '選択肢',
 		values: '詳細',
-		gantt: 'ガントチャート',
-		timeline: 'タイムライン',
 		chart: 'グラフ',
-		kanban: 'カンバン',
 		link: 'リンク',
-		bizcard: '名刺読み取り',
-		document_job: '資料生成',
 		reply: '質問',
 		form: 'フォーム',
-		customer_detail: '顧客詳細'
+		simulator: 'シミュレーター'
 	};
 
 	function summarize(content: MessageContent): string {

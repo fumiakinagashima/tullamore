@@ -11,7 +11,7 @@ export const tools: Tool[] = [
 			properties: {
 				topic: {
 					type: 'string',
-					enum: ['overview', 'data_sources', 'analysis', 'email'],
+					enum: ['overview', 'data_sources', 'analysis', 'simulator', 'email'],
 					description: '知りたいトピック（省略時は全体概要）'
 				}
 			}
@@ -20,7 +20,7 @@ export const tools: Tool[] = [
 ];
 
 const getHelpInputSchema = z.object({
-	topic: z.enum(['overview', 'data_sources', 'analysis', 'email']).optional()
+	topic: z.enum(['overview', 'data_sources', 'analysis', 'simulator', 'email']).optional()
 });
 
 const HELP: Record<string, object> = {
@@ -30,6 +30,7 @@ const HELP: Record<string, object> = {
 		features: [
 			{ name: 'データソース管理', topic: 'data_sources', examples: ['CSVをインポートして登録したい', '新しいデータソースを作りたい'] },
 			{ name: 'データ分析・可視化', topic: 'analysis', examples: ['過去1年の売上トレンドを見せて', '地域別の件数をグラフにして', '月次の推移を折れ線グラフで'] },
+			{ name: 'シミュレーター作成', topic: 'simulator', examples: ['広告費から売上を予測するシミュレーターを作って'] },
 			{ name: 'メール送信', topic: 'email', examples: ['レポートをメールで送って'] }
 		],
 		tips: [
@@ -72,6 +73,19 @@ const HELP: Record<string, object> = {
 			'AIがSQL生成→D1実行→グラフ表示を自動的に行います',
 			'複数のデータソースを組み合わせた分析も可能です（JOINなど）',
 			'「〇〇のデータはどんな列がある？」と聞くとスキーマ確認ができます'
+		]
+	},
+	simulator: {
+		title: 'シミュレーター作成',
+		description: 'データから回帰モデル（シミュレーター）を生成し、変数を動かして将来のシナリオを試せます（Tullamoreの中核機能）',
+		operations: [
+			{ action: 'シミュレーターを作成する', examples: ['広告費と来店数から売上を予測するシミュレーターを作って', '〇〇が変わったらどうなるか試したい'] },
+			{ action: '既存のシミュレーターを確認する', examples: ['作成済みのシミュレーターを見せて'] }
+		],
+		tips: [
+			'AIが目的変数・説明変数の候補を提案してから生成します（design_variables）',
+			'現時点で対応している分析手法は重回帰（線形結合）のみです',
+			'決定係数（R²）が低い場合は、別の説明変数を試すか結果を参考程度に留めてください'
 		]
 	},
 	email: {
