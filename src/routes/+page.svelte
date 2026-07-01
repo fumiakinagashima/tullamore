@@ -805,7 +805,10 @@
 	.input-wrap {
 		position: absolute;
 		left: 50%;
-		transform: translateX(-50%);
+		/* 未開始時の初期配置はCSSで中央寄せ（JS不要・SSR時点で正位置）。
+		   開始後はJS(repositionInput)が top(px)/translateX(-50%) を設定して下部へスライドする。 */
+		top: 50%;
+		transform: translate(-50%, -50%);
 		width: min(720px, calc(100% - 48px));
 		z-index: 5;
 		transition: opacity 0.2s;
