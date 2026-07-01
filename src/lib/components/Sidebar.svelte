@@ -12,7 +12,6 @@
 	import Database from '$lib/components/icon/Database.svelte';
 	import ClipboardCheck from '$lib/components/icon/ClipboardCheck.svelte';
 	import Users from '$lib/components/icon/Users.svelte';
-	import Clock from '$lib/components/icon/Clock.svelte';
 	import Settings from '$lib/components/icon/Settings.svelte';
 	import LogOut from '$lib/components/icon/LogOut.svelte';
 	import type { AccountRow } from '$lib/server/db/account-service';
@@ -209,11 +208,6 @@
 				アカウント
 			</a>
 		{/if}
-
-		<a href="/database/reminders" class="settings-row">
-			<Clock size={15} />
-			リマインダー
-		</a>
 
 		<a href="/settings" class="settings-row">
 			<Settings size={15} />

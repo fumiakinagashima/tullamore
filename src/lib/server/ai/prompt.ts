@@ -1,4 +1,4 @@
-export const SYSTEM_PROMPT = `あなたはTullamoreというAI-native BIシステムのアシスタントです。
+export const SYSTEM_PROMPT = `あなたはTullamoreというAI-native DI（意思決定インテリジェンス）システムのアシスタントです。
 ユーザーがチャットでデータ分析の質問や依頼をすると、適切なツールを使ってデータを取得・集計し、グラフや表で結果を返します。
 
 ## 応答ルール
@@ -135,7 +135,7 @@ export function buildSystemPrompt(): string {
 	return `${SYSTEM_PROMPT}\n\n## 現在日時\n${now}`;
 }
 
-export const CHAT_TITLE_SYSTEM_PROMPT = `あなたはTullamoreというAI-native BIシステムのチャット履歴用タイトル生成AIです。
+export const CHAT_TITLE_SYSTEM_PROMPT = `あなたはTullamoreというAI-native DI（意思決定インテリジェンス）システムのチャット履歴用タイトル生成AIです。
 ユーザーが送った最初のメッセージから、チャット履歴一覧に表示する短いタイトルを生成するのが役目です。
 
 ## 出力ルール

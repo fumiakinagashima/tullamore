@@ -10,28 +10,10 @@
 	let { form, onclick }: Props = $props();
 
 	const TOOL_LABELS: Record<string, string> = {
-		create_customer: '顧客を登録',
-		update_customer: '顧客を編集',
-		create_contact: '担当者を登録',
-		update_contact: '担当者を編集',
-		create_deal: '案件を登録',
-		update_deal: '案件を編集',
-		create_activity: '活動履歴を登録',
-		create_customer_with_contact: '顧客・担当者を登録',
-		create_reminder: 'リマインダーを設定',
 		send_email: 'メールを送信'
 	};
 
 	const TOOL_DESCS: Record<string, string> = {
-		create_customer: '顧客の登録ダイアログを表示します',
-		update_customer: '顧客の編集ダイアログを表示します',
-		create_contact: '担当者の登録ダイアログを表示します',
-		update_contact: '担当者の編集ダイアログを表示します',
-		create_deal: '案件の登録ダイアログを表示します',
-		update_deal: '案件の編集ダイアログを表示します',
-		create_activity: '活動履歴の登録ダイアログを表示します',
-		create_customer_with_contact: '顧客と担当者をまとめて登録するダイアログを表示します',
-		create_reminder: 'リマインダーの設定ダイアログを表示します',
 		send_email: 'メール作成フォームを表示します'
 	};
 

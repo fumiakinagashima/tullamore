@@ -62,16 +62,6 @@ export const notifications = sqliteTable('notifications', {
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
 });
 
-export const reminders = sqliteTable('reminders', {
-	id: text('id').primaryKey(),
-	remindAt: integer('remind_at', { mode: 'timestamp' }).notNull(),
-	content: text('content').notNull(),
-	channels: text('channels').notNull().default('[]'),
-	status: text('status', { enum: ['pending', 'sent', 'failed'] }).notNull().default('pending'),
-	accountId: text('account_id'),
-	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
-});
-
 export const chats = sqliteTable('chats', {
 	id: text('id').primaryKey(),
 	title: text('title').notNull().default(''),
@@ -88,14 +78,6 @@ export const chatMessages = sqliteTable('chat_messages', {
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
 });
 
-export const briefings = sqliteTable('briefings', {
-	id: text('id').primaryKey(),
-	accountId: text('account_id'),
-	date: text('date').notNull(),
-	contents: text('contents').notNull(),
-	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
-});
-
 export type DataSource = typeof dataSources.$inferSelect;
 export type NewDataSource = typeof dataSources.$inferInsert;
 export type Integration = typeof integrations.$inferSelect;
@@ -106,7 +88,3 @@ export type AiSettings = typeof aiSettings.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
-export type Reminder = typeof reminders.$inferSelect;
-export type NewReminder = typeof reminders.$inferInsert;
-export type Briefing = typeof briefings.$inferSelect;
-export type NewBriefing = typeof briefings.$inferInsert;

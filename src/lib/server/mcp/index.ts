@@ -15,12 +15,8 @@ export type ToolName =
 	| 'call_external_api'
 	| 'send_notification'
 	| 'send_slack_notification'
-	| 'create_reminder'
-	| 'list_reminders'
-	| 'delete_sent_reminders'
 	| 'delete_read_notifications'
 	| 'send_email'
-	| 'create_reminders_bulk'
 	| 'get_help';
 
 export const tools: Tool[] = [
@@ -45,12 +41,8 @@ export async function dispatchTool(
 		case 'call_external_api':         return integrations.handleCallExternalApi(db, input);
 		case 'send_notification':         return communication.handleSendNotification(db, input, env);
 		case 'send_slack_notification':   return communication.handleSendSlackNotification(db, input, env);
-		case 'create_reminder':           return communication.handleCreateReminder(db, input, env);
-		case 'list_reminders':            return communication.handleListReminders(db, input, env);
-		case 'delete_sent_reminders':     return communication.handleDeleteSentReminders(db, input, env);
 		case 'delete_read_notifications': return communication.handleDeleteReadNotifications(db, input, env);
 		case 'send_email':                return communication.handleSendEmail(db, input, env);
-		case 'create_reminders_bulk':     return communication.handleCreateRemindersBulk(db, input, env);
 		case 'get_help':                  return help.handleGetHelp(input);
 		default:
 			throw new Error(`Unknown tool: ${name}`);

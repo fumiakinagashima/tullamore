@@ -1,4 +1,4 @@
-export type QuickActionId = 'list_data_sources' | 'create_reminder';
+export type QuickActionId = 'list_data_sources';
 
 export type QuickActionDef = {
 	id: QuickActionId;
@@ -13,12 +13,6 @@ export const quickActionCatalog: QuickActionDef[] = [
 		label: 'データソース一覧',
 		description: '登録済みのデータソースを一覧表示',
 		icon: '📊'
-	},
-	{
-		id: 'create_reminder',
-		label: 'リマインダー設定',
-		description: 'リマインダーの登録フォームを表示します',
-		icon: '⏰'
 	}
 ];
 

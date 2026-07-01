@@ -11,7 +11,7 @@ export const tools: Tool[] = [
 			properties: {
 				topic: {
 					type: 'string',
-					enum: ['overview', 'data_sources', 'analysis', 'reminders', 'email'],
+					enum: ['overview', 'data_sources', 'analysis', 'email'],
 					description: '知りたいトピック（省略時は全体概要）'
 				}
 			}
@@ -20,17 +20,16 @@ export const tools: Tool[] = [
 ];
 
 const getHelpInputSchema = z.object({
-	topic: z.enum(['overview', 'data_sources', 'analysis', 'reminders', 'email']).optional()
+	topic: z.enum(['overview', 'data_sources', 'analysis', 'email']).optional()
 });
 
 const HELP: Record<string, object> = {
 	overview: {
 		title: 'TULLAMORE 使い方ガイド',
-		description: 'チャットでデータについて質問するだけで、SQLを自動生成してグラフや表で可視化するAIネイティブなBIシステムです',
+		description: 'チャットでデータについて質問するだけで、SQLを自動生成してグラフや表で可視化するAIネイティブなDI（意思決定インテリジェンス）システムです',
 		features: [
 			{ name: 'データソース管理', topic: 'data_sources', examples: ['CSVをインポートして登録したい', '新しいデータソースを作りたい'] },
 			{ name: 'データ分析・可視化', topic: 'analysis', examples: ['過去1年の売上トレンドを見せて', '地域別の件数をグラフにして', '月次の推移を折れ線グラフで'] },
-			{ name: 'リマインダー', topic: 'reminders', examples: ['明日の10時にリマインドして'] },
 			{ name: 'メール送信', topic: 'email', examples: ['レポートをメールで送って'] }
 		],
 		tips: [
@@ -73,21 +72,6 @@ const HELP: Record<string, object> = {
 			'AIがSQL生成→D1実行→グラフ表示を自動的に行います',
 			'複数のデータソースを組み合わせた分析も可能です（JOINなど）',
 			'「〇〇のデータはどんな列がある？」と聞くとスキーマ確認ができます'
-		]
-	},
-	reminders: {
-		title: 'リマインダー',
-		description: '指定した日時に通知センター・メール・Slack（連携設定済みの場合）へ通知を送ります',
-		operations: [
-			{ action: 'リマインダーを設定する', examples: ['明日の10時にフォローアップをリマインドして', '来週月曜に通知して', '今日の15:00にアラートを出して'] }
-		],
-		tips: [
-			'通知先はフォーム送信時に選択できます（通知センター・メール・Slack）',
-			'Slack通知は外部API連携画面でWebhook URLの設定が必要です'
-		],
-		relatedPages: [
-			{ label: 'リマインダー管理', href: '/database/reminders', description: '登録済みリマインダーの確認・削除ができます' },
-			{ label: '外部API連携', href: '/settings/integrations', description: 'Slack Webhook URLの設定ができます' }
 		]
 	},
 	email: {
