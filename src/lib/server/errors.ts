@@ -22,7 +22,7 @@ export const errors = {
 				}
 			}
 		),
-	serviceUnavailable: (msg: string) => apiError(msg, 503, 'SERVICE_UNAVAILABLE'),
+	serviceUnavailable: (msg = 'サービスを利用できません') => apiError(msg, 503, 'SERVICE_UNAVAILABLE'),
 	internal: (e?: unknown) =>
 		apiError(e instanceof Error ? e.message : String(e ?? '内部エラーが発生しました'), 500, 'INTERNAL_ERROR')
 };

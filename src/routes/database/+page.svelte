@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import Database from '$lib/components/icon/Database.svelte';
-    import { goto } from '$app/navigation';
+	import Plus from '$lib/components/icon/Plus.svelte';
+	import { goto } from '$app/navigation';
 
 	let { data }: { data: PageData } = $props();
 
@@ -11,6 +12,10 @@
 <div class="page">
 	<div class="page-header">
 		<h1 class="page-title">データソース</h1>
+		<a href="/database/new" class="btn-primary">
+			<Plus size={14} />
+			新規作成
+		</a>
 	</div>
 
 	<div class="table-wrap">
@@ -51,6 +56,25 @@
 		font-size: 1.125rem;
 		font-weight: 600;
 		color: var(--color-text);
+	}
+
+	.btn-primary {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 16px;
+		background: var(--color-primary);
+		color: #fff;
+		border: none;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-decoration: none;
+		cursor: pointer;
+		transition: opacity 0.15s;
+		flex-shrink: 0;
+
+		&:hover { opacity: 0.85; }
 	}
 
 	.table-wrap { overflow-x: auto; }

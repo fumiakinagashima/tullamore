@@ -12,6 +12,11 @@ export function parseSchema(schemaJson: string): ColumnDef[] {
 	try { return JSON.parse(schemaJson); } catch { return []; }
 }
 
+// カラムキーはCREATE/ALTER TABLEに直接埋め込むため、SQLインジェクション対策として識別子として妥当な形式に制限する
+export function isValidColumnKey(key: string): boolean {
+	return /^[a-zA-Z][a-zA-Z0-9_]*$/.test(key);
+}
+
 export async function listDataSources(db: Db): Promise<DataSource[]> {
 	return db.select().from(dataSources).orderBy(dataSources.createdAt);
 }

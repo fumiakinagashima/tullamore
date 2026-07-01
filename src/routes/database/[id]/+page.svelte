@@ -37,7 +37,7 @@
 		const header = columns.map((c) => csvEscape(c.key)).join(',');
 		const sample = columns.map((c) => csvEscape(sampleValue(c))).join(',');
 		const csv = `${header}\n${sample}\n`;
-		const BOM = '\uFEFF';
+		const BOM = '﻿';
 		const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
@@ -115,9 +115,12 @@
 			<h1 class="page-title">{source.name}</h1>
 			{#if source.description}<p class="source-desc">{source.description}</p>{/if}
 		</div>
-		<button class="btn-danger" onclick={deleteSource} disabled={deleting}>
-			{deleting ? '削除中...' : '削除'}
-		</button>
+		<div class="header-actions">
+			<a href="/database/{source.id}/build" class="btn-secondary">編集</a>
+			<button class="btn-danger" onclick={deleteSource} disabled={deleting}>
+				{deleting ? '削除中...' : '削除'}
+			</button>
+		</div>
 	</div>
 
 	<div class="meta-row">
@@ -183,6 +186,12 @@
 	.page-title { font-size: 1.125rem; font-weight: 600; color: var(--color-text); margin: 0 0 4px; }
 	.source-desc { font-size: 0.875rem; color: var(--color-text-muted); margin: 0; }
 
+	.header-actions {
+		display: flex;
+		gap: 8px;
+		flex-shrink: 0;
+	}
+
 	.btn-danger {
 		flex-shrink: 0;
 		padding: 6px 14px;
@@ -196,6 +205,23 @@
 
 		&:hover { background: var(--color-error-bg); }
 		&:disabled { opacity: 0.5; cursor: not-allowed; }
+	}
+
+	.btn-secondary {
+		flex-shrink: 0;
+		padding: 6px 14px;
+		background: transparent;
+		color: var(--color-text);
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		font-size: 0.8125rem;
+		text-decoration: none;
+		display: inline-flex;
+		align-items: center;
+		cursor: pointer;
+		transition: background 0.15s;
+
+		&:hover { background: var(--color-surface); }
 	}
 
 	.meta-row { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }

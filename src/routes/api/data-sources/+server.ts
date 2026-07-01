@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { z } from 'zod/v4';
 import { createDb } from '$lib/server/db';
-import { listDataSources, createDataSource, makeTableName } from '$lib/server/db/data-source-service';
+import { listDataSources, createDataSource, makeTableName, isValidColumnKey } from '$lib/server/db/data-source-service';
 import { errors } from '$lib/server/errors';
 
 const createSchema = z.object({
@@ -25,6 +25,12 @@ export const GET: RequestHandler = async ({ platform }) => {
 export const POST: RequestHandler = async ({ request, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const body = createSchema.parse(await request.json());
+	if (body.columns.some((c) => !isValidColumnKey(c.key))) {
+		return errors.badRequest('カラムキーは英字で始まる英数字・アンダースコアのみ使用できます');
+	}
+	if (new Set(body.columns.map((c) => c.key)).size !== body.columns.length) {
+		return errors.badRequest('カラムキーが重複しています');
+	}
 	const db = createDb(platform.env.DB);
 	const id = crypto.randomUUID();
 	const tableName = makeTableName(id);

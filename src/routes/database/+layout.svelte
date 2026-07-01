@@ -3,6 +3,7 @@
 	import type { Snippet } from 'svelte';
 	import Plus from '$lib/components/icon/Plus.svelte';
 	import Database from '$lib/components/icon/Database.svelte';
+	import Table from '$lib/components/icon/Table.svelte';
 	import Search from '$lib/components/icon/Search.svelte';
 	import type { LayoutData } from './$types';
 
@@ -20,6 +21,10 @@
 				<Plus size={14} />
 			</a>
 		</div>
+		<a href="/database/" class="sql-link" class:active={page.url.pathname === '/'}>
+			<Database size={13} />
+			データソース
+		</a>
 		<a href="/database/sql" class="sql-link" class:active={page.url.pathname === '/database/'}>
 			<Search size={13} />
 			SQLクエリ
@@ -31,7 +36,7 @@
 					class="table-item"
 					class:active={page.url.pathname === `/database/${source.id}`}
 				>
-					<Database size={13} />
+					<Table size={13} />
 					<span class="table-name">{source.name}</span>
 				</a>
 			{/each}
