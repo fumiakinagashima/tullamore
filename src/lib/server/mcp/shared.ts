@@ -1,6 +1,7 @@
 import type { EmailEnv } from '../email';
 
 export type ToolEnv = EmailEnv & {
+	DB?: D1Database;
 	ANTHROPIC_API_KEY?: string;
 	R2?: R2Bucket;
 	KV?: KVNamespace;

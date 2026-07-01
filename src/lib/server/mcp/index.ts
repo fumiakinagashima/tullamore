@@ -3,6 +3,7 @@ import type { Db } from '../db';
 import * as bi from './bi';
 import * as communication from './communication';
 import * as integrations from './integrations';
+import * as analysis from './analysis';
 import * as help from './help';
 
 export type { ToolEnv } from './shared';
@@ -17,12 +18,15 @@ export type ToolName =
 	| 'send_slack_notification'
 	| 'delete_read_notifications'
 	| 'send_email'
+	| 'design_variables'
+	| 'select_analysis_method'
 	| 'get_help';
 
 export const tools: Tool[] = [
 	...bi.tools,
 	...integrations.tools,
 	...communication.tools,
+	...analysis.tools,
 	...help.tools
 ];
 
@@ -43,6 +47,8 @@ export async function dispatchTool(
 		case 'send_slack_notification':   return communication.handleSendSlackNotification(db, input, env);
 		case 'delete_read_notifications': return communication.handleDeleteReadNotifications(db, input, env);
 		case 'send_email':                return communication.handleSendEmail(db, input, env);
+		case 'design_variables':          return analysis.handleDesignVariables(db, input, env);
+		case 'select_analysis_method':    return analysis.handleSelectAnalysisMethod(db, input);
 		case 'get_help':                  return help.handleGetHelp(input);
 		default:
 			throw new Error(`Unknown tool: ${name}`);
