@@ -10,443 +10,36 @@
 	import FormDialog from '$lib/components/dialog/FormDialog.svelte';
 	import TurnHistoryDrawer from '$lib/components/chat/TurnHistoryDrawer.svelte';
 	import TypingIndicator from '$lib/components/ui/TypingIndicator.svelte';
-	import type { Message, MessageContent, FormContent, ActionItem, ValuesContent, ChartContent, LinkContent, ReplyContent, SimulatorContent } from '$lib/types/chat';
-	import type { StreamEvent } from '$lib/server/ai/stream';
+	import type { MessageContent, ValuesContent, ChartContent, LinkContent, ReplyContent, SimulatorContent } from '$lib/types/chat';
 	import * as m from '$lib/paraglide/messages.js';
-	import { tick, untrack } from 'svelte';
-	import { marked } from 'marked';
-	import { filterXSS } from 'xss';
 	import { toast } from '$lib/stores/toast.svelte';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
-	import { chatSession } from '$lib/stores/chat-session.svelte';
-	import { chatHistory } from '$lib/stores/chat-history.svelte';
 	import ArrowUp from '$lib/components/icon/ArrowUp.svelte';
 	import Clock from '$lib/components/icon/Clock.svelte';
-	import { CHAT_TITLE_MAX_LENGTH, CHAT_TEXTAREA_MAX_HEIGHT_PX } from '$lib/constants';
+	import { createChatState, renderMarkdown } from './index.svelte';
+	import type { PageData } from './$types';
 
-	function renderMarkdown(text: string): string {
-		return filterXSS(marked.parse(text, { async: false }) as string);
-	}
-
-	const ls = (key: string, def: string) =>
-		typeof localStorage !== 'undefined' ? (localStorage.getItem(key) ?? def) : def;
-
-	let { data } = $props();
-
-	function seedMessageFromNotification(seed: { id: string; seedContent: MessageContent[] } | null): Message[] {
-		if (!seed) return [];
-		return [{ id: crypto.randomUUID(), role: 'assistant', contents: seed.seedContent, createdAt: new Date() }];
-	}
-
-	function seedMessagesFromChat(seed: { id: string; messages: { id: string; role: 'user' | 'assistant'; contents: MessageContent[]; createdAt: Date }[] } | null): Message[] {
-		if (!seed) return [];
-		return seed.messages.map((msg) => ({ id: msg.id, role: msg.role, contents: msg.contents, createdAt: msg.createdAt }));
-	}
-
-	let messages = $state<Message[]>(untrack(() =>
-		data.seedChat ? seedMessagesFromChat(data.seedChat) : seedMessageFromNotification(data.seedNotification)
-	));
-	let input = $state('');
-	let loading = $state(false);
-	let listEl = $state<HTMLElement | null>(null);
-	let chatEl = $state<HTMLElement | null>(null);
-	let inputWrapEl = $state<HTMLElement | null>(null);
-	let textareaEl = $state<HTMLTextAreaElement | null>(null);
-	let enterToSend = $state(ls('enterToSend', 'true') !== 'false');
-	let hasStarted = $state(untrack(() => !!data.seedNotification || (!!data.seedChat && data.seedChat.messages.length > 0)));
-	let inputReady = $state(untrack(() => !hasStarted));
-	let currentChatId: string | null = untrack(() => data.seedChat?.id ?? null);
-	let panelForm = $state<FormContent | null>(null);
-	let historyDrawerOpen = $state(false);
-
-	type Turn = { id: string; userMsg: Message | null; assistantMsgs: Message[] };
-	let turns = $derived.by(() => {
-		const result: Turn[] = [];
-		let current: Turn | null = null;
-		for (const msg of messages) {
-			if (msg.role === 'user') {
-				current = { id: msg.id, userMsg: msg, assistantMsgs: [] };
-				result.push(current);
-			} else if (current) {
-				current.assistantMsgs.push(msg);
-			} else {
-				current = { id: msg.id, userMsg: null, assistantMsgs: [msg] };
-				result.push(current);
-			}
-		}
-		return result;
-	});
-	let latestTurn = $derived<Turn | null>(turns.length > 0 ? turns[turns.length - 1] : null);
-	let pastTurns = $derived(turns.slice(0, -1));
-	let latestTurnMessages = $derived<Message[]>(
-		latestTurn ? [...(latestTurn.userMsg ? [latestTurn.userMsg] : []), ...latestTurn.assistantMsgs] : []
-	);
-
-	let streamingText = $state('');
-	let streamingUIContents = $state<MessageContent[]>([]);
-
-	$effect(() => {
-		const handler = () => {
-			enterToSend = (localStorage.getItem('enterToSend') ?? 'true') !== 'false';
-		};
-		window.addEventListener('storage', handler);
-		return () => window.removeEventListener('storage', handler);
-	});
-
-	let seededNotificationId: string | null = untrack(() => data.seedNotification?.id ?? null);
-
-	$effect(() => {
-		const seed = data.seedNotification;
-		if (!seed || seed.id === seededNotificationId) return;
-		seededNotificationId = seed.id;
-		if (!hasStarted) hasStarted = true;
-		messages = [
-			...messages,
-			{ id: crypto.randomUUID(), role: 'assistant', contents: seed.seedContent, createdAt: new Date() }
-		];
-	});
-
-	$effect(() => {
-		const urlChatId = page.url.searchParams.get('id');
-		if (urlChatId === currentChatId) return;
-		currentChatId = urlChatId;
-		messages = seedMessagesFromChat(data.seedChat);
-		hasStarted = !!data.seedChat && data.seedChat.messages.length > 0;
-		streamingText = '';
-		streamingUIContents = [];
-		input = '';
-	});
-
-	let mountedResetToken = chatSession.resetToken;
-	$effect(() => {
-		const token = chatSession.resetToken;
-		if (token === mountedResetToken) return;
-		mountedResetToken = token;
-		messages = [];
-		hasStarted = false;
-		streamingText = '';
-		streamingUIContents = [];
-		seededNotificationId = null;
-		input = '';
-	});
-
-	function repositionInput(animate: boolean) {
-		if (!inputWrapEl || !chatEl) return;
-		const containerH = chatEl.offsetHeight;
-		const inputH = inputWrapEl.offsetHeight;
-		if (!hasStarted) {
-			inputWrapEl.style.transition = '';
-			inputWrapEl.style.transform = 'translateX(-50%)';
-			inputWrapEl.style.bottom = '';
-			inputWrapEl.style.top = `${(containerH - inputH) / 2}px`;
-			return;
-		}
-		inputWrapEl.style.transition = animate
-			? 'top 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
-			: 'none';
-		inputWrapEl.style.transform = 'translateX(-50%)';
-		inputWrapEl.style.bottom = 'auto';
-		inputWrapEl.style.top = `${containerH - inputH - 24}px`;
-	}
-
-	let isFirstEffect = true;
-	$effect(() => {
-		void hasStarted;
-		const animate = !isFirstEffect;
-		isFirstEffect = false;
-		requestAnimationFrame(() => {
-			repositionInput(animate);
-			inputReady = true;
-		});
-	});
-
-	$effect(() => {
-		function handleResize() {
-			requestAnimationFrame(() => repositionInput(false));
-		}
-		window.addEventListener('resize', handleResize);
-		return () => window.removeEventListener('resize', handleResize);
-	});
-
-	function autoGrow() {
-		if (!textareaEl) return;
-		textareaEl.style.height = 'auto';
-		const sh = textareaEl.scrollHeight;
-		if (sh >= CHAT_TEXTAREA_MAX_HEIGHT_PX) {
-			textareaEl.style.height = `${CHAT_TEXTAREA_MAX_HEIGHT_PX}px`;
-			textareaEl.style.overflowY = 'auto';
-		} else {
-			textareaEl.style.height = sh + 'px';
-			textareaEl.style.overflowY = 'hidden';
-		}
-		requestAnimationFrame(() => repositionInput(false));
-	}
-
-	async function scrollLatestToTop() {
-		await tick();
-		await new Promise<void>((r) => requestAnimationFrame(() => r()));
-		if (!listEl) return;
-		const userMsgs = listEl.querySelectorAll('.message.user');
-		const last = userMsgs[userMsgs.length - 1] as HTMLElement | undefined;
-		if (!last) return;
-		const containerTop = listEl.getBoundingClientRect().top;
-		const msgTop = last.getBoundingClientRect().top;
-		listEl.scrollTo({
-			top: Math.max(0, listEl.scrollTop + msgTop - containerTop - 32),
-			behavior: 'smooth'
-		});
-	}
-
-	function addUserMessage(text: string, isFirst = false) {
-		const message: Message = { id: crypto.randomUUID(), role: 'user', contents: [{ type: 'text', text }], createdAt: new Date() };
-		messages = [...messages, message];
-		persistMessage(message, isFirst ? text : undefined);
-	}
-
-	function assignChatId() {
-		const url = new URL(window.location.href);
-		if (url.searchParams.has('id') || url.searchParams.has('notification')) return;
-		const id = crypto.randomUUID();
-		url.searchParams.set('id', id);
-		currentChatId = id;
-		goto(`${url.pathname}?${url.searchParams}`, { replaceState: true, noScroll: true, keepFocus: true });
-	}
-
-	function chatTitleFrom(text: string): string {
-		const t = text.trim().replace(/\s+/g, ' ');
-		return t.length > CHAT_TITLE_MAX_LENGTH ? t.slice(0, CHAT_TITLE_MAX_LENGTH) + '…' : t;
-	}
-
-	async function persistMessage(message: Message, firstMessageText?: string) {
-		if (!currentChatId) return;
-		const chatId = currentChatId;
-		try {
-			await fetch(`/api/chats/${chatId}/messages`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					id: message.id,
-					role: message.role,
-					contents: message.contents,
-					...(firstMessageText ? { title: chatTitleFrom(firstMessageText) } : {})
-				})
-			});
-		} catch {
-			// 保存失敗時もチャット表示は継続する
-		}
-		if (firstMessageText) {
-			chatHistory.prepend({ id: chatId, title: chatTitleFrom(firstMessageText), updatedAt: new Date().toISOString() });
-			requestChatTitle(chatId, firstMessageText);
-		}
-	}
-
-	async function requestChatTitle(chatId: string, message: string) {
-		try {
-			const res = await fetch(`/api/chats/${chatId}/title`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ message })
-			});
-			if (!res.ok) return;
-			const { title } = (await res.json()) as { title: string };
-			if (title) chatHistory.updateTitle(chatId, title);
-		} catch {
-			// 失敗時は切り詰めタイトルのまま
-		}
-	}
-
-	function finalizeStreamingMessage() {
-		const contents: MessageContent[] = [];
-		if (streamingText.trim()) contents.push({ type: 'text', text: streamingText });
-		for (const c of streamingUIContents) {
-			contents.push(c);
-		}
-		if (contents.length === 0) {
-			contents.push({ type: 'text', text: m.chat_error() });
-		}
-		if (contents.length > 0) {
-			const message: Message = { id: crypto.randomUUID(), role: 'assistant', contents, createdAt: new Date() };
-			messages = [...messages, message];
-			persistMessage(message);
-		}
-		streamingText = '';
-		streamingUIContents = [];
-	}
-
-	async function submitToChat(tool: string, data: Record<string, string>) {
-		loading = true;
-		try {
-			const res = await fetch('/api/chat', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ tool, data, history: messages })
-			});
-			const result = (await res.json()) as { contents: MessageContent[] };
-			const message: Message = { id: crypto.randomUUID(), role: 'assistant', contents: result.contents, createdAt: new Date() };
-			messages = [...messages, message];
-			persistMessage(message);
-		} catch {
-			const message: Message = {
-				id: crypto.randomUUID(),
-				role: 'assistant',
-				contents: [{ type: 'text', text: m.chat_error() }],
-				createdAt: new Date()
-			};
-			messages = [...messages, message];
-			persistMessage(message);
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function sendMessage(text: string, isFirst = false) {
-		addUserMessage(text, isFirst);
-		loading = true;
-		streamingText = '';
-		streamingUIContents = [];
-		await scrollLatestToTop();
-		repositionInput(false);
-
-		try {
-			const res = await fetch('/api/chat', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ message: text, history: messages })
-			});
-
-			if (!res.ok || !res.body) {
-				finalizeStreamingMessage();
-				return;
-			}
-
-			const reader = res.body.getReader();
-			const decoder = new TextDecoder();
-			let buf = '';
-			let finalized = false;
-
-			const finalize = () => {
-				if (finalized) return;
-				finalized = true;
-				finalizeStreamingMessage();
-			};
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-
-				buf += decoder.decode(value, { stream: true });
-				const parts = buf.split('\n\n');
-				buf = parts.pop() ?? '';
-
-				for (const part of parts) {
-					const line = part.trim();
-					if (!line.startsWith('data: ')) continue;
-					try {
-						const event = JSON.parse(line.slice(6)) as StreamEvent;
-						if (event.type === 'delta') {
-							streamingText += event.text;
-						} else if (event.type === 'ui') {
-							streamingUIContents = [...streamingUIContents, event.content];
-						} else if (event.type === 'done') {
-							finalize();
-						} else if (event.type === 'error') {
-							streamingText = m.chat_error();
-							finalize();
-						}
-					} catch {
-						// JSON parse error, skip
-					}
-				}
-			}
-
-			finalize();
-		} catch {
-			streamingText = '';
-			messages = [
-				...messages,
-				{
-					id: crypto.randomUUID(),
-					role: 'assistant',
-					contents: [{ type: 'text', text: m.chat_error() }],
-					createdAt: new Date()
-				}
-			];
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function handleSubmit() {
-		const text = input.trim();
-		if (!text || loading) return;
-		input = '';
-		if (textareaEl) textareaEl.style.height = 'auto';
-		const isFirst = !hasStarted;
-		if (isFirst) {
-			hasStarted = true;
-			assignChatId();
-		}
-		await sendMessage(text, isFirst);
-	}
-
-	async function handleActionSelect(action: ActionItem) {
-		if (loading) return;
-		const isFirst = !hasStarted;
-		if (isFirst) {
-			hasStarted = true;
-			assignChatId();
-		}
-		await sendMessage(action.label, isFirst);
-	}
-
-	async function handleReplySubmit(msg: Message, content: ReplyContent, answer: string) {
-		if (loading) return;
-		const isFirst = !hasStarted;
-		if (isFirst) {
-			hasStarted = true;
-			assignChatId();
-		}
-		content.completed = true;
-		persistMessage(msg);
-		await sendMessage(answer, isFirst);
-	}
-
-	async function handlePanelSubmit(tool: string, data: Record<string, string>) {
-		panelForm = null;
-		await submitToChat(tool, data);
-	}
-
-	function handlePanelCancel() {
-		panelForm = null;
-	}
-
-	function handleKey(e: KeyboardEvent) {
-		if (enterToSend && e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
-			e.preventDefault();
-			handleSubmit();
-		}
-	}
+	let { data }: { data: PageData } = $props();
+	const s = createChatState(() => data);
 
 	// suppress unused import warning
 	void toast;
 </script>
 
-<div class="chat" bind:this={chatEl}>
-	<div class="greeting" class:hidden={hasStarted} aria-hidden={hasStarted}>
+<div class="chat" bind:this={s.chatEl}>
+	<div class="greeting" class:hidden={s.hasStarted} aria-hidden={s.hasStarted}>
 		<h1>TULLAMORE</h1>
 		<p>データについて質問してください</p>
 	</div>
 
-	{#if hasStarted && pastTurns.length > 0}
-		<button class="history-btn" onclick={() => (historyDrawerOpen = true)} aria-label="会話履歴">
+	{#if s.hasStarted && s.pastTurns.length > 0}
+		<button class="history-btn" onclick={() => (s.historyDrawerOpen = true)} aria-label="会話履歴">
 			<Clock size={16} />
 		</button>
 	{/if}
 
-	<div class="messages" class:visible={hasStarted} bind:this={listEl}>
+	<div class="messages" class:visible={s.hasStarted} bind:this={s.listEl}>
 		<div class="messages-inner">
-			{#each latestTurnMessages as msg (msg.id)}
+			{#each s.latestTurnMessages as msg (msg.id)}
 				<div class="message {msg.role}">
 					{#if msg.role === 'user'}
 						<div class="user-bubble">
@@ -460,14 +53,14 @@
 								{#if content.type === 'text'}
 									<div class="assistant-text">{@html renderMarkdown(content.text)}</div>
 								{:else if content.type === 'form'}
-									<FormButton form={content} onclick={() => { panelForm = content; }} />
+									<FormButton form={content} onclick={() => { s.panelForm = content; }} />
 								{:else if content.type === 'table'}
 									<Table columns={content.columns} rows={content.rows} />
 								{:else if content.type === 'actions'}
 									<ActionSelector
 										title={content.title}
 										actions={content.actions}
-										onselect={handleActionSelect}
+										onselect={s.handleActionSelect}
 									/>
 								{:else}
 									{@const extra = content as ValuesContent | ChartContent | LinkContent | ReplyContent | SimulatorContent}
@@ -493,7 +86,7 @@
 												title={extra.title}
 												fields={extra.fields}
 												submitLabel={extra.submitLabel}
-												onsubmit={(answer) => handleReplySubmit(msg, extra, answer)}
+												onsubmit={(answer) => s.handleReplySubmit(msg, extra, answer)}
 											/>
 										{/if}
 									{/if}
@@ -504,7 +97,7 @@
 				</div>
 			{/each}
 
-			{#if loading}
+			{#if s.loading}
 				<div class="message assistant">
 					<div class="assistant-message">
 						<TypingIndicator />
@@ -514,22 +107,22 @@
 		</div>
 	</div>
 
-	<div class="input-wrap" bind:this={inputWrapEl} style:opacity={inputReady ? 1 : 0}>
+	<div class="input-wrap" bind:this={s.inputWrapEl} style:opacity={s.inputReady ? 1 : 0}>
 		<div class="input-card">
 			<textarea
-				bind:this={textareaEl}
-				bind:value={input}
-				oninput={autoGrow}
-				onkeydown={handleKey}
-				placeholder={enterToSend ? m.chat_placeholder_enter() : m.chat_placeholder_noenter()}
+				bind:this={s.textareaEl}
+				bind:value={s.input}
+				oninput={s.autoGrow}
+				onkeydown={s.handleKey}
+				placeholder={s.enterToSend ? m.chat_placeholder_enter() : m.chat_placeholder_noenter()}
 				rows="1"
-				disabled={loading}
+				disabled={s.loading}
 			></textarea>
 			<div class="input-footer">
 				<button
 					class="send-btn"
-					onclick={handleSubmit}
-					disabled={loading || !input.trim()}
+					onclick={s.handleSubmit}
+					disabled={s.loading || !s.input.trim()}
 					aria-label="送信"
 				>
 					<ArrowUp size={16} />
@@ -538,14 +131,14 @@
 		</div>
 	</div>
 
-	{#if panelForm}
+	{#if s.panelForm}
 		<FormDialog
-			form={panelForm}
-			onsubmit={handlePanelSubmit}
-			oncancel={handlePanelCancel}
+			form={s.panelForm}
+			onsubmit={s.handlePanelSubmit}
+			oncancel={s.handlePanelCancel}
 		/>
 	{/if}
-	<TurnHistoryDrawer turns={pastTurns} open={historyDrawerOpen} onclose={() => (historyDrawerOpen = false)} />
+	<TurnHistoryDrawer turns={s.pastTurns} open={s.historyDrawerOpen} onclose={() => (s.historyDrawerOpen = false)} />
 </div>
 
 <style lang="scss">
