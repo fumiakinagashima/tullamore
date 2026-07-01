@@ -51,5 +51,5 @@ console.log(
 );
 console.log('');
 console.log('本番D1へ投入する場合:');
-console.log(`  bunx wrangler d1 execute midleton --remote --file ./${outFile}`);
+console.log(`  bunx wrangler d1 execute tullamore --remote --file ./${outFile}`);
 console.log(`  rm ${outFile}`);
