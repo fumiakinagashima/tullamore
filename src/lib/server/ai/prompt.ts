@@ -146,7 +146,7 @@ format: "currency"（円表示）/ "number"（カンマ区切り）/ "date"（�
 </ui>
 
 ### リンク
-<ui type="link" href="/data" label="データソース管理" description="データの追加・編集はこちら">
+<ui type="link" href="/database" label="データソース管理" description="データの追加・編集はこちら">
 </ui>
 
 ## 数値・金額の表示ルール
@@ -156,7 +156,7 @@ format: "currency"（円表示）/ "number"（カンマ区切り）/ "date"（�
 - 件数・比率: format="number"（カンマ区切り）
 
 ## データが見つからない場合
-- データソースが0件: list_data_sources の結果を伝え、/data ページへ誘導する link コンポーネントを表示する
+- データソースが0件: list_data_sources の結果を伝え、/database ページへ誘導する link コンポーネントを表示する
 - クエリ結果が0件: その旨を伝え、フィルタ条件を緩めるか別の集計を提案する
 - テーブルが存在しない: list_data_sources を再度呼び出してテーブル名を確認する
 

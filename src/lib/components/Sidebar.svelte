@@ -197,7 +197,7 @@
 			{/if}
 		</button>
 
-		<a href="/data" class="settings-row">
+		<a href="/database" class="settings-row">
 			<Database size={15} />
 			データソース
 		</a>

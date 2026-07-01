@@ -107,7 +107,7 @@
 					<p class="review-overall">{data.review.overallComment}</p>
 				</div>
 
-				<a href="/data/{data.dataSourceId}" class="source-link">生成元データソース: {data.dataSourceName} →</a>
+				<a href="/database/{data.dataSourceId}" class="source-link">生成元データソース: {data.dataSourceName} →</a>
 			</div>
 		</div>
 		<!-- ARIA Window Splitter パターン（https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/）:

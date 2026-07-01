@@ -39,7 +39,7 @@ const HELP: Record<string, object> = {
 			'各データソースのテーブル名と列名はAIが自動的に把握して分析に使います'
 		],
 		relatedPages: [
-			{ label: 'データソース', href: '/data', description: 'データの登録・CSV取り込みができます' },
+			{ label: 'データソース', href: '/database', description: 'データの登録・CSV取り込みができます' },
 			{ label: 'シミュレーター', href: '/simulators', description: '作成済みシミュレーターの一覧・操作' },
 			{ label: '設定', href: '/settings', description: 'アプリの各種設定を変更できます' }
 		]
@@ -50,7 +50,7 @@ const HELP: Record<string, object> = {
 		operations: [
 			{ action: 'データソースを新規作成する', examples: ['「データソース」ページで「新規作成」から列定義を入力します'] },
 			{ action: 'CSVをインポートする', examples: ['データソース詳細ページの「CSVインポート」セクションからアップロードします'] },
-			{ action: 'SQLを直接実行する', examples: ['データソース詳細ページの「SQLエディタ」でSELECT文を実行できます'] }
+			{ action: 'SQLを直接実行する', examples: ['「データソース」ページの「SQLクエリ」でSELECT文を実行できます'] }
 		],
 		tips: [
 			'CSVの1行目はヘッダー行として読み込まれます（カラムキーと一致させてください）',
@@ -58,7 +58,7 @@ const HELP: Record<string, object> = {
 			'AIはデータソース名・説明・列のラベルを参照して分析を行います'
 		],
 		relatedPages: [
-			{ label: 'データソース', href: '/data', description: 'データソースの一覧・登録・CSV取り込み' }
+			{ label: 'データソース', href: '/database', description: 'データソースの一覧・登録・CSV取り込み' }
 		]
 	},
 	analysis: {

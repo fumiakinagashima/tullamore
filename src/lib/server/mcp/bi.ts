@@ -50,7 +50,7 @@ export const tools: Tool[] = [
 export async function handleListDataSources(db: Db) {
 	const sources = await listDataSources(db);
 	if (sources.length === 0) {
-		return { count: 0, data_sources: [], message: 'データソースが登録されていません。/data ページからデータソースを追加してください。' };
+		return { count: 0, data_sources: [], message: 'データソースが登録されていません。/database ページからデータソースを追加してください。' };
 	}
 	return {
 		count: sources.length,
