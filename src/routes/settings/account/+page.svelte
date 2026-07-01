@@ -7,20 +7,18 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let activeTab = $state<'profile' | 'password'>('profile');
-
 	let name = $state(untrack(() => data.account.name));
 	let email = $state(untrack(() => data.account.email ?? ''));
 	let role = $state(untrack(() => data.account.role ?? ''));
 
-	let profileSaving = $state(false);
-	let profileSaved = $state(false);
-	let profileError = $state('');
+	let saving = $state(false);
+	let saved = $state(false);
+	let error = $state('');
 
 	async function saveProfile() {
-		profileSaving = true;
-		profileSaved = false;
-		profileError = '';
+		saving = true;
+		saved = false;
+		error = '';
 		try {
 			const res = await fetch('/api/account', {
 				method: 'PATCH',
@@ -29,55 +27,14 @@
 			});
 			if (!res.ok) {
 				const body = (await res.json()) as { error?: string };
-				profileError = body.error ?? m.chat_error();
+				error = body.error ?? m.chat_error();
 				return;
 			}
 			await invalidateAll();
-			profileSaved = true;
-			setTimeout(() => (profileSaved = false), 2000);
+			saved = true;
+			setTimeout(() => (saved = false), 2000);
 		} finally {
-			profileSaving = false;
-		}
-	}
-
-	let currentPassword = $state('');
-	let newPassword = $state('');
-	let newPasswordConfirm = $state('');
-
-	let passwordSaving = $state(false);
-	let passwordSaved = $state(false);
-	let passwordError = $state('');
-
-	async function savePassword() {
-		passwordError = '';
-		if (newPassword.length < 8) {
-			passwordError = m.account_settings_password_too_short();
-			return;
-		}
-		if (newPassword !== newPasswordConfirm) {
-			passwordError = m.account_settings_password_mismatch();
-			return;
-		}
-		passwordSaving = true;
-		passwordSaved = false;
-		try {
-			const res = await fetch('/api/account/password', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ currentPassword, newPassword })
-			});
-			if (!res.ok) {
-				const body = (await res.json()) as { error?: string };
-				passwordError = body.error ?? m.chat_error();
-				return;
-			}
-			currentPassword = '';
-			newPassword = '';
-			newPasswordConfirm = '';
-			passwordSaved = true;
-			setTimeout(() => (passwordSaved = false), 2000);
-		} finally {
-			passwordSaving = false;
+			saving = false;
 		}
 	}
 </script>
@@ -88,64 +45,31 @@
 		<a href="/settings">一般</a>
 		{#if data.account.permission === 'admin'}
 			<a href="/settings/integrations">{m.integrations()}</a>
-		{/if}
-		{#if data.account.permission === 'admin'}
 			<a href="/settings/email">{m.email_settings()}</a>
 			<a href="/settings/ai">{m.ai_settings()}</a>
 		{/if}
 		<a href="/settings/account" class="active">{m.account_settings()}</a>
+		<a href="/settings/account/password">{m.account_settings_password()}</a>
 	</nav>
 
-	<div class="tabs" role="tablist">
-		<button
-			type="button"
-			role="tab"
-			aria-selected={activeTab === 'profile'}
-			class:active={activeTab === 'profile'}
-			onclick={() => (activeTab = 'profile')}
-		>{m.account_settings_basic_info()}</button>
-		<button
-			type="button"
-			role="tab"
-			aria-selected={activeTab === 'password'}
-			class:active={activeTab === 'password'}
-			onclick={() => (activeTab = 'password')}
-		>{m.account_settings_password()}</button>
-	</div>
-
-	{#if activeTab === 'profile'}
-		<section>
-			<div class="fields">
-				<Textbox label={m.account_settings_name()} bind:value={name} required />
-				<Textbox label={m.account_settings_email()} type="email" bind:value={email} />
-				<Textbox label={m.account_settings_role()} bind:value={role} />
-				<div class="field">
-					<span class="field-label">{m.account_settings_permission()}</span>
-					<span class="perm-badge" class:perm-admin={data.account.permission === 'admin'}>
-						{data.account.permission === 'admin' ? '管理者' : '一般'}
-					</span>
-				</div>
+	<section>
+		<div class="fields">
+			<Textbox label={m.account_settings_name()} bind:value={name} required />
+			<Textbox label={m.account_settings_email()} type="email" bind:value={email} />
+			<Textbox label={m.account_settings_role()} bind:value={role} />
+			<div class="field">
+				<span class="field-label">{m.account_settings_permission()}</span>
+				<span class="perm-badge" class:perm-admin={data.account.permission === 'admin'}>
+					{data.account.permission === 'admin' ? '管理者' : '一般'}
+				</span>
 			</div>
-			<div class="actions">
-				<button class="save-btn" onclick={saveProfile} disabled={profileSaving || !name}>{m.settings_save()}</button>
-				{#if profileSaved}<span class="saved">{m.settings_saved()}</span>{/if}
-				{#if profileError}<span class="error">{profileError}</span>{/if}
-			</div>
-		</section>
-	{:else}
-		<section>
-			<div class="fields">
-				<Textbox label={m.account_settings_current_password()} type="password" bind:value={currentPassword} />
-				<Textbox label={m.account_settings_new_password()} type="password" bind:value={newPassword} />
-				<Textbox label={m.account_settings_new_password_confirm()} type="password" bind:value={newPasswordConfirm} />
-			</div>
-			<div class="actions">
-				<button class="save-btn" onclick={savePassword} disabled={passwordSaving || !currentPassword || !newPassword}>{m.settings_save()}</button>
-				{#if passwordSaved}<span class="saved">{m.settings_saved()}</span>{/if}
-				{#if passwordError}<span class="error">{passwordError}</span>{/if}
-			</div>
-		</section>
-	{/if}
+		</div>
+		<div class="actions">
+			<button class="save-btn" onclick={saveProfile} disabled={saving || !name}>{m.settings_save()}</button>
+			{#if saved}<span class="saved">{m.settings_saved()}</span>{/if}
+			{#if error}<span class="error">{error}</span>{/if}
+		</div>
+	</section>
 </div>
 
 <style lang="scss">
@@ -162,33 +86,6 @@
 
 	section {
 		margin-bottom: 40px;
-	}
-
-	.tabs {
-		display: flex;
-		gap: 4px;
-		margin-bottom: 24px;
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	.tabs button {
-		padding: 8px 4px;
-		margin-right: 20px;
-		background: none;
-		border: none;
-		border-bottom: 2px solid transparent;
-		margin-bottom: -1px;
-		font-size: 0.875rem;
-		color: var(--color-text-muted);
-		cursor: pointer;
-		transition: color 0.15s;
-
-		&:hover { color: var(--color-text); }
-		&.active {
-			color: var(--color-text);
-			border-bottom-color: var(--color-primary);
-			font-weight: 500;
-		}
 	}
 
 	.subnav {

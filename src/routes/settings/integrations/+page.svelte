@@ -149,6 +149,7 @@
 			<a href="/settings/ai">{m.ai_settings()}</a>
 		{/if}
 		<a href="/settings/account">{m.account_settings()}</a>
+		<a href="/settings/account/password">{m.account_settings_password()}</a>
 	</nav>
 
 	<div class="header">
