@@ -158,6 +158,7 @@
 	.chat-side {
 		width: 300px;
 		flex-shrink: 0;
+		height: 100%;
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;

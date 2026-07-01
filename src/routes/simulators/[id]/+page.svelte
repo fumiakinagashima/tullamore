@@ -26,15 +26,62 @@
 			妥当性チェック: data.review
 		}
 	});
+
+	// AIアシスタント欄の幅（ドラッグでリサイズ可能。localStorageに記憶する）
+	const CHAT_WIDTH_STORAGE_KEY = 'tullamore_simulator_chat_width';
+	const CHAT_WIDTH_MIN = 260;
+	const CHAT_WIDTH_MAX = 560;
+	const CHAT_WIDTH_DEFAULT = 320;
+	const CHAT_WIDTH_KEY_STEP = 20;
+
+	function clampChatWidth(w: number): number {
+		return Math.min(CHAT_WIDTH_MAX, Math.max(CHAT_WIDTH_MIN, w));
+	}
+
+	function loadChatWidth(): number {
+		if (typeof localStorage === 'undefined') return CHAT_WIDTH_DEFAULT;
+		const raw = Number(localStorage.getItem(CHAT_WIDTH_STORAGE_KEY));
+		return Number.isFinite(raw) && raw > 0 ? clampChatWidth(raw) : CHAT_WIDTH_DEFAULT;
+	}
+
+	let chatWidth = $state(loadChatWidth());
+	let resizing = $state(false);
+
+	function startResize(e: PointerEvent) {
+		e.preventDefault();
+		resizing = true;
+		const startX = e.clientX;
+		const startWidth = chatWidth;
+
+		function onMove(ev: PointerEvent) {
+			// パネルは右側なので、左にドラッグするほど幅が広がる
+			chatWidth = clampChatWidth(startWidth + (startX - ev.clientX));
+		}
+		function onUp() {
+			resizing = false;
+			window.removeEventListener('pointermove', onMove);
+			window.removeEventListener('pointerup', onUp);
+			localStorage.setItem(CHAT_WIDTH_STORAGE_KEY, String(chatWidth));
+		}
+		window.addEventListener('pointermove', onMove);
+		window.addEventListener('pointerup', onUp);
+	}
+
+	function handleResizeKey(e: KeyboardEvent) {
+		if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+		e.preventDefault();
+		const delta = e.key === 'ArrowLeft' ? CHAT_WIDTH_KEY_STEP : -CHAT_WIDTH_KEY_STEP;
+		chatWidth = clampChatWidth(chatWidth + delta);
+		localStorage.setItem(CHAT_WIDTH_STORAGE_KEY, String(chatWidth));
+	}
 </script>
 
-<div class="page">
-	<div class="page-header">
-		<a href="/simulators" class="back-link">← シミュレーター</a>
-	</div>
-
+<div class="page">	
 	<div class="layout">
 		<div class="content-side">
+			<div class="page-header">
+				<a href="/simulators" class="back-link">← シミュレーター</a>
+			</div>
 			<div class="content-inner">
 				<Simulator
 					simulatorId={data.content.simulatorId}
@@ -63,7 +110,24 @@
 				<a href="/data/{data.dataSourceId}" class="source-link">生成元データソース: {data.dataSourceName} →</a>
 			</div>
 		</div>
-		<div class="chat-side">
+		<!-- ARIA Window Splitter パターン（https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/）:
+		     role="separator" + tabindex + キー操作は非対話要素向けのa11y-lintでは検出できない正しい組み合わせ -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<div
+			class="resize-handle"
+			class:active={resizing}
+			role="separator"
+			aria-orientation="vertical"
+			aria-label="AIアシスタントの幅を調整"
+			aria-valuenow={chatWidth}
+			aria-valuemin={CHAT_WIDTH_MIN}
+			aria-valuemax={CHAT_WIDTH_MAX}
+			tabindex="0"
+			onpointerdown={startResize}
+			onkeydown={handleResizeKey}
+		></div>
+		<div class="chat-side" style:width="{chatWidth}px">
 			<DialogChatSide contextTitle={data.content.name} contextFields={[]} {recordContext} />
 		</div>
 	</div>
@@ -77,8 +141,7 @@
 	}
 
 	.page-header {
-		padding: 16px 24px;
-		border-bottom: 1px solid var(--color-border);
+		margin-bottom: 24px;
 		flex-shrink: 0;
 	}
 
@@ -97,10 +160,37 @@
 		overflow: hidden;
 	}
 
-	.chat-side {
-		width: 320px;
+	.resize-handle {
 		flex-shrink: 0;
-		border-left: 1px solid var(--color-border);
+		width: 5px;
+		cursor: col-resize;
+		position: relative;
+		background: transparent;
+
+		&::after {
+			content: '';
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: 2px;
+			width: 1px;
+			background: var(--color-border);
+		}
+
+		&:hover::after, &.active::after {
+			left: 1px;
+			width: 3px;
+			background: var(--color-primary);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--color-primary);
+			outline-offset: -2px;
+		}
+	}
+
+	.chat-side {
+		flex-shrink: 0;
 		overflow: hidden;
 	}
 
