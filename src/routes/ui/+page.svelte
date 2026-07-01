@@ -13,6 +13,7 @@
 	import BarChart from '$lib/components/ui/BarChart.svelte';
 	import LineChart from '$lib/components/ui/LineChart.svelte';
 	import PieChart from '$lib/components/ui/PieChart.svelte';
+	import ScatterChart from '$lib/components/ui/ScatterChart.svelte';
 	import ActionSelector from '$lib/components/chat/ActionSelector.svelte';
 	import SearchSelect from '$lib/components/ui/SearchSelect.svelte';
 	import TimePicker from '$lib/components/ui/TimePicker.svelte';
@@ -151,6 +152,13 @@
 		]}
 	];
 
+	// 意図的に0から離れた範囲にする（広告費のようなデータを想定。0を軸に含めてしまうバグの再発防止用）
+	const scatterData = [
+		{ x: 68000, y: 897000 }, { x: 83000, y: 950000 }, { x: 98000, y: 1002000 },
+		{ x: 113000, y: 1055000 }, { x: 128000, y: 1108000 }, { x: 143000, y: 1160000 },
+		{ x: 158000, y: 1213000 }
+	];
+
 </script>
 
 <div class="page">
@@ -271,6 +279,9 @@
 		<div class="pie-wrap">
 			<PieChart title="顧客ステータス分布" data={pieData} />
 		</div>
+		<div class="chart-spacer">
+			<ScatterChart title="広告費と売上の関係" xLabel="広告費" yLabel="売上金額" points={scatterData} />
+		</div>
 	</section>
 
 	<!-- 多系列グラフ -->
@@ -292,6 +303,7 @@
 			<Chart chartType="bar" title="月別売上（万円）" data={barData} />
 			<Chart chartType="line" title="四半期推移（万円）" data={lineData} />
 			<Chart chartType="pie" title="顧客ステータス分布" data={pieData} />
+			<Chart chartType="scatter" title="広告費と売上の関係" xLabel="広告費" yLabel="売上金額" points={scatterData} />
 		</div>
 	</section>
 

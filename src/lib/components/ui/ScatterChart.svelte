@@ -20,10 +20,13 @@
 	const isMulti = $derived(allSeries.length > 1);
 	const allPoints = $derived(allSeries.flatMap((s) => s.points));
 
-	const xMin = $derived(Math.min(...allPoints.map((p) => p.x), 0));
-	const xMax = $derived(Math.max(...allPoints.map((p) => p.x), 1));
-	const yMin = $derived(Math.min(...allPoints.map((p) => p.y), 0));
-	const yMax = $derived(Math.max(...allPoints.map((p) => p.y), 1));
+	// 0/1 のフォールバックは allPoints が空でMath.min/maxがInfinityになる場合だけに使う
+	// （常に0を含めてしまうと、0から離れた範囲のデータ（例: 広告費が6万〜16万等）が
+	// 右端に圧縮されて散布図が壊れて見える）
+	const xMin = $derived(allPoints.length > 0 ? Math.min(...allPoints.map((p) => p.x)) : 0);
+	const xMax = $derived(allPoints.length > 0 ? Math.max(...allPoints.map((p) => p.x)) : 1);
+	const yMin = $derived(allPoints.length > 0 ? Math.min(...allPoints.map((p) => p.y)) : 0);
+	const yMax = $derived(allPoints.length > 0 ? Math.max(...allPoints.map((p) => p.y)) : 1);
 
 	const W = 680;
 	const PL = 90;
