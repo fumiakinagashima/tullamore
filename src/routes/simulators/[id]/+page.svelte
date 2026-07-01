@@ -34,34 +34,37 @@
 	</div>
 
 	<div class="layout">
-		<DialogChatSide contextTitle={data.content.name} contextFields={[]} {recordContext} />
+		<div class="content-side">
+			<div class="content-inner">
+				<Simulator
+					simulatorId={data.content.simulatorId}
+					name={data.content.name}
+					description={data.content.description}
+					targetLabel={data.content.targetLabel}
+					intercept={data.content.intercept}
+					features={data.content.features}
+					metrics={data.content.metrics}
+				/>
 
-		<div class="content">
-			<Simulator
-				simulatorId={data.content.simulatorId}
-				name={data.content.name}
-				description={data.content.description}
-				targetLabel={data.content.targetLabel}
-				intercept={data.content.intercept}
-				features={data.content.features}
-				metrics={data.content.metrics}
-			/>
-
-			<div class="review-card">
-				<p class="review-title">AIレビュー（妥当性チェック）</p>
-				<div class="review-row">
-					<span class="review-label">当てはまり</span>
-					<span class="review-badge {data.review.fitQuality}">{FIT_LABEL[data.review.fitQuality]}</span>
+				<div class="review-card">
+					<p class="review-title">AIレビュー（妥当性チェック）</p>
+					<div class="review-row">
+						<span class="review-label">当てはまり</span>
+						<span class="review-badge {data.review.fitQuality}">{FIT_LABEL[data.review.fitQuality]}</span>
+					</div>
+					<p class="review-comment">{data.review.fitComment}</p>
+					<p class="review-comment">{data.review.sampleSizeComment}</p>
+					{#if data.review.multicollinearityComment}
+						<p class="review-comment warn">{data.review.multicollinearityComment}</p>
+					{/if}
+					<p class="review-overall">{data.review.overallComment}</p>
 				</div>
-				<p class="review-comment">{data.review.fitComment}</p>
-				<p class="review-comment">{data.review.sampleSizeComment}</p>
-				{#if data.review.multicollinearityComment}
-					<p class="review-comment warn">{data.review.multicollinearityComment}</p>
-				{/if}
-				<p class="review-overall">{data.review.overallComment}</p>
-			</div>
 
-			<a href="/data/{data.dataSourceId}" class="source-link">生成元データソース: {data.dataSourceName} →</a>
+				<a href="/data/{data.dataSourceId}" class="source-link">生成元データソース: {data.dataSourceName} →</a>
+			</div>
+		</div>
+		<div class="chat-side">
+			<DialogChatSide contextTitle={data.content.name} contextFields={[]} {recordContext} />
 		</div>
 	</div>
 </div>
@@ -94,16 +97,25 @@
 		overflow: hidden;
 	}
 
-	.content {
+	.chat-side {
+		width: 320px;
+		flex-shrink: 0;
+		border-left: 1px solid var(--color-border);
+		overflow: hidden;
+	}
+
+	.content-side {
 		flex: 1;
 		min-width: 0;
 		overflow-y: auto;
 		padding: 24px;
-		border-left: 1px solid var(--color-border);
+	}
+
+	.content-inner {
+		max-width: 720px;
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
-		max-width: 720px;
 	}
 
 	.review-card {
