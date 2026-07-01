@@ -93,7 +93,8 @@
 <style lang="scss">
 	.page {
 		padding: 28px 32px;
-		max-width: 640px;
+		max-width: 740px;
+		margin: 0 auto;
 	}
 
 	.page-title {
@@ -208,7 +209,10 @@
 	.form-actions {
 		display: flex;
 		gap: 8px;
-		margin-top: 20px;
+		border-top: 1px solid var(--color-border);
+		margin-top: 40px;
+		padding-top: 20px;
+		justify-content: flex-end;
 	}
 
 	.btn-primary {

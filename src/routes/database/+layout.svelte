@@ -10,6 +10,9 @@
 </script>
 
 <div class="workbench">
+	<div class="db-main">
+		{@render children()}
+	</div>
 	<aside class="db-sidebar">
 		<div class="db-sidebar-header">
 			<span class="db-sidebar-title">データベース</span>
@@ -17,7 +20,7 @@
 				<Plus size={14} />
 			</a>
 		</div>
-		<a href="/database/sql" class="sql-link" class:active={page.url.pathname === '/database/sql'}>
+		<a href="/database/sql" class="sql-link" class:active={page.url.pathname === '/database/'}>
 			<Search size={13} />
 			SQLクエリ
 		</a>
@@ -37,9 +40,6 @@
 			{/if}
 		</div>
 	</aside>
-	<div class="db-main">
-		{@render children()}
-	</div>
 </div>
 
 <style lang="scss">
@@ -50,7 +50,7 @@
 	}
 
 	.db-sidebar {
-		width: 220px;
+		width: 280px;
 		flex-shrink: 0;
 		display: flex;
 		flex-direction: column;

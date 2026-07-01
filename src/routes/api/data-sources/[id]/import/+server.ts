@@ -35,6 +35,7 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
 	const formData = await request.formData();
 	const file = formData.get('file') as File | null;
 	if (!file) return errors.badRequest('ファイルが指定されていません');
+	const replace = formData.get('replace') === 'true';
 
 	const text = await file.text();
 	const { rows } = parseCSV(text);
@@ -45,6 +46,7 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
 	const placeholders = colKeys.map(() => '?').join(', ');
 	const colList = colKeys.map((k) => `\`${k}\``).join(', ');
 	const insertSql = `INSERT INTO \`${source.tableName}\` (${colList}) VALUES (${placeholders})`;
+	const deleteStmt = platform.env.DB.prepare(`DELETE FROM \`${source.tableName}\``);
 
 	let inserted = 0;
 	const BATCH_SIZE = 100;
@@ -60,10 +62,15 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
 			});
 			return platform.env!.DB!.prepare(insertSql).bind(...values);
 		});
-		await platform.env.DB.batch(stmts);
+		// 全件置き換えの削除は、最初のバッチに含めて一緒にコミットする（db.batch()は原子的に実行される）
+		await platform.env.DB.batch(replace && i === 0 ? [deleteStmt, ...stmts] : stmts);
 		inserted += batch.length;
 	}
+	if (replace && rows.length === 0) {
+		await platform.env.DB.batch([deleteStmt]);
+	}
 
-	await updateDataSource(db, params.id, { rowCount: source.rowCount + inserted });
-	return json({ inserted });
+	const rowCount = replace ? inserted : source.rowCount + inserted;
+	await updateDataSource(db, params.id, { rowCount });
+	return json({ inserted, rowCount });
 };

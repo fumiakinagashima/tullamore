@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import Database from '$lib/components/icon/Database.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -9,10 +10,28 @@
 	let sqlRunning = $state(false);
 
 	async function runSql() {
-		if (!sqlInput.trim()) return;
-		sqlRunning = true;
+		const trimmed = sqlInput.trim();
+		if (!trimmed) return;
 		sqlError = null;
 		sqlResult = null;
+
+		// /tables はSQLを実行せず、data_sources（ds_*テーブルのみ）から一覧を組み立てるメタコマンド。
+		// sqlite_master 等のカタログテーブルはSQLガードで塞いでいるため、テーブル一覧はこちらで代替する。
+		if (/^\/tables$/i.test(trimmed)) {
+			sqlResult = {
+				columns: ['table_name', 'name', 'description', 'columns', 'row_count'],
+				rows: data.sources.map((s) => ({
+					table_name: s.tableName,
+					name: s.name,
+					description: s.description ?? '',
+					columns: JSON.parse(s.schemaJson).length,
+					row_count: s.rowCount
+				}))
+			};
+			return;
+		}
+
+		sqlRunning = true;
 		try {
 			const res = await fetch('/api/sql/execute', {
 				method: 'POST',
@@ -38,31 +57,32 @@
 	}
 </script>
 
+
 <div class="page">
-	<h1 class="page-title">SQLクエリ</h1>
+	<div class="page-header">
+		<h1 class="page-title">SQLクエリ</h1>
+		<div class="run-row">
+			<button class="btn-primary" onclick={runSql} disabled={sqlRunning || !sqlInput.trim()}>
+				実行<span class="short-cut">⌘/Ctrl + Enter</span>
+			</button>
+		</div>
+	</div>
 
 	{#if data.sources.length > 0}
 		<div class="tables-ref">
-			<span class="tables-ref-label">テーブル一覧:</span>
-			{#each data.sources as source (source.id)}
-				<span class="table-chip mono">{source.tableName}</span>
-			{/each}
+			<span class="tables-ref-label">テーブル一覧コマンド:</span>
+			<span class="table-chip mono">/tables</span>
 		</div>
 	{/if}
-
+	
 	<textarea
 		bind:value={sqlInput}
 		onkeydown={handleKeydown}
 		class="sql-textarea"
 		placeholder={`SELECT * FROM \`${data.sources[0]?.tableName ?? 'table_name'}\` LIMIT 100`}
-		rows="6"
+		rows="5"
 	></textarea>
-	<div class="run-row">
-		<button class="btn-primary" onclick={runSql} disabled={sqlRunning || !sqlInput.trim()}>
-			{sqlRunning ? '実行中...' : '実行'}
-		</button>
-		<span class="hint">⌘/Ctrl + Enter でも実行できます（SELECT文のみ）</span>
-	</div>
+	
 
 	{#if sqlError}
 		<p class="sql-error">{sqlError}</p>
@@ -91,15 +111,19 @@
 
 <style lang="scss">
 	.page {
-		padding: 28px 32px;
-		max-width: 1040px;
+		padding: 24px 32px;
 	}
-
+	.page-header {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		justify-content: space-between;
+		margin-bottom: 16px;
+	}
 	.page-title {
 		font-size: 1.125rem;
 		font-weight: 600;
 		color: var(--color-text);
-		margin: 0 0 16px;
 	}
 
 	.tables-ref {
@@ -132,11 +156,11 @@
 		box-sizing: border-box;
 		padding: 12px 14px;
 		border: 1px solid var(--color-border);
-		border-radius: 8px;
+		border-radius: 6px;
 		background: var(--color-surface);
 		color: var(--color-text);
 		font-family: ui-monospace, monospace;
-		font-size: 0.8125rem;
+		font-weight: 500;
 		resize: vertical;
 		outline: none;
 
@@ -165,9 +189,17 @@
 		font-weight: 500;
 		cursor: pointer;
 		transition: opacity 0.15s;
+		display: flex;
+		align-items: center;
+		gap: 6px;
 
 		&:hover { opacity: 0.85; }
 		&:disabled { opacity: 0.5; cursor: not-allowed; }
+		
+
+		& .short-cut {
+			font-size: 0.68rem;
+		}
 	}
 
 	.sql-error {
@@ -195,3 +227,4 @@
 		th { font-weight: 500; color: var(--color-text-muted); background: var(--color-surface); }
 	}
 </style>
+

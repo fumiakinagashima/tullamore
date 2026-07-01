@@ -1,8 +1,10 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { goto, invalidateAll } from '$app/navigation';
-	import Upload from '$lib/components/icon/Upload.svelte';
+	import Download from '$lib/components/icon/Download.svelte';
 	import DataGrid from '$lib/components/ui/DataGrid.svelte';
+	import FileUpload from '$lib/components/ui/FileUpload.svelte';
+	import Toggle from '$lib/components/ui/Toggle.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let { source } = $derived(data);
@@ -19,22 +21,53 @@
 		}))
 	);
 
+	// CSVテンプレートダウンロード（1行目: カラムキー、2行目: サンプル値。そのまま上書きして使う想定）
+	function csvEscape(v: string): string {
+		return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+	}
+
+	function sampleValue(col: Col): string {
+		if (col.type === 'number') return '0';
+		if (col.type === 'boolean') return 'true';
+		if (col.type === 'date') return '2024-01-01';
+		return col.label;
+	}
+
+	function downloadTemplate() {
+		const header = columns.map((c) => csvEscape(c.key)).join(',');
+		const sample = columns.map((c) => csvEscape(sampleValue(c))).join(',');
+		const csv = `${header}\n${sample}\n`;
+		const BOM = '\uFEFF';
+		const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `${source.tableName}_template.csv`;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
 	// CSV import
 	let importing = $state(false);
 	let importResult = $state<string | null>(null);
+	let replaceExisting = $state(false);
 
-	async function handleImport(e: Event) {
-		const file = (e.target as HTMLInputElement).files?.[0];
+	async function handleImport(files: File[]) {
+		const file = files[0];
 		if (!file) return;
+		if (replaceExisting && !confirm('既存データを全て削除してから登録します。よろしいですか？')) return;
 		importing = true;
 		importResult = null;
 		const fd = new FormData();
 		fd.append('file', file);
+		if (replaceExisting) fd.append('replace', 'true');
 		try {
 			const res = await fetch(`/api/data-sources/${source.id}/import`, { method: 'POST', body: fd });
 			const json = (await res.json()) as { inserted?: number; error?: string };
 			if (!res.ok) throw new Error(json.error ?? 'インポートに失敗しました');
-			importResult = `${json.inserted}件をインポートしました`;
+			importResult = replaceExisting
+				? `既存データを削除し、${json.inserted}件を登録しました`
+				: `${json.inserted}件をインポートしました`;
 			await invalidateAll();
 		} catch (err) {
 			importResult = `エラー: ${err instanceof Error ? err.message : String(err)}`;
@@ -49,7 +82,7 @@
 
 	async function loadPreview() {
 		previewLoaded = false;
-		const res = await fetch(`/api/data-sources/${source.id}/rows?limit=100`);
+		const res = await fetch(`/api/data-sources/${source.id}/rows?limit=30`);
 		const json = (await res.json()) as { rows: Record<string, string | number | null>[] };
 		previewRows = json.rows;
 		previewLoaded = true;
@@ -107,19 +140,23 @@
 
 	<section class="section">
 		<h2 class="section-title">CSVインポート</h2>
-		<p class="section-note">1行目はヘッダー行（カラムキーと一致する必要があります）</p>
-		<label class="file-label" class:importing>
-			<Upload size={14} />
-			{importing ? 'インポート中...' : 'CSVファイルを選択'}
-			<input type="file" accept=".csv,text/csv" onchange={handleImport} disabled={importing} style="display:none" />
-		</label>
+		<p class="section-note">テンプレートをダウンロードし、2行目以降にデータを入力（サンプル行は上書き）してからアップロードしてください</p>
+		<button class="file-label template-btn" onclick={downloadTemplate}>
+			<Download size={14} />
+			テンプレートをダウンロード
+		</button>
+		<div class="replace-row">
+			<Toggle bind:checked={replaceExisting} disabled={importing} label="既存データを全て削除してから登録する" />
+		</div>
+		<FileUpload accept=".csv,text/csv" disabled={importing} onchange={handleImport} />
+		{#if importing}<p class="import-result">インポート中...</p>{/if}
 		{#if importResult}
 			<p class="import-result" class:error={importResult.startsWith('エラー')}>{importResult}</p>
 		{/if}
 	</section>
 
 	<section class="section">
-		<h2 class="section-title">データ（先頭100件）</h2>
+		<h2 class="section-title">データ（先頭30件）</h2>
 		{#if !previewLoaded}
 			<p class="empty-text">読み込み中...</p>
 		{:else if previewRows.length === 0}
@@ -133,7 +170,6 @@
 <style lang="scss">
 	.page {
 		padding: 28px 32px;
-		max-width: 1040px;
 	}
 
 	.page-header {
@@ -209,12 +245,21 @@
 		border: 1px solid var(--color-border);
 		border-radius: 8px;
 		font-size: 0.875rem;
+		font-family: inherit;
 		color: var(--color-text);
 		cursor: pointer;
 		transition: background 0.15s;
 
 		&:hover { background: var(--color-background); }
-		&.importing { opacity: 0.6; cursor: not-allowed; }
+	}
+
+	.template-btn {
+		margin-bottom: 10px;
+	}
+
+	.replace-row {
+		margin-bottom: 10px;
+		font-size: 0.8125rem;
 	}
 
 	.import-result {
