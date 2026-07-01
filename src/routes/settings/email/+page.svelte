@@ -74,7 +74,6 @@
 		{#if data.account.permission === 'admin'}
 			<a href="/settings/integrations">{m.integrations()}</a>
 		{/if}
-		<a href="/settings/quick-actions">{m.quick_actions()}</a>
 		{#if data.account.permission === 'admin'}
 			<a href="/settings/email" class="active">{m.email_settings()}</a>
 			<a href="/settings/ai">{m.ai_settings()}</a>

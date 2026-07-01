@@ -42,7 +42,6 @@
 		{#if data.account.permission === 'admin'}
 			<a href="/settings/integrations" class:active={currentPath === '/settings/integrations'}>{m.integrations()}</a>
 		{/if}
-		<a href="/settings/quick-actions" class:active={currentPath === '/settings/quick-actions'}>{m.quick_actions()}</a>
 		{#if data.account.permission === 'admin'}
 			<a href="/settings/email" class:active={currentPath === '/settings/email'}>{m.email_settings()}</a>
 			<a href="/settings/ai" class:active={currentPath === '/settings/ai'}>{m.ai_settings()}</a>

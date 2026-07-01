@@ -21,15 +21,6 @@
 	import { page } from '$app/state';
 	import { chatSession } from '$lib/stores/chat-session.svelte';
 	import { chatHistory } from '$lib/stores/chat-history.svelte';
-	import {
-		quickActionCatalog,
-		DEFAULT_QUICK_ACTION_IDS,
-		MAX_QUICK_ACTIONS,
-		QUICK_ACTIONS_STORAGE_KEY,
-		isQuickActionId,
-		type QuickActionDef
-	} from '$lib/quick-actions/catalog';
-	import Plus from '$lib/components/icon/Plus.svelte';
 	import ArrowUp from '$lib/components/icon/ArrowUp.svelte';
 	import Clock from '$lib/components/icon/Clock.svelte';
 	import { CHAT_TITLE_MAX_LENGTH, CHAT_TEXTAREA_MAX_HEIGHT_PX } from '$lib/constants';
@@ -40,24 +31,6 @@
 
 	const ls = (key: string, def: string) =>
 		typeof localStorage !== 'undefined' ? (localStorage.getItem(key) ?? def) : def;
-
-	function loadQuickActions(): QuickActionDef[] {
-		const raw = ls(QUICK_ACTIONS_STORAGE_KEY, '');
-		let ids: string[] = DEFAULT_QUICK_ACTION_IDS;
-		if (raw) {
-			try {
-				const parsed = JSON.parse(raw);
-				if (Array.isArray(parsed)) ids = parsed;
-			} catch {
-				// ignore malformed value, fall back to defaults
-			}
-		}
-		const valid = ids.filter(isQuickActionId).slice(0, MAX_QUICK_ACTIONS);
-		const ordered = valid.length > 0 ? valid : DEFAULT_QUICK_ACTION_IDS;
-		return ordered
-			.map((id) => quickActionCatalog.find((a) => a.id === id))
-			.filter((a): a is QuickActionDef => !!a);
-	}
 
 	let { data } = $props();
 
@@ -84,8 +57,6 @@
 	let hasStarted = $state(untrack(() => !!data.seedNotification || (!!data.seedChat && data.seedChat.messages.length > 0)));
 	let inputReady = $state(untrack(() => !hasStarted));
 	let currentChatId: string | null = untrack(() => data.seedChat?.id ?? null);
-	let quickActions = $state(loadQuickActions());
-	let quickActionMenuOpen = $state(false);
 	let panelForm = $state<FormContent | null>(null);
 	let historyDrawerOpen = $state(false);
 
@@ -116,11 +87,8 @@
 	let streamingUIContents = $state<MessageContent[]>([]);
 
 	$effect(() => {
-		const handler = (e: StorageEvent) => {
+		const handler = () => {
 			enterToSend = (localStorage.getItem('enterToSend') ?? 'true') !== 'false';
-			if (e.key === QUICK_ACTIONS_STORAGE_KEY || e.key === null) {
-				quickActions = loadQuickActions();
-			}
 		};
 		window.addEventListener('storage', handler);
 		return () => window.removeEventListener('storage', handler);
@@ -161,16 +129,6 @@
 		streamingUIContents = [];
 		seededNotificationId = null;
 		input = '';
-	});
-
-	$effect(() => {
-		if (!quickActionMenuOpen) return;
-		const close = () => (quickActionMenuOpen = false);
-		const id = setTimeout(() => document.addEventListener('click', close), 0);
-		return () => {
-			clearTimeout(id);
-			document.removeEventListener('click', close);
-		};
 	});
 
 	function repositionInput(animate: boolean) {
@@ -463,48 +421,6 @@
 		panelForm = null;
 	}
 
-	async function runQuickAction(action: QuickActionDef) {
-		quickActionMenuOpen = false;
-		if (loading) return;
-		const isFirst = !hasStarted;
-		if (isFirst) {
-			hasStarted = true;
-			assignChatId();
-		}
-		addUserMessage(action.label, isFirst);
-		loading = true;
-		await scrollLatestToTop();
-		try {
-			const res = await fetch('/api/quick-actions', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ id: action.id })
-			});
-			const result = (await res.json()) as { contents: MessageContent[] };
-			const formContent = result.contents.find((c) => c.type === 'form') as FormContent | undefined;
-			const otherContents = result.contents.filter((c) => c.type !== 'form');
-			if (otherContents.length > 0) {
-				const message: Message = { id: crypto.randomUUID(), role: 'assistant', contents: otherContents, createdAt: new Date() };
-				messages = [...messages, message];
-				persistMessage(message);
-			}
-			if (formContent) {
-				panelForm = formContent;
-			}
-		} catch {
-			const message: Message = {
-				id: crypto.randomUUID(),
-				role: 'assistant',
-				contents: [{ type: 'text', text: m.chat_error() }],
-				createdAt: new Date()
-			};
-			messages = [...messages, message];
-			persistMessage(message);
-		} finally {
-			loading = false;
-		}
-	}
-
 	function handleKey(e: KeyboardEvent) {
 		if (enterToSend && e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
 			e.preventDefault();
@@ -610,41 +526,6 @@
 				disabled={loading}
 			></textarea>
 			<div class="input-footer">
-				<div class="input-footer-left">
-					<div class="quick-action-wrap">
-						<button
-							class="icon-btn"
-							onclick={(e) => {
-								e.stopPropagation();
-								quickActionMenuOpen = !quickActionMenuOpen;
-							}}
-							disabled={loading}
-							aria-label="クイックアクション"
-							aria-expanded={quickActionMenuOpen}
-						>
-							<Plus size={16} />
-						</button>
-						{#if quickActionMenuOpen}
-							<div class="quick-action-menu">
-								{#if quickActions.length === 0}
-									<p class="menu-empty">
-										クイックアクションが設定されていません。<a href="/settings/quick-actions">設定</a>から追加できます。
-									</p>
-								{:else}
-									{#each quickActions as action}
-										<button class="menu-item" onclick={() => runQuickAction(action)}>
-											<span class="menu-icon">{action.icon}</span>
-											<span class="menu-text">
-												<span class="menu-label">{action.label}</span>
-												<span class="menu-desc">{action.description}</span>
-											</span>
-										</button>
-									{/each}
-								{/if}
-							</div>
-						{/if}
-					</div>
-				</div>
 				<button
 					class="send-btn"
 					onclick={handleSubmit}
@@ -842,90 +723,8 @@
 	.input-footer {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: flex-end;
 		margin-top: 4px;
-	}
-
-	.input-footer-left {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-	}
-
-	.quick-action-wrap { position: relative; }
-
-	.icon-btn {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 30px;
-		height: 30px;
-		background: transparent;
-		border: 1px solid var(--color-border);
-		border-radius: 8px;
-		color: var(--color-text-muted);
-		cursor: pointer;
-		transition: background 0.15s, color 0.15s;
-
-		&:hover { background: var(--color-background); color: var(--color-text); }
-		&:disabled { opacity: 0.4; cursor: not-allowed; }
-	}
-
-	.quick-action-menu {
-		position: absolute;
-		bottom: calc(100% + 8px);
-		left: 0;
-		min-width: 220px;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: 12px;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-		padding: 6px;
-		z-index: 50;
-	}
-
-	.menu-empty {
-		font-size: 0.8125rem;
-		color: var(--color-text-muted);
-		padding: 8px 10px;
-		margin: 0;
-
-		a { color: var(--color-primary); }
-	}
-
-	.menu-item {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		width: 100%;
-		padding: 8px 10px;
-		background: transparent;
-		border: none;
-		border-radius: 8px;
-		text-align: left;
-		cursor: pointer;
-		transition: background 0.12s;
-
-		&:hover { background: var(--color-background); }
-	}
-
-	.menu-icon { font-size: 1rem; flex-shrink: 0; }
-
-	.menu-text {
-		display: flex;
-		flex-direction: column;
-		gap: 1px;
-	}
-
-	.menu-label {
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--color-text);
-	}
-
-	.menu-desc {
-		font-size: 0.75rem;
-		color: var(--color-text-muted);
 	}
 
 	.send-btn {
