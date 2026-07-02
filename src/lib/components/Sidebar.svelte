@@ -10,6 +10,8 @@
 	import MoreVertical from '$lib/components/icon/MoreVertical.svelte';
 	import Bell from '$lib/components/icon/Bell.svelte';
 	import Database from '$lib/components/icon/Database.svelte';
+	import Scatter from '$lib/components/icon/Scatter.svelte';
+	import TrendingUp from '$lib/components/icon/TrendingUp.svelte';
 	import Sparkles from '$lib/components/icon/Sparkles.svelte';
 	import Users from '$lib/components/icon/Users.svelte';
 	import Settings from '$lib/components/icon/Settings.svelte';
@@ -18,6 +20,11 @@
 
 	type Props = { account: AccountRow };
 	let { account }: Props = $props();
+
+	const analysisModules = [
+		{ href: '/analysis/regression', label: '回帰分析', icon: Scatter },
+		{ href: '/analysis/trend', label: 'トレンド予測', icon: TrendingUp }
+	];
 
 	let notificationDrawerOpen = $state(false);
 
@@ -142,6 +149,14 @@
 	</a>
 
 	<nav class="history">
+		<p class="group-label">分析</p>
+		{#each analysisModules as mod (mod.href)}
+			<a href={mod.href} class="analysis-link" class:active={page.url.pathname === mod.href}>
+				<mod.icon size={14} />
+				{mod.label}
+			</a>
+		{/each}
+
 		{#each historyGroups as group}
 			<p class="group-label">{group.label}</p>
 			{#each group.items as item}
@@ -310,6 +325,26 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.analysis-link {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 7px 10px;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		color: var(--sidebar-text);
+		text-decoration: none;
+		transition: background 0.15s, color 0.15s;
+
+		&:hover { background: var(--sidebar-hover); }
+
+		&.active {
+			background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+			color: var(--color-primary);
+			font-weight: 500;
+		}
 	}
 
 	.history-rename-input {

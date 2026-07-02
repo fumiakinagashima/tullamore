@@ -1,5 +1,7 @@
 <script lang="ts">
-	type CellType = 'text' | 'number' | 'select';
+	import { tick } from 'svelte';
+
+	type CellType = 'text' | 'number' | 'date' | 'select';
 
 	type GridColumn = {
 		key: string;
@@ -18,6 +20,8 @@
 		addable?: boolean;
 		deletable?: boolean;
 		onchange?: (rows: GridRow[]) => void;
+		/** 指定すると表の高さをこの値（px）で固定し、はみ出た行は縦スクロールにする（未指定時は従来通り高さ無制限） */
+		maxHeight?: number;
 	};
 
 	let {
@@ -25,30 +29,26 @@
 		rows = $bindable([]),
 		addable = true,
 		deletable = true,
-		onchange
+		onchange,
+		maxHeight
 	}: Props = $props();
 
+	// セルは常に input/select 要素として描画する（非編集時だけ span に差し替える、といったことはしない）。
+	// 要素の種類を切り替えると、table の auto-layout が列幅を再計算してクリックの度にガタつくため
 	let active = $state<{ row: number; col: number } | null>(null);
-	// Flag to suppress blur-triggered deactivation during keyboard navigation
-	let navigating = false;
 
-	function focusInput(node: HTMLInputElement) {
-		node.focus();
-		node.select();
-	}
+	// キーボードでのセル移動（Tab/Enter）で次のセルへ実際にフォーカスを移すための参照テーブル
+	let cellEls: (HTMLInputElement | HTMLSelectElement | null)[][] = [];
 
-	function focusSelect(node: HTMLSelectElement) {
-		node.focus();
-	}
+	let scrollEl: HTMLDivElement | undefined = $state();
 
-	function activate(r: number, c: number) {
-		if (columns[c]?.readonly) return;
-		active = { row: r, col: c };
-	}
-
-	function deactivate() {
-		if (navigating) return;
-		active = null;
+	function registerCell(node: HTMLInputElement | HTMLSelectElement, pos: { ri: number; ci: number }) {
+		(cellEls[pos.ri] ??= [])[pos.ci] = node;
+		return {
+			destroy() {
+				if (cellEls[pos.ri]?.[pos.ci] === node) cellEls[pos.ri][pos.ci] = null;
+			}
+		};
 	}
 
 	function updateCell(ri: number, key: string, val: string | number | null) {
@@ -57,16 +57,13 @@
 	}
 
 	function navigate(ri: number, ci: number, dRow: number, dCol: number) {
-		navigating = true;
 		const nextRi = ri + dRow;
 		const nextCi = ci + dCol;
 		if (nextCi >= 0 && nextCi < columns.length && nextRi >= 0 && nextRi < rows.length) {
-			active = { row: nextRi, col: nextCi };
+			cellEls[nextRi]?.[nextCi]?.focus();
 		} else {
-			active = null;
+			(document.activeElement as HTMLElement | null)?.blur();
 		}
-		// Reset flag after blur has fired
-		setTimeout(() => { navigating = false; }, 0);
 	}
 
 	function handleKeydown(e: KeyboardEvent, ri: number, ci: number) {
@@ -76,30 +73,29 @@
 			if (nextCi >= 0 && nextCi < columns.length) {
 				navigate(ri, ci, 0, e.shiftKey ? -1 : 1);
 			} else if (!e.shiftKey && ri < rows.length - 1) {
-				navigating = true;
-				active = { row: ri + 1, col: 0 };
-				setTimeout(() => { navigating = false; }, 0);
+				cellEls[ri + 1]?.[0]?.focus();
 			} else if (e.shiftKey && ri > 0) {
-				navigating = true;
-				active = { row: ri - 1, col: columns.length - 1 };
-				setTimeout(() => { navigating = false; }, 0);
+				cellEls[ri - 1]?.[columns.length - 1]?.focus();
 			} else {
-				active = null;
+				(document.activeElement as HTMLElement | null)?.blur();
 			}
 		} else if (e.key === 'Enter') {
 			e.preventDefault();
 			navigate(ri, ci, 1, 0);
 		} else if (e.key === 'Escape') {
-			active = null;
+			(document.activeElement as HTMLElement | null)?.blur();
 		}
 	}
 
-	function addRow() {
+	async function addRow() {
 		const newRow: GridRow = Object.fromEntries(
 			columns.map((c) => [c.key, c.type === 'number' ? 0 : ''])
 		);
 		rows = [...rows, newRow];
 		onchange?.(rows);
+		// maxHeight指定でスクロール領域になっている場合、隠れた位置に追加されて気づきにくいので一番下まで送る
+		await tick();
+		if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
 	}
 
 	function deleteRow(i: number) {
@@ -110,18 +106,10 @@
 		}
 		onchange?.(rows);
 	}
-
-	function getCellDisplay(row: GridRow, col: GridColumn): string {
-		const val = row[col.key];
-		if (col.type === 'select' && col.options) {
-			return col.options.find((o) => o.value === String(val ?? ''))?.label ?? String(val ?? '');
-		}
-		return String(val ?? '');
-	}
 </script>
 
 <div class="grid-wrap">
-	<div class="scroll">
+	<div class="scroll" bind:this={scrollEl} style:max-height={maxHeight ? `${maxHeight}px` : undefined}>
 		<table>
 			<thead>
 				<tr>
@@ -136,41 +124,36 @@
 					<tr>
 						{#each columns as col, ci}
 							{@const isActive = active?.row === ri && active?.col === ci}
-							<td
-								class:active-cell={isActive}
-								class:readonly={col.readonly}
-								onclick={() => !col.readonly && activate(ri, ci)}
-							>
-								{#if isActive}
-									{#if col.type === 'select' && col.options}
-										<select
-											use:focusSelect
-											value={String(row[col.key] ?? '')}
-											onchange={(e) => {
-												updateCell(ri, col.key, (e.currentTarget as HTMLSelectElement).value);
-											}}
-											onkeydown={(e) => handleKeydown(e, ri, ci)}
-											onblur={deactivate}
-										>
-											{#each col.options as opt}
-												<option value={opt.value}>{opt.label}</option>
-											{/each}
-										</select>
-									{:else}
-										<input
-											use:focusInput
-											type={col.type === 'number' ? 'number' : 'text'}
-											value={String(row[col.key] ?? '')}
-											oninput={(e) => {
-												const v = (e.currentTarget as HTMLInputElement).value;
-												updateCell(ri, col.key, col.type === 'number' ? (Number(v) || 0) : v);
-											}}
-											onkeydown={(e) => handleKeydown(e, ri, ci)}
-											onblur={deactivate}
-										/>
-									{/if}
+							<td class:active-cell={isActive} class:readonly={col.readonly}>
+								{#if col.type === 'select' && col.options}
+									<select
+										use:registerCell={{ ri, ci }}
+										value={String(row[col.key] ?? '')}
+										disabled={col.readonly}
+										onfocus={() => (active = { row: ri, col: ci })}
+										onchange={(e) => updateCell(ri, col.key, (e.currentTarget as HTMLSelectElement).value)}
+										onkeydown={(e) => handleKeydown(e, ri, ci)}
+										onblur={() => (active = null)}
+									>
+										{#each col.options as opt}
+											<option value={opt.value}>{opt.label}</option>
+										{/each}
+									</select>
 								{:else}
-									<span class="display">{getCellDisplay(row, col)}</span>
+									<input
+										use:registerCell={{ ri, ci }}
+										type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
+										value={String(row[col.key] ?? '')}
+										readonly={col.readonly}
+										tabindex={col.readonly ? -1 : 0}
+										onfocus={() => (active = { row: ri, col: ci })}
+										onkeydown={(e) => handleKeydown(e, ri, ci)}
+										onblur={(e) => {
+											active = null;
+											const v = (e.currentTarget as HTMLInputElement).value;
+											updateCell(ri, col.key, col.type === 'number' ? (Number(v) || 0) : v);
+										}}
+									/>
 								{/if}
 							</td>
 						{/each}
@@ -206,6 +189,7 @@
 
 	.scroll {
 		overflow-x: auto;
+		overflow-y: auto;
 		border: 1px solid var(--color-border);
 		border-radius: 8px 8px 0 0;
 	}
@@ -216,7 +200,13 @@
 		font-size: 0.9375rem;
 	}
 
-	thead { background: var(--color-surface); }
+	/* maxHeight指定時にスクロールしても列見出しが見えるよう固定する（未指定時は無効なので副作用なし） */
+	thead {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: var(--color-surface);
+	}
 
 	th {
 		padding: 8px 12px;
@@ -251,26 +241,35 @@
 		z-index: 1;
 	}
 
-	.display {
-		display: block;
-		padding: 8px 12px;
-		min-height: 37px;
-		color: var(--color-text);
-		white-space: nowrap;
-	}
-
-	td.active-cell input,
-	td.active-cell select {
+	/* 常に input/select を描画し、非アクティブ時は枠線・背景を消してテキスト表示のように見せる
+	   （active/非active でDOM要素の種類自体は切り替えない＝クリックのたびに列幅がガタつく問題を避ける） */
+	td input,
+	td select {
 		display: block;
 		width: 100%;
 		height: 37px;
 		padding: 0 12px;
 		border: none;
-		background: var(--color-background);
+		background: transparent;
 		color: var(--color-text);
 		font-size: 0.9375rem;
 		font-family: inherit;
 		outline: none;
+		cursor: cell;
+	}
+
+	td.readonly input {
+		cursor: default;
+		color: var(--color-text-muted);
+	}
+
+	td select { cursor: pointer; }
+	td.readonly select { cursor: default; }
+
+	td.active-cell input,
+	td.active-cell select {
+		background: var(--color-background);
+		cursor: text;
 	}
 
 	td.active-cell select { cursor: pointer; }
