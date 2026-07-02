@@ -1,12 +1,16 @@
 <script lang="ts">
+	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import type { LinearRegressionModel } from '$lib/analysis/types';
 	import { continuousColumns } from '$lib/analysis/column-type';
+	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import Simulator from '$lib/components/chat/Simulator.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import Textbox from '$lib/components/ui/Textbox.svelte';
 
 	let { data }: { data: PageData } = $props();
+
+	const bridge = getContext<AnalysisBridge>(ANALYSIS_BRIDGE_KEY);
 
 	let dataSourceId = $state('');
 	let targetColumn = $state('');
@@ -61,6 +65,50 @@
 	}
 
 	const canRun = $derived(!!dataSourceId && !!targetColumn && featureColumns.length > 0);
+
+	// 右側のAIアシスタントに現在の設定・結果を渡す（妥当性について聞かれた時の材料にもなる）
+	$effect(() => {
+		bridge.analysisType = 'regression';
+		bridge.config = {
+			data_source_id: dataSourceId || undefined,
+			target_column: targetColumn || undefined,
+			feature_columns: featureColumns.length > 0 ? featureColumns : undefined
+		};
+		const m = model;
+		bridge.resultSummary = m
+			? {
+					target_column: m.targetColumn,
+					feature_columns: m.featureColumns,
+					r2: m.metrics.r2,
+					adjusted_r2: m.metrics.adjustedR2,
+					sample_size: m.metrics.sampleSize,
+					coefficients: Object.fromEntries(m.featureColumns.map((c, i) => [c, m.coefficients[i]]))
+				}
+			: null;
+	});
+
+	// AIアシスタントの set_config ツールから呼ばれる。dataSourceId を変えると
+	// 下の $effect が targetColumn/featureColumns をリセットしてしまうため、
+	// リセットが先に走るのを tick() で待ってから値をセットする
+	async function applyConfig(patch: Record<string, unknown>) {
+		if (typeof patch.data_source_id === 'string' && patch.data_source_id !== dataSourceId) {
+			dataSourceId = patch.data_source_id;
+			await tick();
+		}
+		if (typeof patch.target_column === 'string') targetColumn = patch.target_column;
+		if (Array.isArray(patch.feature_columns)) {
+			featureColumns = patch.feature_columns.filter((c): c is string => typeof c === 'string');
+		}
+		await tick();
+		if (canRun) await run();
+	}
+
+	$effect(() => {
+		bridge.applyConfig = applyConfig;
+		return () => {
+			if (bridge.applyConfig === applyConfig) bridge.applyConfig = null;
+		};
+	});
 
 	async function run() {
 		if (!canRun) return;

@@ -1,13 +1,17 @@
 <script lang="ts">
+	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import { continuousColumns } from '$lib/analysis/column-type';
 	import { fitTrendFromRows, buildTrendSeries, type TrendRawRow } from '$lib/analysis/trend';
+	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import LineChart from '$lib/components/ui/LineChart.svelte';
 	import DataGrid from '$lib/components/ui/DataGrid.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import Textbox from '$lib/components/ui/Textbox.svelte';
 
 	let { data }: { data: PageData } = $props();
+
+	const bridge = getContext<AnalysisBridge>(ANALYSIS_BRIDGE_KEY);
 
 	const HORIZON_OPTIONS = [
 		{ value: '6', label: '半年後まで' },
@@ -83,6 +87,49 @@
 	const forecastEnd = $derived(liveSeries ? liveSeries.trend[liveSeries.trend.length - 1] : null);
 	// 実績と予測の境界（＝現在）に縦線を引く。2点の間ぴったりに置きたいので -0.5 した小数インデックスを使う
 	const markerIndex = $derived(liveSeries ? liveSeries.historicalCount - 0.5 : undefined);
+
+	// 右側のAIアシスタントに現在の設定・結果を渡す（妥当性について聞かれた時の材料にもなる）
+	$effect(() => {
+		bridge.analysisType = 'trend';
+		bridge.config = {
+			data_source_id: dataSourceId || undefined,
+			date_column: dateColumn || undefined,
+			target_column: targetColumn || undefined,
+			horizon_months: Number(horizonMonths)
+		};
+		const m = liveModel;
+		bridge.resultSummary = m
+			? {
+					target_column: m.targetColumn,
+					monthly_change: m.coefficients[0] * 30.44,
+					r2: m.metrics.r2,
+					adjusted_r2: m.metrics.adjustedR2,
+					sample_size: m.metrics.sampleSize
+				}
+			: null;
+	});
+
+	// AIアシスタントの set_config ツールから呼ばれる。dataSourceId を変えると
+	// 上の $effect が dateColumn/targetColumn をリセットしてしまうため、
+	// リセットが先に走るのを tick() で待ってから値をセットする
+	async function applyConfig(patch: Record<string, unknown>) {
+		if (typeof patch.data_source_id === 'string' && patch.data_source_id !== dataSourceId) {
+			dataSourceId = patch.data_source_id;
+			await tick();
+		}
+		if (typeof patch.date_column === 'string') dateColumn = patch.date_column;
+		if (typeof patch.target_column === 'string') targetColumn = patch.target_column;
+		if (typeof patch.horizon_months === 'number') horizonMonths = String(patch.horizon_months);
+		await tick();
+		if (canRun) await run();
+	}
+
+	$effect(() => {
+		bridge.applyConfig = applyConfig;
+		return () => {
+			if (bridge.applyConfig === applyConfig) bridge.applyConfig = null;
+		};
+	});
 
 	async function run() {
 		if (!canRun) return;

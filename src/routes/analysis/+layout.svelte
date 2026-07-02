@@ -1,47 +1,95 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { setContext } from 'svelte';
 	import type { Snippet } from 'svelte';
-	import Scatter from '$lib/components/icon/Scatter.svelte';
-	import TrendingUp from '$lib/components/icon/TrendingUp.svelte';
+	import { ANALYSIS_BRIDGE_KEY, createAnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
+	import AnalysisAssistant from '$lib/components/analysis/AnalysisAssistant.svelte';
 	import type { LayoutData } from './$types';
 
-	let { children }: { data: LayoutData; children: Snippet } = $props();
+	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
-	const modules = [
-		{
-			href: '/analysis/regression',
-			label: '回帰分析',
-			desc: '変数を動かして目的変数への影響をシミュレーション',
-			icon: Scatter
-		},
-		{
-			href: '/analysis/trend',
-			label: 'トレンド予測',
-			desc: '時系列データから将来の推移を予測',
-			icon: TrendingUp
+	// 各分析ページ（回帰分析・トレンド予測）が現在の設定値・結果・setterを登録し、
+	// 右側のAIアシスタントがそれを読んで「設定をセットする」「妥当性について答える」を行う
+	const bridge = createAnalysisBridge();
+	setContext(ANALYSIS_BRIDGE_KEY, bridge);
+
+	// AIアシスタント欄の幅（ドラッグでリサイズ可能。localStorageに記憶する。/simulators/[id] と同じパターン）
+	const ASSISTANT_WIDTH_STORAGE_KEY = 'tullamore_analysis_assistant_width';
+	const ASSISTANT_WIDTH_MIN = 260;
+	const ASSISTANT_WIDTH_MAX = 560;
+	const ASSISTANT_WIDTH_DEFAULT = 300;
+	const ASSISTANT_WIDTH_KEY_STEP = 20;
+
+	function clampAssistantWidth(w: number): number {
+		return Math.min(ASSISTANT_WIDTH_MAX, Math.max(ASSISTANT_WIDTH_MIN, w));
+	}
+
+	function loadAssistantWidth(): number {
+		if (typeof localStorage === 'undefined') return ASSISTANT_WIDTH_DEFAULT;
+		const raw = Number(localStorage.getItem(ASSISTANT_WIDTH_STORAGE_KEY));
+		return Number.isFinite(raw) && raw > 0 ? clampAssistantWidth(raw) : ASSISTANT_WIDTH_DEFAULT;
+	}
+
+	let assistantWidth = $state(loadAssistantWidth());
+	let resizing = $state(false);
+
+	function startResize(e: PointerEvent) {
+		e.preventDefault();
+		resizing = true;
+		const startX = e.clientX;
+		const startWidth = assistantWidth;
+
+		function onMove(ev: PointerEvent) {
+			// パネルは右側なので、左にドラッグするほど幅が広がる
+			assistantWidth = clampAssistantWidth(startWidth + (startX - ev.clientX));
 		}
-	];
+		function onUp() {
+			resizing = false;
+			window.removeEventListener('pointermove', onMove);
+			window.removeEventListener('pointerup', onUp);
+			localStorage.setItem(ASSISTANT_WIDTH_STORAGE_KEY, String(assistantWidth));
+		}
+		window.addEventListener('pointermove', onMove);
+		window.addEventListener('pointerup', onUp);
+	}
+
+	function handleResizeKey(e: KeyboardEvent) {
+		if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+		e.preventDefault();
+		const delta = e.key === 'ArrowLeft' ? ASSISTANT_WIDTH_KEY_STEP : -ASSISTANT_WIDTH_KEY_STEP;
+		assistantWidth = clampAssistantWidth(assistantWidth + delta);
+		localStorage.setItem(ASSISTANT_WIDTH_STORAGE_KEY, String(assistantWidth));
+	}
 </script>
 
 <div class="workbench">
 	<div class="analysis-main">
 		{@render children()}
 	</div>
-	<aside class="analysis-sidebar">
-		<div class="analysis-sidebar-header">
-			<span class="analysis-sidebar-title">分析</span>
-		</div>
-		<div class="module-list">
-			{#each modules as mod (mod.href)}
-				<a href={mod.href} class="module-item" class:active={page.url.pathname === mod.href}>
-					<mod.icon size={15} />
-					<div class="module-text">
-						<span class="module-label">{mod.label}</span>
-						<span class="module-desc">{mod.desc}</span>
-					</div>
-				</a>
-			{/each}
-		</div>
+	<!-- ARIA Window Splitter パターン（https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/）:
+	     role="separator" + tabindex + キー操作は非対話要素向けのa11y-lintでは検出できない正しい組み合わせ -->
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div
+		class="resize-handle"
+		class:active={resizing}
+		role="separator"
+		aria-orientation="vertical"
+		aria-label="AIアシスタントの幅を調整"
+		aria-valuenow={assistantWidth}
+		aria-valuemin={ASSISTANT_WIDTH_MIN}
+		aria-valuemax={ASSISTANT_WIDTH_MAX}
+		tabindex="0"
+		onpointerdown={startResize}
+		onkeydown={handleResizeKey}
+	></div>
+	<aside class="analysis-sidebar" style:width="{assistantWidth}px">
+		<AnalysisAssistant
+			analysisType={bridge.analysisType}
+			sources={data.sources}
+			config={bridge.config}
+			resultSummary={bridge.resultSummary}
+			onApplyConfig={(patch) => bridge.applyConfig?.(patch)}
+		/>
 	</aside>
 </div>
 
@@ -58,75 +106,40 @@
 		overflow-y: auto;
 	}
 
+	.resize-handle {
+		flex-shrink: 0;
+		width: 5px;
+		cursor: col-resize;
+		position: relative;
+		background: transparent;
+
+		&::after {
+			content: '';
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: 4px;
+			width: 2px;
+			background: var(--color-border);
+		}
+
+		&:hover::after, &.active::after {
+			left: 1px;
+			width: 3px;
+			background: var(--color-primary);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--color-primary);
+			outline-offset: -2px;
+		}
+	}
+
 	.analysis-sidebar {
-		width: 280px;
 		flex-shrink: 0;
 		display: flex;
 		flex-direction: column;
-		border-left: 1px solid var(--color-border);
 		background: var(--color-surface);
-		overflow-y: auto;
-	}
-
-	.analysis-sidebar-header {
-		padding: 14px 14px 10px;
-	}
-
-	.analysis-sidebar-title {
-		font-size: 0.75rem;
-		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--color-text-muted);
-	}
-
-	.module-list {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		padding: 0 8px 12px;
-	}
-
-	.module-item {
-		display: flex;
-		align-items: flex-start;
-		gap: 10px;
-		padding: 10px 8px;
-		border-radius: 8px;
-		text-decoration: none;
-		color: var(--color-text-muted);
-
-		:global(svg) {
-			margin-top: 2px;
-			flex-shrink: 0;
-		}
-
-		&:hover { background: var(--color-background); color: var(--color-text); }
-
-		&.active {
-			background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-			color: var(--color-primary);
-
-			.module-desc { color: var(--color-primary); opacity: 0.8; }
-		}
-	}
-
-	.module-text {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		min-width: 0;
-	}
-
-	.module-label {
-		font-size: 0.8125rem;
-		font-weight: 500;
-		color: inherit;
-	}
-
-	.module-desc {
-		font-size: 0.6875rem;
-		color: var(--color-text-muted);
-		line-height: 1.4;
+		overflow: hidden;
 	}
 </style>
