@@ -1,6 +1,4 @@
 <script lang="ts">
-	import ZoomableChart from './ZoomableChart.svelte';
-
 	type DataPoint = { label: string; value: number };
 	type Series = { name: string; data: DataPoint[] };
 
@@ -96,7 +94,6 @@
 	const legendY = $derived(H - 12);
 </script>
 
-<ZoomableChart>
 <figure class="chart">
 	{#if title}<figcaption>{title}</figcaption>{/if}
 	<svg viewBox="0 0 {W} {H}" role="img" aria-label={title}>
@@ -166,7 +163,6 @@
 		{/if}
 	</svg>
 </figure>
-</ZoomableChart>
 
 <style lang="scss">
 	.chart { display: flex; flex-direction: column; gap: 6px; margin: 0; }
