@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { z } from 'zod/v4';
 import { createDb } from '$lib/server/db';
-import { listDbConnections, createDbConnection } from '$lib/server/db/db-connection-service';
+import { listDbConnections, getDbConnection, createDbConnection } from '$lib/server/db/db-connection-service';
 import { listAvailableHyperdriveBindings } from '$lib/server/db-connections/hyperdrive';
 import { errors } from '$lib/server/errors';
 
@@ -32,7 +32,17 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	}
 
 	const db = createDb(platform.env.DB);
-	const id = crypto.randomUUID();
+	// hyperdriveはバインディング名が一意なので、それをそのままidに使う（provider追加時はランダムUUIDにフォールバック）。
+	// こうすることで「無効化→再度有効化」で同じidの行が復活し、external_table_syncs.dbConnectionId経由の
+	// 取り込み元表示・再同期が無効化前の状態のまま繋がり続ける（idが毎回変わると紐付けが切れてしまう）
+	const id = body.provider === 'hyperdrive' ? body.config.bindingName : crypto.randomUUID();
+
+	const existing = await getDbConnection(db, id);
+	if (existing) {
+		// 既に有効化済み（同じbindingへの重複リクエスト）。冪等に既存行を返す
+		return json({ ...existing, config: JSON.parse(existing.config) });
+	}
+
 	const row = await createDbConnection(db, {
 		id,
 		name: body.name,

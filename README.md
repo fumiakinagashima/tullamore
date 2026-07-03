@@ -94,6 +94,8 @@ KV・R2 はローカルでは `.wrangler/state/` に自動作成されるため�
 
 > **メール送信（SMTP）の注意**: `/settings/email` のSMTPプロバイダーは `cloudflare:sockets`（workerdランタイム専用API）を使うため、`bun dev`（Node.js上のVite）では動作しない。ローカルで確認する場合は Resend または AWS SES を使用すること。
 
+> **データ連携（Hyperdrive）の注意**: `/connections` はHyperdriveバインディングを使うため、`bun dev`（`getPlatformProxy`）では正しく動作しない。`getPlatformProxy`はHyperdriveを「単純なパススルー値」として返す仕様で、`wrangler dev`・本番の実際の値とは形が異なる（[Cloudflare公式ドキュメント](https://developers.cloudflare.com/workers/wrangler/api/#getplatformproxy)参照）。D1/KV/R2は`bun dev`から問題なく使えるが、Hyperdriveだけは確認する場合 `bun run build && wrangler dev` を使うこと（`docs/DATA_CONNECTIONS.md` 参照）。
+
 ### その他のコマンド
 
 ```sh

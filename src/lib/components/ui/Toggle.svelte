@@ -3,19 +3,29 @@
 		label?: string;
 		checked?: boolean;
 		disabled?: boolean;
+		/** checked が変わった直後に呼ばれる。API呼び出し等の副作用をトリガーしたい場合に使う */
+		onchange?: (checked: boolean) => void;
 	};
 
 	let {
 		label,
 		checked = $bindable(false),
-		disabled = false
+		disabled = false,
+		onchange
 	}: Props = $props();
 
 	const uid = `tgl-${Math.random().toString(36).slice(2, 7)}`;
 </script>
 
 <div class="row" class:disabled>
-	<input type="checkbox" id={uid} bind:checked {disabled} class="sr-only" />
+	<input
+		type="checkbox"
+		id={uid}
+		bind:checked
+		{disabled}
+		class="sr-only"
+		onchange={(e) => onchange?.(e.currentTarget.checked)}
+	/>
 	<label for={uid} class="track">
 		<span class="knob"></span>
 	</label>
