@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ZoomableChart from './ZoomableChart.svelte';
+
 	const COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'];
 
 	type DataPoint = { label: string; value: number };
@@ -45,6 +47,7 @@
 	});
 </script>
 
+<ZoomableChart>
 <figure class="chart">
 	{#if title}<figcaption>{title}</figcaption>{/if}
 	<div class="wrap">
@@ -64,6 +67,7 @@
 		</ul>
 	</div>
 </figure>
+</ZoomableChart>
 
 <style lang="scss">
 	.chart { display: flex; flex-direction: column; gap: 6px; margin: 0; }

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ZoomableChart from './ZoomableChart.svelte';
+
 	type Bar = { label: string; low: number; high: number };
 
 	type Props = {
@@ -34,6 +36,7 @@
 	const baseX = $derived(xOf(base));
 </script>
 
+<ZoomableChart>
 <figure class="chart">
 	{#if title}<figcaption>{title}</figcaption>{/if}
 	<svg viewBox="0 0 {W} {H}" role="img" aria-label={title}>
@@ -51,6 +54,7 @@
 		{/each}
 	</svg>
 </figure>
+</ZoomableChart>
 
 <style lang="scss">
 	.chart { display: flex; flex-direction: column; gap: 6px; margin: 0; }
