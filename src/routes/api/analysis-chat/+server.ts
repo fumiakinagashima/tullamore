@@ -42,13 +42,27 @@ const SET_CONFIG_TOOL: Tool = {
 				type: 'string',
 				enum: ['day', 'week', 'month'],
 				description: '集計粒度（トレンド予測のみ）。day=日次、week=週次、month=月次。指定がなければmonthのまま変更しない'
+			},
+			total_budget: {
+				type: 'number',
+				description: '配分する予算の総額（予算配分最適化のみ）'
 			}
 		}
 	}
 };
 
+type AnalysisType =
+	| 'regression'
+	| 'trend'
+	| 'sensitivity'
+	| 'scenario'
+	| 'goal-seek'
+	| 'monte-carlo'
+	| 'budget-allocation'
+	| null;
+
 function buildSystemPrompt(
-	analysisType: 'regression' | 'trend' | 'sensitivity' | 'scenario' | 'goal-seek' | null,
+	analysisType: AnalysisType,
 	sources: SourceInfo[],
 	config: Record<string, unknown>,
 	resultSummary: Record<string, unknown> | null
@@ -84,9 +98,24 @@ function buildSystemPrompt(
 				'ある説明変数がいくつであるべきかを逆算する画面です。データソース・目的変数（数値列）・説明変数（数値列、複数可）を' +
 				'設定すると結果が表示されます。逆算する変数・目標値・他の変数の固定値は画面上で選択・入力してください。'
 		);
+	} else if (analysisType === 'monte-carlo') {
+		sections.push(
+			'現在の画面は「モンテカルロ・シミュレーション」です。回帰モデルを学習した上で、各説明変数に分布（一様/正規/三角/固定値）を' +
+				'与えて大量にサンプリングし、目的変数がとりうる値のばらつき（平均・標準偏差・パーセンタイル・ヒストグラム）を見る画面です。' +
+				'データソース・目的変数（数値列）・説明変数（数値列、複数可）を設定すると結果が表示されます。' +
+				'各変数の分布の種類・パラメータ、サンプル数、閾値はこのアシスタントでは設定できないため画面上で入力するよう案内してください。'
+		);
+	} else if (analysisType === 'budget-allocation') {
+		sections.push(
+			'現在の画面は「予算配分最適化（マーケティングミックス）」です。回帰モデルを学習した上で、' +
+				'説明変数を予算配分するチャネル（広告費等）とみなし、指定した予算総額を各チャネルの上下限（既定は実測レンジ）内で' +
+				'目的変数（例: 売上）が最大になるよう配分する画面です。データソース・目的変数（数値列）・チャネル（説明変数、数値列、複数可）を' +
+				'設定すると結果が表示されます。予算総額（total_budget）が伝えられればそれも設定すること。チャネルごとの上下限は画面上で調整してください。'
+		);
 	} else {
 		sections.push(
-			'ユーザーはまだ分析画面（回帰分析・感度分析・シナリオ比較・ゴールシーク・トレンド予測のいずれか）を開いていません。' +
+			'ユーザーはまだ分析画面（回帰分析・感度分析・シナリオ比較・ゴールシーク・トレンド予測・モンテカルロ・シミュレーション・' +
+				'予算配分最適化のいずれか）を開いていません。' +
 				'何を分析したいか聞き、適した画面をサイドバーから開くよう案内してください（このアシスタントは開いた画面の設定を手伝えます）。'
 		);
 	}
@@ -126,7 +155,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 	const body = (await request.json()) as {
 		message: string;
-		analysisType: 'regression' | 'trend' | null;
+		analysisType: AnalysisType;
 		sources: SourceInfo[];
 		config: Record<string, unknown>;
 		resultSummary: Record<string, unknown> | null;

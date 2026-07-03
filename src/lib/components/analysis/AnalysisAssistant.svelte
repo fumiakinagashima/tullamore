@@ -8,7 +8,15 @@
 	type ChatMessage = { role: 'user' | 'assistant'; text: string };
 
 	type Props = {
-		analysisType: 'regression' | 'trend' | 'sensitivity' | 'scenario' | 'goal-seek' | null;
+		analysisType:
+			| 'regression'
+			| 'trend'
+			| 'sensitivity'
+			| 'scenario'
+			| 'goal-seek'
+			| 'monte-carlo'
+			| 'budget-allocation'
+			| null;
 		sources: SourceInfo[];
 		config: Record<string, unknown>;
 		resultSummary?: Record<string, unknown> | null;
@@ -108,7 +116,10 @@
 		trend: '「売上の推移を1年後まで予測して」のように伝えると設定します。使い方や結果の見方の質問もどうぞ。',
 		sensitivity: '「売上にどの変数が一番効いているか見たい」のように伝えると設定します。使い方や結果の見方の質問もどうぞ。',
 		scenario: '「広告費と来店数で売上を比較したい」のように伝えると設定します。シナリオの値はグリッドで編集してください。',
-		'goal-seek': '「売上を目標値にするには広告費をいくらにすればいいか」のように伝えると設定します。使い方の質問もどうぞ。'
+		'goal-seek': '「売上を目標値にするには広告費をいくらにすればいいか」のように伝えると設定します。使い方の質問もどうぞ。',
+		'monte-carlo': '「広告費と来店数から売上のばらつきを見たい」のように伝えると設定します。各変数の分布や実行はページ側で設定してください。',
+		'budget-allocation':
+			'「広告費とSNS広告費の予算配分を最適化したい」のように伝えると設定します。予算総額やチャネルごとの上限はページ側で設定してください。'
 	};
 
 	const emptyHint = $derived(analysisType ? EMPTY_HINTS[analysisType] : 'どの分析を試したいですか？サイドバーから選ぶか、内容を伝えてください。');

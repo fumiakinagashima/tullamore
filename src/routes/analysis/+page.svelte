@@ -4,6 +4,8 @@
 	import Tornado from '$lib/components/icon/Tornado.svelte';
 	import Compare from '$lib/components/icon/Compare.svelte';
 	import Target from '$lib/components/icon/Target.svelte';
+	import Dice from '$lib/components/icon/Dice.svelte';
+	import Coins from '$lib/components/icon/Coins.svelte';
 
 	const modules = [
 		{
@@ -35,6 +37,18 @@
 			label: 'トレンド予測',
 			desc: '時系列データから将来の推移を線で予測します。「半年後・1年後・5年後の見込み」のような、時間の経過に沿った推移を見たいときに使います。',
 			icon: TrendingUp
+		},
+		{
+			href: '/analysis/monte-carlo',
+			label: 'モンテカルロ・シミュレーション',
+			desc: '説明変数に幅（分布）を持たせて大量にサンプリングし、目的変数がとりうる値のばらつきを見ます。「どのくらいの確率で目標を超えるか」のような不確実性を織り込みたいときに使います。',
+			icon: Dice
+		},
+		{
+			href: '/analysis/budget-allocation',
+			label: '予算配分最適化',
+			desc: '説明変数を予算配分するチャネル（広告費等）とみなし、予算総額を目的変数が最大になるよう配分します。「限られた予算をどのチャネルにいくら振るべきか」を知りたいときに使います。',
+			icon: Coins
 		}
 	];
 </script>

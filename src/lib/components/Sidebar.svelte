@@ -13,6 +13,8 @@
 	import Tornado from '$lib/components/icon/Tornado.svelte';
 	import Compare from '$lib/components/icon/Compare.svelte';
 	import Target from '$lib/components/icon/Target.svelte';
+	import Dice from '$lib/components/icon/Dice.svelte';
+	import Coins from '$lib/components/icon/Coins.svelte';
 	import Users from '$lib/components/icon/Users.svelte';
 	import Settings from '$lib/components/icon/Settings.svelte';
 	import LogOut from '$lib/components/icon/LogOut.svelte';
@@ -26,7 +28,9 @@
 		{ href: '/analysis/sensitivity', label: '感度分析', icon: Tornado },
 		{ href: '/analysis/scenario', label: 'シナリオ比較', icon: Compare },
 		{ href: '/analysis/goal-seek', label: 'ゴールシーク', icon: Target },
-		{ href: '/analysis/trend', label: 'トレンド予測', icon: TrendingUp }
+		{ href: '/analysis/trend', label: 'トレンド予測', icon: TrendingUp },
+		{ href: '/analysis/monte-carlo', label: 'モンテカルロ', icon: Dice },
+		{ href: '/analysis/budget-allocation', label: '予算配分最適化', icon: Coins }
 	];
 
 	const dataSourceModules = $derived(
