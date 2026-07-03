@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
 	const rows = await db.select().from(integrations).orderBy(asc(integrations.name));
 	const items = rows.map((r) => ({
 		...r,
-		authConfig: maskAuthConfig(JSON.parse(r.authConfig ?? '{}') as Record<string, string>)
+		authConfig: maskAuthConfig(JSON.parse(r.authConfig ?? '{}') as Record<string, string>) as Record<string, string>
 	}));
 	return { account: locals.account!, items };
 };

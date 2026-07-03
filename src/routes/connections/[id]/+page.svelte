@@ -84,7 +84,13 @@
 <div class="page">
 	<a href="/connections" class="back-link">← 接続管理一覧</a>
 	<h1 class="page-title">{data.connection.name}</h1>
-	<p class="page-sub">バインディング: {data.connection.config.bindingName}</p>
+	<p class="page-sub">
+		{#if data.connection.provider === 'hyperdrive'}
+			バインディング: {data.connection.config.bindingName}
+		{:else}
+			{data.connection.config.host}:{data.connection.config.port}/{data.connection.config.database}
+		{/if}
+	</p>
 
 	{#if data.tablesError}
 		<p class="error-box">接続に失敗しました: {data.tablesError}</p>

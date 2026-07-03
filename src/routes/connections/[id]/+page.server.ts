@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { createDb } from '$lib/server/db';
 import { getDbConnection } from '$lib/server/db/db-connection-service';
+import { maskAuthConfig } from '$lib/server/db/integration-service';
 
 type ImportColumn = {
 	externalName: string;
@@ -32,9 +33,16 @@ export const load: PageServerLoad = async ({ params, platform, locals, fetch }) 
 		tablesError = e instanceof Error ? e.message : String(e);
 	}
 
+	const config = maskAuthConfig(JSON.parse(connection.config)) as {
+		bindingName?: string;
+		host?: string;
+		port?: number;
+		database?: string;
+	};
+
 	return {
 		account: locals.account!,
-		connection: { ...connection, config: JSON.parse(connection.config) as { bindingName?: string } },
+		connection: { ...connection, config },
 		tables,
 		tablesError
 	};

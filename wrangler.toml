@@ -19,18 +19,24 @@ id = "fabfbf60a3a444a89992788d512910a7"
 binding = "R2"
 bucket_name = "tullamore"
 
-# 外部DB接続（データ連携、/settings/data-connections）。
+# 外部DB接続（データ連携、/connections）。PostgreSQL/MySQL両対応（バインディングの形
+# （connectionStringの有無）からエンジンを自動判別する。src/lib/server/db-connections/hyperdrive.ts 参照）。
 # Hyperdriveはバインディングが静的なため、接続を追加するには実際に
-# `wrangler hyperdrive create <name> --connection-string="postgres://..."` を実行してIDを発行し、
+# `wrangler hyperdrive create <name> --connection-string="postgres://..."`（またはmysql://）を実行してIDを発行し、
 # ここにバインディングを追加してデプロイし直す必要がある（docs/DATA_CONNECTIONS.md 参照）。
 # バインディング名は必ず `HYPERDRIVE_` で始めること（実行時にこのプレフィックスでスキャンして一覧化している）。
-# ローカル開発用に、docker-compose.yml のPostgresへ向けたサンプル接続を1本用意している。
+# ローカル開発用に、docker-compose.yml のPostgres/MySQLへ向けたサンプル接続を用意している。
 # localConnectionString がある間は id は実際には参照されないため、本番のHyperdrive configを作るまでは
 # プレースホルダーのままでよい。
 [[hyperdrive]]
 binding = "HYPERDRIVE_LOCAL_SAMPLE"
 id = "local-sample-placeholder"
 localConnectionString = "postgres://tullamore:tullamore@localhost:55432/tullamore_sample"
+
+[[hyperdrive]]
+binding = "HYPERDRIVE_LOCAL_SAMPLE_MYSQL"
+id = "local-sample-mysql-placeholder"
+localConnectionString = "mysql://tullamore:tullamore@localhost:3306/tullamore_sample"
 
 [vars]
 MOCK_AI = "false"

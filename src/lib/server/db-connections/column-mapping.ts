@@ -14,6 +14,20 @@ export function mapPgTypeToColumnType(pgType: string): ColumnDef['type'] {
 	return 'text';
 }
 
+const MYSQL_NUMBER_TYPES = /^(tinyint|smallint|mediumint|int|bigint|decimal|numeric|float|double|bit|year)$/i;
+const MYSQL_DATE_TYPES = /^(date|datetime|timestamp|time)$/i;
+
+/**
+ * MySQLの information_schema.columns.data_type を Tullamoreの4種類の列型に変換する。
+ * MySQLのBOOLEAN/BOOLはTINYINT(1)の別名で、data_type上は単なる'tinyint'としか返らず
+ * 通常のtinyint列と区別できないため、boolean判定は行わずnumberとして扱う（既知の制約）
+ */
+export function mapMysqlTypeToColumnType(mysqlType: string): ColumnDef['type'] {
+	if (MYSQL_DATE_TYPES.test(mysqlType)) return 'date';
+	if (MYSQL_NUMBER_TYPES.test(mysqlType)) return 'number';
+	return 'text';
+}
+
 /** 外部DBの列名を isValidColumnKey（英字始まり・英数字とアンダースコアのみ）を満たす形に変換する */
 export function sanitizeColumnKey(name: string): string {
 	let key = name.replace(/[^a-zA-Z0-9_]/g, '_');

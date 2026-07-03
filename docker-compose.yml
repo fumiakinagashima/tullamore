@@ -1,6 +1,7 @@
-# データ連携（/settings/data-connections、Hyperdrive経由の外部DB取り込み）をローカルで
-# エンドツーエンドに確認するためのサンプルPostgres。`docker compose up -d` で起動し、
-# wrangler.toml の HYPERDRIVE_LOCAL_SAMPLE の localConnectionString がこのDBを指す。
+# データ連携（/connections、Hyperdrive/TCP Sockets経由の外部DB取り込み）をローカルで
+# エンドツーエンドに確認するためのサンプルPostgres/MySQL。`docker compose up -d` で起動し、
+# wrangler.toml の HYPERDRIVE_LOCAL_SAMPLE / HYPERDRIVE_LOCAL_SAMPLE_MYSQL の
+# localConnectionString がこれらのDBを指す。
 services:
   postgres:
     image: postgres:16
@@ -16,5 +17,20 @@ services:
       - tullamore_postgres_data:/var/lib/postgresql/data
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
 
+  mysql:
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: tullamore
+      MYSQL_DATABASE: tullamore_sample
+      MYSQL_USER: tullamore
+      MYSQL_PASSWORD: tullamore
+    ports:
+      - '3306:3306'
+    volumes:
+      - tullamore_mysql_data:/var/lib/mysql
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+
 volumes:
   tullamore_postgres_data:
+  tullamore_mysql_data:

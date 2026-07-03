@@ -1,10 +1,27 @@
-import { Client } from 'pg';
-import type { DbConnectionDriver, ExternalColumn, ExternalTableRef } from './types';
+import type { DbConnectionDriver } from './types';
+import { createPgDriver } from './pg-driver';
+import { createMysqlDriver } from './mysql-driver';
 
-type HyperdriveBinding = { connectionString: string };
+type HyperdriveConnectionStringBinding = { connectionString: string };
+type HyperdriveMysqlObjectBinding = { host: string; port: number; user: string; password: string; database: string };
+type HyperdriveBinding = HyperdriveConnectionStringBinding | HyperdriveMysqlObjectBinding;
+
+// 本番の実Hyperdriveバインディングは、PostgresならconnectionStringを、MySQLならconnectionStringを
+// 持たずhost/port/user/password/databaseを直接公開する（Cloudflare公式ドキュメントのHyperdrive型定義準拠）。
+// 一方 `wrangler dev` のローカル開発モード（localConnectionString）は、接続先がMySQLでも
+// 常にconnectionString形式で渡ってくるため、その場合はスキーム（postgres:// / mysql://）で判定する
+function isConnectionStringBinding(value: unknown): value is HyperdriveConnectionStringBinding {
+	return !!value && typeof value === 'object' && typeof (value as HyperdriveConnectionStringBinding).connectionString === 'string';
+}
+
+function isHyperdriveMysqlObjectBinding(value: unknown): value is HyperdriveMysqlObjectBinding {
+	if (!value || typeof value !== 'object' || isConnectionStringBinding(value)) return false;
+	const v = value as HyperdriveMysqlObjectBinding;
+	return typeof v.host === 'string' && typeof v.port === 'number' && typeof v.user === 'string';
+}
 
 function isHyperdriveBinding(value: unknown): value is HyperdriveBinding {
-	return !!value && typeof value === 'object' && typeof (value as HyperdriveBinding).connectionString === 'string';
+	return isConnectionStringBinding(value) || isHyperdriveMysqlObjectBinding(value);
 }
 
 /**
@@ -19,76 +36,32 @@ export function listAvailableHyperdriveBindings(env: Record<string, unknown>): s
 		.sort();
 }
 
-// 識別子（スキーマ名・テーブル名・列名）は必ず information_schema から取得した値のみを渡す想定。
-// SQL文字列に直接埋め込む前に、想定外の文字が混ざっていないか防御的に検証する
-function assertSafeIdentifier(id: string): void {
-	if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(id)) {
-		throw new Error(`不正な識別子です: ${id}`);
+/** /connections の一覧にエンジンバッジを出すためのヘルパー */
+export function getHyperdriveBindingEngine(env: Record<string, unknown>, bindingName: string): 'postgres' | 'mysql' | null {
+	const binding = env[bindingName];
+	if (isConnectionStringBinding(binding)) {
+		return /^mysql:/i.test(binding.connectionString) ? 'mysql' : 'postgres';
 	}
+	if (isHyperdriveMysqlObjectBinding(binding)) return 'mysql';
+	return null;
 }
 
-/**
- * 指定したHyperdriveバインディングに対するドライバを作成する。
- * 接続は最初のクエリ時に一度だけ張り、以降の呼び出しで使い回す（Hyperdrive側でプーリングされるため、
- * テーブル一覧取得→カラム取得→行取得のような一連の操作をまとめて1接続で行うのが効率的）。
- * 呼び出し側は必ず finally で close() を呼ぶこと。
- */
+/** 指定したHyperdriveバインディングに対するドライバを作成する。クエリロジックはpg-driver.ts/mysql-driver.tsに共通化されている */
 export function createHyperdriveDriver(env: Record<string, unknown>, bindingName: string): DbConnectionDriver {
 	const binding = env[bindingName];
-	if (!isHyperdriveBinding(binding)) {
-		throw new Error(`Hyperdriveバインディング「${bindingName}」が見つかりません`);
+	if (isConnectionStringBinding(binding)) {
+		return /^mysql:/i.test(binding.connectionString)
+			? createMysqlDriver(binding.connectionString)
+			: createPgDriver({ connectionString: binding.connectionString });
 	}
-
-	const client = new Client({ connectionString: binding.connectionString });
-	let connected = false;
-
-	async function ensureConnected(): Promise<void> {
-		if (!connected) {
-			await client.connect();
-			connected = true;
-		}
+	if (isHyperdriveMysqlObjectBinding(binding)) {
+		return createMysqlDriver({
+			host: binding.host,
+			port: binding.port,
+			user: binding.user,
+			password: binding.password,
+			database: binding.database
+		});
 	}
-
-	return {
-		async listTables(): Promise<ExternalTableRef[]> {
-			await ensureConnected();
-			const res = await client.query<{ table_schema: string; table_name: string }>(
-				`SELECT table_schema, table_name FROM information_schema.tables
-				 WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema')
-				 ORDER BY table_schema, table_name`
-			);
-			return res.rows.map((r) => ({ schema: r.table_schema, name: r.table_name }));
-		},
-
-		async listColumns(table: ExternalTableRef): Promise<ExternalColumn[]> {
-			await ensureConnected();
-			const res = await client.query<{ column_name: string; data_type: string }>(
-				`SELECT column_name, data_type FROM information_schema.columns
-				 WHERE table_schema = $1 AND table_name = $2
-				 ORDER BY ordinal_position`,
-				[table.schema, table.name]
-			);
-			return res.rows.map((r) => ({ name: r.column_name, dataType: r.data_type }));
-		},
-
-		async fetchRows(
-			table: ExternalTableRef,
-			columns: string[],
-			offset: number,
-			limit: number
-		): Promise<Record<string, unknown>[]> {
-			await ensureConnected();
-			assertSafeIdentifier(table.schema);
-			assertSafeIdentifier(table.name);
-			columns.forEach(assertSafeIdentifier);
-			const colList = columns.map((c) => `"${c}"`).join(', ');
-			const sql = `SELECT ${colList} FROM "${table.schema}"."${table.name}" LIMIT $1 OFFSET $2`;
-			const res = await client.query(sql, [limit, offset]);
-			return res.rows;
-		},
-
-		async close(): Promise<void> {
-			if (connected) await client.end();
-		}
-	};
+	throw new Error(`Hyperdriveバインディング「${bindingName}」が見つかりません`);
 }

@@ -1,0 +1,84 @@
+import { Client, types } from 'pg';
+import type { DbConnectionDriver, ExternalColumn, ExternalTableRef } from './types';
+
+// pgはデフォルトでdate/timestamp列をプロセスのローカルタイムゾーンで解釈した上でDateオブジェクトに変換するため、
+// `bun dev`実行時（マシンのローカルタイムゾーン、例: JST）と`wrangler dev`/本番（常にUTC）で
+// 同じ日付が異なる値にパースされてしまう（例: JST環境ではDATE '2024-01-01' が9時間ズレて
+// 2023-12-31T15:00:00.000Zになる）。生の文字列のまま受け取ることでタイムゾーン依存を排除する
+// （date=1082, timestamp without tz=1114, timestamptz=1184）
+types.setTypeParser(1082, (val) => val);
+types.setTypeParser(1114, (val) => val);
+types.setTypeParser(1184, (val) => val);
+
+// 識別子（スキーマ名・テーブル名・列名）は必ず information_schema から取得した値のみを渡す想定。
+// SQL文字列に直接埋め込む前に、想定外の文字が混ざっていないか防御的に検証する
+function assertSafeIdentifier(id: string): void {
+	if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(id)) {
+		throw new Error(`不正な識別子です: ${id}`);
+	}
+}
+
+/**
+ * `pg.Client`ベースのPostgresドライバ共通実装。接続方法（Hyperdriveバインディング経由か、
+ * 直接TCP接続か）に依存しないクエリロジックをここに集約する。hyperdrive.ts / tcp-socket.ts の
+ * どちらも、`pg.Client`のコンストラクタ引数だけを渡してこの関数を呼ぶ。
+ *
+ * 接続は最初のクエリ時に一度だけ張り、以降の呼び出しで使い回す（テーブル一覧取得→カラム取得→
+ * 行取得のような一連の操作をまとめて1接続で行うのが効率的）。呼び出し側は必ず finally で close() を呼ぶこと。
+ */
+export function createPgDriver(clientConfig: ConstructorParameters<typeof Client>[0]): DbConnectionDriver {
+	const client = new Client(clientConfig);
+	let connected = false;
+
+	async function ensureConnected(): Promise<void> {
+		if (!connected) {
+			await client.connect();
+			connected = true;
+		}
+	}
+
+	return {
+		engine: 'postgres',
+
+		async listTables(): Promise<ExternalTableRef[]> {
+			await ensureConnected();
+			const res = await client.query<{ table_schema: string; table_name: string }>(
+				`SELECT table_schema, table_name FROM information_schema.tables
+				 WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema')
+				 ORDER BY table_schema, table_name`
+			);
+			return res.rows.map((r) => ({ schema: r.table_schema, name: r.table_name }));
+		},
+
+		async listColumns(table: ExternalTableRef): Promise<ExternalColumn[]> {
+			await ensureConnected();
+			const res = await client.query<{ column_name: string; data_type: string }>(
+				`SELECT column_name, data_type FROM information_schema.columns
+				 WHERE table_schema = $1 AND table_name = $2
+				 ORDER BY ordinal_position`,
+				[table.schema, table.name]
+			);
+			return res.rows.map((r) => ({ name: r.column_name, dataType: r.data_type }));
+		},
+
+		async fetchRows(
+			table: ExternalTableRef,
+			columns: string[],
+			offset: number,
+			limit: number
+		): Promise<Record<string, unknown>[]> {
+			await ensureConnected();
+			assertSafeIdentifier(table.schema);
+			assertSafeIdentifier(table.name);
+			columns.forEach(assertSafeIdentifier);
+			const colList = columns.map((c) => `"${c}"`).join(', ');
+			const sql = `SELECT ${colList} FROM "${table.schema}"."${table.name}" LIMIT $1 OFFSET $2`;
+			const res = await client.query(sql, [limit, offset]);
+			return res.rows;
+		},
+
+		async close(): Promise<void> {
+			if (connected) await client.end();
+		}
+	};
+}

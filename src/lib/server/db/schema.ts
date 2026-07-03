@@ -31,9 +31,10 @@ export const dbConnections = sqliteTable('db_connections', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	description: text('description'),
-	// provider は将来 'tcp_socket' | 'http_api' を追加できるよう enum にしておく（現状 'hyperdrive' のみ実装）
-	provider: text('provider', { enum: ['hyperdrive'] }).notNull().default('hyperdrive'),
-	// provider ごとの設定。hyperdrive の場合は { bindingName: string }
+	// provider は将来 'http_api' を追加できるよう enum にしておく
+	provider: text('provider', { enum: ['hyperdrive', 'tcp_socket'] }).notNull().default('hyperdrive'),
+	// provider ごとの設定。hyperdrive の場合は { bindingName }、tcp_socket の場合は
+	// { host, port, database, username, password, ssl }（password はマスクして扱う。integration-service.ts参照）
 	config: text('config').notNull().default('{}'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)

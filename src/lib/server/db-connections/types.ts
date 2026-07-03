@@ -1,5 +1,5 @@
-// 外部DB接続の抽象化。今回は Hyperdrive（Postgres）のみ実装するが、
-// 将来 tcp_socket（動的接続）・http_api（Supabase REST等）を追加する際もこのインターフェースに合わせる想定。
+// 外部DB接続の抽象化。provider（hyperdrive/tcp_socket）× engine（postgres/mysql）の組み合わせを
+// 同じインターフェースで扱う。将来 http_api（Supabase REST等）を追加する際もこれに合わせる想定。
 
 export type ExternalTableRef = {
 	schema: string;
@@ -8,11 +8,13 @@ export type ExternalTableRef = {
 
 export type ExternalColumn = {
 	name: string;
-	/** ドライバ側の生の型名（例: Postgresの information_schema.columns.data_type） */
+	/** ドライバ側の生の型名（例: Postgres/MySQLの information_schema.columns.data_type） */
 	dataType: string;
 };
 
 export interface DbConnectionDriver {
+	/** 列の型マッピング（column-mapping.ts）をPostgres/MySQLどちらの方言で行うか呼び出し側が判断するための情報 */
+	engine: 'postgres' | 'mysql';
 	listTables(): Promise<ExternalTableRef[]>;
 	listColumns(table: ExternalTableRef): Promise<ExternalColumn[]>;
 	fetchRows(
