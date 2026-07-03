@@ -8,43 +8,49 @@
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
+
+	// /database/accounts はアカウント管理（データソースとは無関係の別機能）のため、
+	// テーブル一覧サイドバーは表示しない
+	const isAccountsPage = $derived(page.url.pathname.startsWith('/database/accounts'));
 </script>
 
 <div class="workbench">
 	<div class="db-main">
 		{@render children()}
 	</div>
-	<aside class="db-sidebar">
-		<div class="db-sidebar-header">
-			<span class="db-sidebar-title">データベース</span>
-			<a href="/database/new" class="icon-btn" aria-label="新しいテーブル">
-				<Plus size={14} />
-			</a>
-		</div>
-		<a href="/database/" class="sql-link" class:active={page.url.pathname === '/'}>
-			<Database size={13} />
-			データソース
-		</a>
-		<a href="/database/sql" class="sql-link" class:active={page.url.pathname === '/database/'}>
-			<Search size={13} />
-			SQLクエリ
-		</a>
-		<div class="table-list">
-			{#each data.sources as source (source.id)}
-				<a
-					href="/database/{source.id}"
-					class="table-item"
-					class:active={page.url.pathname === `/database/${source.id}`}
-				>
-					<Table size={13} />
-					<span class="table-name">{source.name}</span>
+	{#if !isAccountsPage}
+		<aside class="db-sidebar">
+			<div class="db-sidebar-header">
+				<span class="db-sidebar-title">データベース</span>
+				<a href="/database/new" class="icon-btn" aria-label="新しいテーブル">
+					<Plus size={14} />
 				</a>
-			{/each}
-			{#if data.sources.length === 0}
-				<p class="table-list-empty">テーブルがありません</p>
-			{/if}
-		</div>
-	</aside>
+			</div>
+			<a href="/database/" class="sql-link" class:active={page.url.pathname === '/'}>
+				<Database size={13} />
+				データソース
+			</a>
+			<a href="/database/sql" class="sql-link" class:active={page.url.pathname === '/database/'}>
+				<Search size={13} />
+				SQLクエリ
+			</a>
+			<div class="table-list">
+				{#each data.sources as source (source.id)}
+					<a
+						href="/database/{source.id}"
+						class="table-item"
+						class:active={page.url.pathname === `/database/${source.id}`}
+					>
+						<Table size={13} />
+						<span class="table-name">{source.name}</span>
+					</a>
+				{/each}
+				{#if data.sources.length === 0}
+					<p class="table-list-empty">テーブルがありません</p>
+				{/if}
+			</div>
+		</aside>
+	{/if}
 </div>
 
 <style lang="scss">
