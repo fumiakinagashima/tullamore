@@ -7,6 +7,7 @@
 	import Plus from '$lib/components/icon/Plus.svelte';
 	import Bell from '$lib/components/icon/Bell.svelte';
 	import Database from '$lib/components/icon/Database.svelte';
+	import Plug from '$lib/components/icon/Plug.svelte';
 	import Scatter from '$lib/components/icon/Scatter.svelte';
 	import TrendingUp from '$lib/components/icon/TrendingUp.svelte';
 	import Tornado from '$lib/components/icon/Tornado.svelte';
@@ -27,6 +28,13 @@
 		{ href: '/analysis/goal-seek', label: 'ゴールシーク', icon: Target },
 		{ href: '/analysis/trend', label: 'トレンド予測', icon: TrendingUp }
 	];
+
+	const dataSourceModules = $derived(
+		[
+			{ href: '/database', label: 'データベース管理', icon: Database, adminOnly: false },
+			{ href: '/connections', label: '接続管理', icon: Plug, adminOnly: true }
+		].filter((mod) => !mod.adminOnly || account.permission === 'admin')
+	);
 
 	let notificationDrawerOpen = $state(false);
 
@@ -64,6 +72,14 @@
 				{mod.label}
 			</a>
 		{/each}
+
+		<p class="group-label">データソース</p>
+		{#each dataSourceModules as mod (mod.href)}
+			<a href={mod.href} class="analysis-link" class:active={page.url.pathname.startsWith(mod.href)}>
+				<mod.icon size={14} />
+				{mod.label}
+			</a>
+		{/each}
 	</nav>
 
 	<div class="sidebar-footer">
@@ -74,11 +90,6 @@
 				<span class="notification-badge">{formatBadgeCount(notificationCenter.unreadCount)}</span>
 			{/if}
 		</button>
-
-		<a href="/database" class="settings-row">
-			<Database size={15} />
-			データソース
-		</a>
 
 		{#if account.permission === 'admin'}
 			<a href="/database/accounts" class="settings-row">

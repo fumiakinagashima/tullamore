@@ -11,7 +11,7 @@
 
 <div class="page">
 	<div class="page-header">
-		<h1 class="page-title">データソース</h1>
+		<h1 class="page-title">データベース管理</h1>
 		<a href="/database/new" class="btn-primary">
 			<Plus size={14} />
 			新規作成

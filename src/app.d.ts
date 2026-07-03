@@ -29,6 +29,10 @@ declare global {
 				SMTP_SECURE?: string;
 				SMTP_USERNAME?: string;
 				SMTP_PASSWORD?: string;
+				// 外部DB接続（Hyperdrive）。1接続 = 1バインディング（wrangler.tomlに事前登録・再デプロイが必要）。
+				// 複数接続に対応するため、`HYPERDRIVE_`で始まる名前のバインディングを実行時にスキャンして使う
+				// （src/lib/server/db-connections/hyperdrive.ts の listAvailableHyperdriveBindings 参照）
+				[key: `HYPERDRIVE_${string}`]: Hyperdrive | undefined;
 			};
 		}
 	}

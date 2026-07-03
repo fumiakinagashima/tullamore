@@ -7,7 +7,26 @@
 	import Toggle from '$lib/components/ui/Toggle.svelte';
 
 	let { data }: { data: PageData } = $props();
-	let { source } = $derived(data);
+	let { source, sync, connectionName } = $derived(data);
+
+	let resyncing = $state(false);
+	let resyncResult = $state<string | null>(null);
+
+	async function resync() {
+		resyncing = true;
+		resyncResult = null;
+		try {
+			const res = await fetch(`/api/data-sources/${source.id}/resync`, { method: 'POST' });
+			const body = (await res.json()) as { inserted?: number; error?: string };
+			if (!res.ok) throw new Error(body.error ?? '再同期に失敗しました');
+			resyncResult = `${body.inserted}件を再取り込みしました`;
+			await invalidateAll();
+		} catch (e) {
+			resyncResult = `エラー: ${e instanceof Error ? e.message : String(e)}`;
+		} finally {
+			resyncing = false;
+		}
+	}
 
 	type Col = { key: string; label: string; type: 'text' | 'number' | 'date' | 'boolean' };
 	let columns: Col[] = $derived(JSON.parse(source.schemaJson));
@@ -129,6 +148,21 @@
 		<span class="meta-chip mono">テーブル名: {source.tableName}</span>
 	</div>
 
+	{#if sync}
+		<div class="sync-banner">
+			<span class="sync-info">
+				取り込み元: {connectionName} / {sync.externalSchema}.{sync.externalTable}
+				{#if sync.lastSyncedAt}（最終同期: {new Date(sync.lastSyncedAt).toLocaleString('ja-JP')}）{/if}
+			</span>
+			<button class="btn-secondary" onclick={resync} disabled={resyncing}>
+				{resyncing ? '同期中...' : '今すぐ再同期'}
+			</button>
+		</div>
+		{#if resyncResult}
+			<p class="import-result" class:error={resyncResult.startsWith('エラー')}>{resyncResult}</p>
+		{/if}
+	{/if}
+
 	<section class="section">
 		<h2 class="section-title">スキーマ</h2>
 		<table class="schema-table">
@@ -225,6 +259,22 @@
 	}
 
 	.meta-row { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+
+	.sync-banner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 10px 14px;
+		margin-bottom: 24px;
+		background: var(--color-info-bg);
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		font-size: 0.8125rem;
+		color: var(--color-text);
+	}
+
+	.sync-info { min-width: 0; }
 
 	.meta-chip {
 		display: inline-flex;
