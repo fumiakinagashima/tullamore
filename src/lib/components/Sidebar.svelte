@@ -15,7 +15,6 @@
 	import Tornado from '$lib/components/icon/Tornado.svelte';
 	import Compare from '$lib/components/icon/Compare.svelte';
 	import Target from '$lib/components/icon/Target.svelte';
-	import Sparkles from '$lib/components/icon/Sparkles.svelte';
 	import Users from '$lib/components/icon/Users.svelte';
 	import Settings from '$lib/components/icon/Settings.svelte';
 	import LogOut from '$lib/components/icon/LogOut.svelte';
@@ -221,11 +220,6 @@
 		<a href="/database" class="settings-row">
 			<Database size={15} />
 			データソース
-		</a>
-
-		<a href="/simulators" class="settings-row">
-			<Sparkles size={15} />
-			シミュレーター
 		</a>
 
 		{#if account.permission === 'admin'}
