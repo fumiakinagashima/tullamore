@@ -37,6 +37,9 @@
 	const PL = 90;
 	const PR = 16;
 	const rotateLabs = $derived(labels.length > 10);
+	// 日次粒度のトレンド予測等、点数が多い場合にラベル・ドットが埋め尽くさないよう間引く（少数点数の既存利用箇所は影響なし）
+	const labelStep = $derived(Math.max(1, Math.ceil(labels.length / 15)));
+	const showDots = $derived(labels.length <= 120);
 	// height指定時（横長のダッシュボード用）は縦の余白も詰めて、単純な縮小ではなく横に広いアスペクト比にする
 	const PT = $derived(height ? 10 : 16);
 	const H = $derived(height ?? (rotateLabs ? 300 : 220));
@@ -115,24 +118,28 @@
 				stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
 		{/each}
 
-		<!-- Dots -->
-		{#each allSeries as s, si}
-			{#each s.data as d, i}
-				<circle cx={px(i, s.data.length)} cy={py(d.value)} r="2" fill={seriesColor(si)} />
+		<!-- Dots（点数が多い時は省略し、線だけで表現する） -->
+		{#if showDots}
+			{#each allSeries as s, si}
+				{#each s.data as d, i}
+					<circle cx={px(i, s.data.length)} cy={py(d.value)} r="2" fill={seriesColor(si)} />
+				{/each}
 			{/each}
-		{/each}
+		{/if}
 
-		<!-- X-axis labels (from first series) -->
+		<!-- X-axis labels (from first series。点数が多い時は間引いて表示する) -->
 		{#each labels as label, i}
-			{@const lx = px(i, labels.length)}
-			{@const ly = PT + plotH + 10}
-			<text
-				x={lx} y={ly}
-				text-anchor={rotateLabs ? 'end' : 'middle'}
-				fill="var(--color-text-muted)"
-				font-size="8"
-				transform={rotateLabs ? `rotate(-45 ${lx} ${ly})` : undefined}
-			>{label}</text>
+			{#if i % labelStep === 0 || i === labels.length - 1}
+				{@const lx = px(i, labels.length)}
+				{@const ly = PT + plotH + 10}
+				<text
+					x={lx} y={ly}
+					text-anchor={rotateLabs ? 'end' : 'middle'}
+					fill="var(--color-text-muted)"
+					font-size="8"
+					transform={rotateLabs ? `rotate(-45 ${lx} ${ly})` : undefined}
+				>{label}</text>
+			{/if}
 		{/each}
 
 		<!-- Axes -->

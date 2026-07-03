@@ -37,6 +37,11 @@ const SET_CONFIG_TOOL: Tool = {
 				type: 'number',
 				enum: [6, 12, 60],
 				description: '予測期間（月数）。6=半年後まで、12=1年後まで、60=5年後まで（トレンド予測のみ）'
+			},
+			granularity: {
+				type: 'string',
+				enum: ['day', 'week', 'month'],
+				description: '集計粒度（トレンド予測のみ）。day=日次、week=週次、month=月次。指定がなければmonthのまま変更しない'
 			}
 		}
 	}
@@ -58,8 +63,8 @@ function buildSystemPrompt(
 	} else if (analysisType === 'trend') {
 		sections.push(
 			'現在の画面は「トレンド予測」です。時系列データから将来の推移を線で予測する画面で、' +
-				'データソース・日付列・目的変数（数値列）・予測期間（半年/1年/5年）を設定すると結果が表示されます。' +
-				'結果表示後は元データのグリッドが編集可能になり、数値や日付を変更すると即座に再計算されます。'
+				'データソース・日付列・目的変数（数値列）・予測期間（半年/1年/5年）・集計粒度（日次/週次/月次、指定なければ月次）を' +
+				'設定すると結果が表示されます。結果表示後は元データのグリッドが編集可能になり、数値や日付を変更すると即座に再計算されます。'
 		);
 	} else if (analysisType === 'sensitivity') {
 		sections.push(

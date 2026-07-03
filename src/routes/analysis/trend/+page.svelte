@@ -2,7 +2,7 @@
 	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import { continuousColumns } from '$lib/analysis/column-type';
-	import { fitTrendFromRows, buildTrendSeries, type TrendRawRow } from '$lib/analysis/trend';
+	import { fitTrendFromRows, buildTrendSeries, type TrendRawRow, type TrendGranularity } from '$lib/analysis/trend';
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import LineChart from '$lib/components/ui/LineChart.svelte';
 	import DataGrid from '$lib/components/ui/DataGrid.svelte';
@@ -19,10 +19,19 @@
 		{ value: '60', label: '5年後まで' }
 	];
 
+	const GRANULARITY_OPTIONS = [
+		{ value: 'day', label: '日次' },
+		{ value: 'week', label: '週次' },
+		{ value: 'month', label: '月次' }
+	];
+
 	let dataSourceId = $state('');
 	let dateColumn = $state('');
 	let targetColumn = $state('');
 	let horizonMonths = $state('12');
+	// Select は string を bindable として扱うため string で持ち、使用時に TrendGranularity へ絞る（値はGRANULARITY_OPTIONSの3種のみ）
+	let granularityValue = $state('month');
+	const granularity = $derived(granularityValue as TrendGranularity);
 	let note = $state('');
 	let loading = $state(false);
 	let error = $state('');
@@ -70,7 +79,7 @@
 	const liveSeries = $derived.by(() => {
 		if (!liveModel) return null;
 		try {
-			return buildTrendSeries(rows, liveModel, Number(horizonMonths));
+			return buildTrendSeries(rows, liveModel, Number(horizonMonths), granularity);
 		} catch {
 			return null;
 		}
@@ -81,9 +90,12 @@
 		return numberFmt.format(n);
 	}
 
-	// coefficient は「1日あたり」の変化量。30.44 は平均月日数（365.25/12）
-	const monthlyChange = $derived(liveModel ? liveModel.coefficients[0] * 30.44 : 0);
-	const direction = $derived(monthlyChange > 0 ? 'up' : monthlyChange < 0 ? 'down' : 'flat');
+	// coefficient は「1日あたり」の変化量。選択中の集計粒度に合わせた変化量に換算する（30.44は平均月日数=365.25/12）
+	const PERIOD_DAYS: Record<TrendGranularity, number> = { day: 1, week: 7, month: 30.44 };
+	const PERIOD_LABEL: Record<TrendGranularity, string> = { day: '日あたりの変化', week: '週あたりの変化', month: '月あたりの変化' };
+	const PERIOD_AVG_LABEL: Record<TrendGranularity, string> = { day: '日次', week: '週次', month: '月次' };
+	const periodChange = $derived(liveModel ? liveModel.coefficients[0] * PERIOD_DAYS[granularity] : 0);
+	const direction = $derived(periodChange > 0 ? 'up' : periodChange < 0 ? 'down' : 'flat');
 	const forecastEnd = $derived(liveSeries ? liveSeries.trend[liveSeries.trend.length - 1] : null);
 	// 実績と予測の境界（＝現在）に縦線を引く。2点の間ぴったりに置きたいので -0.5 した小数インデックスを使う
 	const markerIndex = $derived(liveSeries ? liveSeries.historicalCount - 0.5 : undefined);
@@ -95,13 +107,15 @@
 			data_source_id: dataSourceId || undefined,
 			date_column: dateColumn || undefined,
 			target_column: targetColumn || undefined,
-			horizon_months: Number(horizonMonths)
+			horizon_months: Number(horizonMonths),
+			granularity
 		};
 		const m = liveModel;
 		bridge.resultSummary = m
 			? {
 					target_column: m.targetColumn,
-					monthly_change: m.coefficients[0] * 30.44,
+					granularity,
+					change_per_period: periodChange,
 					r2: m.metrics.r2,
 					adjusted_r2: m.metrics.adjustedR2,
 					sample_size: m.metrics.sampleSize
@@ -120,6 +134,9 @@
 		if (typeof patch.date_column === 'string') dateColumn = patch.date_column;
 		if (typeof patch.target_column === 'string') targetColumn = patch.target_column;
 		if (typeof patch.horizon_months === 'number') horizonMonths = String(patch.horizon_months);
+		if (patch.granularity === 'day' || patch.granularity === 'week' || patch.granularity === 'month') {
+			granularityValue = patch.granularity;
+		}
 		await tick();
 		if (canRun) await run();
 	}
@@ -162,7 +179,7 @@
 <div class="module-page">
 	<div class="page-header">
 		<h1 class="page-title">トレンド予測</h1>
-		<p class="page-sub">月次の実績データから将来の推移を線で予測します</p>
+		<p class="page-sub">実績データから将来の推移を線で予測します（日次・週次・月次で集計粒度を切り替えられます）</p>
 	</div>
 
 	<section class="results-panel">
@@ -170,9 +187,9 @@
 			<div class="results-card">
 				<div class="metrics-row">
 					<div class="metric">
-						<span class="metric-label">月あたりの変化</span>
+						<span class="metric-label">{PERIOD_LABEL[granularity]}</span>
 						<span class="metric-value" class:up={direction === 'up'} class:down={direction === 'down'}>
-							{monthlyChange >= 0 ? '+' : ''}{fmt(monthlyChange)}
+							{periodChange >= 0 ? '+' : ''}{fmt(periodChange)}
 						</span>
 					</div>
 					<div class="metric">
@@ -196,7 +213,7 @@
 					{markerIndex}
 					markerLabel="現在"
 					series={[
-						{ name: '実績（月次平均）', data: liveSeries.historical },
+						{ name: `実績（${PERIOD_AVG_LABEL[granularity]}平均）`, data: liveSeries.historical },
 						{ name: 'トレンド予測', data: liveSeries.trend }
 					]}
 				/>
@@ -226,7 +243,10 @@
 			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 		</div>
 
-		<Select label="予測期間" bind:value={horizonMonths} options={HORIZON_OPTIONS} />
+		<div class="config-row">
+			<Select label="集計粒度" bind:value={granularityValue} options={GRANULARITY_OPTIONS} />
+			<Select label="予測期間" bind:value={horizonMonths} options={HORIZON_OPTIONS} />
+		</div>
 
 		<Textbox label="分析メモ（任意）" bind:value={note} placeholder="例: 今後1年の会員数推移を見たい" />
 

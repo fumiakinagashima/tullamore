@@ -10,13 +10,47 @@ export const TREND_TIME_FEATURE = '__time_days';
 export type TrendRawRow = { date: string; value: number };
 export type TrendPoint = { label: string; value: number };
 
+/** 集計粒度。回帰計算自体は日単位の連続値（TREND_TIME_FEATURE）なので、粒度は表示・集計バケツと予測の刻み幅にのみ影響する */
+export type TrendGranularity = 'day' | 'week' | 'month';
+
 function toTimeMs(dateStr: string): number {
 	return new Date(dateStr).getTime();
 }
 
+function pad2(n: number): string {
+	return String(n).padStart(2, '0');
+}
+
 function monthLabel(dateStr: string): string {
 	const d = new Date(dateStr);
-	return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+	return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}`;
+}
+
+function dayLabel(dateStr: string): string {
+	const d = new Date(dateStr);
+	return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+}
+
+/** ISO週（月曜始まり）の週初め日付をラベルとして使う */
+function weekLabel(dateStr: string): string {
+	const d = new Date(dateStr);
+	const day = d.getUTCDay();
+	const diffToMonday = day === 0 ? -6 : 1 - day;
+	const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + diffToMonday));
+	return dayLabel(monday.toISOString());
+}
+
+function bucketLabel(dateStr: string, granularity: TrendGranularity): string {
+	if (granularity === 'day') return dayLabel(dateStr);
+	if (granularity === 'week') return weekLabel(dateStr);
+	return monthLabel(dateStr);
+}
+
+/** 日付を粒度単位でn個先に進める（予測期間の刻み幅の生成に使う） */
+function addPeriod(d: Date, granularity: TrendGranularity, n: number): Date {
+	if (granularity === 'day') return new Date(d.getTime() + n * 86_400_000);
+	if (granularity === 'week') return new Date(d.getTime() + n * 7 * 86_400_000);
+	return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, d.getUTCDate()));
 }
 
 function validRows(rows: TrendRawRow[]): TrendRawRow[] {
@@ -67,57 +101,63 @@ export function fitTrendFromRows(rows: TrendRawRow[]): LinearRegressionModel {
 }
 
 /**
- * 月次集計した実績値と、学習済みモデルによる「実績期間〜予測期間」通しのトレンド線を返す。
- * 2系列を同じ月数に揃えるのは server 版と同じ理由（LineChartは系列ごとの要素数で横位置を計算するため）。
+ * 集計した実績値と、学習済みモデルによる「実績期間〜予測期間」通しのトレンド線を返す。
+ * 2系列を同じ点数に揃えるのは server 版と同じ理由（LineChartは系列ごとの要素数で横位置を計算するため）。
+ * granularity は表示・集計バケツと予測の刻み幅を変えるだけで、horizonMonths（予測期間の長さ）は従来通り月数で指定する
+ * （例: 日次×半年後まで = 実測を日次集計し、直近の日から半年後までを1日刻みで予測する）。
  */
 export function buildTrendSeries(
 	rows: TrendRawRow[],
 	model: LinearRegressionModel,
-	horizonMonths: number
+	horizonMonths: number,
+	granularity: TrendGranularity = 'month'
 ): { historical: TrendPoint[]; trend: TrendPoint[]; historicalCount: number } {
 	const valid = validRows(rows);
 	if (valid.length === 0) throw new Error('分析対象のデータがありません');
 
 	const baseMs = Math.min(...valid.map((r) => toTimeMs(r.date)));
 
-	const byMonth = new Map<string, { sum: number; count: number; xSum: number }>();
+	const byBucket = new Map<string, { sum: number; count: number; xSum: number }>();
 	for (const r of valid) {
-		const label = monthLabel(r.date);
+		const label = bucketLabel(r.date, granularity);
 		const x = (toTimeMs(r.date) - baseMs) / 86_400_000;
-		const bucket = byMonth.get(label) ?? { sum: 0, count: 0, xSum: 0 };
+		const bucket = byBucket.get(label) ?? { sum: 0, count: 0, xSum: 0 };
 		bucket.sum += r.value;
 		bucket.count += 1;
 		bucket.xSum += x;
-		byMonth.set(label, bucket);
+		byBucket.set(label, bucket);
 	}
-	const months = [...byMonth.keys()].sort();
-	const historical: TrendPoint[] = months.map((label) => {
-		const b = byMonth.get(label)!;
+	const buckets = [...byBucket.keys()].sort();
+	const historical: TrendPoint[] = buckets.map((label) => {
+		const b = byBucket.get(label)!;
 		return { label, value: b.sum / b.count };
 	});
-	const historicalX = months.map((label) => {
-		const b = byMonth.get(label)!;
+	const historicalX = buckets.map((label) => {
+		const b = byBucket.get(label)!;
 		return b.xSum / b.count;
 	});
 
 	const lastMs = Math.max(...valid.map((r) => toTimeMs(r.date)));
 	const lastDate = new Date(lastMs);
+	const horizonEndMs = addPeriod(lastDate, 'month', horizonMonths).getTime();
+
 	const futureLabels: string[] = [];
 	const futureX: number[] = [];
-	for (let i = 1; i <= horizonMonths; i++) {
-		const d = new Date(Date.UTC(lastDate.getUTCFullYear(), lastDate.getUTCMonth() + i, lastDate.getUTCDate()));
-		futureLabels.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
-		futureX.push((d.getTime() - baseMs) / 86_400_000);
+	let cursor = addPeriod(lastDate, granularity, 1);
+	while (cursor.getTime() <= horizonEndMs) {
+		futureLabels.push(bucketLabel(cursor.toISOString(), granularity));
+		futureX.push((cursor.getTime() - baseMs) / 86_400_000);
+		cursor = addPeriod(cursor, granularity, 1);
 	}
 
 	const trend: TrendPoint[] = [
-		...historicalX.map((x, i) => ({ label: months[i], value: predict(model, { [TREND_TIME_FEATURE]: x }) })),
+		...historicalX.map((x, i) => ({ label: buckets[i], value: predict(model, { [TREND_TIME_FEATURE]: x }) })),
 		...futureX.map((x, i) => ({ label: futureLabels[i], value: predict(model, { [TREND_TIME_FEATURE]: x }) }))
 	];
 	const historicalPadded: TrendPoint[] = [
 		...historical,
-		...futureLabels.map((label, i) => ({ label, value: trend[months.length + i].value }))
+		...futureLabels.map((label, i) => ({ label, value: trend[buckets.length + i].value }))
 	];
 
-	return { historical: historicalPadded, trend, historicalCount: months.length };
+	return { historical: historicalPadded, trend, historicalCount: buckets.length };
 }
