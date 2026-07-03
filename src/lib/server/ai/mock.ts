@@ -57,10 +57,17 @@ const MOCK_RESPONSES: MessageContent[][] = [
 		}
 	],
 	[
-		{ type: 'text', text: '名刺を読み取ります。カメラで撮影するか、画像をアップロードしてください。' },
+		{ type: 'text', text: '月次の売上推移をグラフにしました。' },
 		{
-			type: 'bizcard',
-			title: '名刺を読み取ってください'
+			type: 'chart',
+			chartType: 'line',
+			title: '月次売上推移',
+			data: [
+				{ label: '1月', value: 1200000 },
+				{ label: '2月', value: 1450000 },
+				{ label: '3月', value: 1380000 },
+				{ label: '4月', value: 1620000 }
+			]
 		}
 	]
 ];
