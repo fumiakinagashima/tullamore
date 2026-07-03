@@ -1,6 +1,9 @@
 <script lang="ts">
 	import Scatter from '$lib/components/icon/Scatter.svelte';
 	import TrendingUp from '$lib/components/icon/TrendingUp.svelte';
+	import Tornado from '$lib/components/icon/Tornado.svelte';
+	import Compare from '$lib/components/icon/Compare.svelte';
+	import Target from '$lib/components/icon/Target.svelte';
 
 	const modules = [
 		{
@@ -8,6 +11,24 @@
 			label: '回帰分析',
 			desc: '説明変数を動かすと目的変数がどう変化するかをシミュレーションします。「広告費を増やしたら売上はどうなるか」のような、ドライバーの影響度を調べたいときに使います。',
 			icon: Scatter
+		},
+		{
+			href: '/analysis/sensitivity',
+			label: '感度分析',
+			desc: '各説明変数を実測レンジいっぱいに動かした時、目的変数がどれだけ振れるかをトルネードチャートで見ます。「一番効いている変数はどれか」を最初に把握したいときに使います。',
+			icon: Tornado
+		},
+		{
+			href: '/analysis/scenario',
+			label: 'シナリオ比較',
+			desc: '説明変数の組み合わせを複数パターン用意し、目的変数の予測値を横並びで比較します。「楽観ケースと悲観ケースでどれだけ差が出るか」を見たいときに使います。',
+			icon: Compare
+		},
+		{
+			href: '/analysis/goal-seek',
+			label: 'ゴールシーク',
+			desc: '目的変数を目標値にするために、説明変数がいくつであるべきかを逆算します。「売上目標を達成するには広告費をいくらにすべきか」を知りたいときに使います。',
+			icon: Target
 		},
 		{
 			href: '/analysis/trend',

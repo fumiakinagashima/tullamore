@@ -12,6 +12,9 @@
 	import Database from '$lib/components/icon/Database.svelte';
 	import Scatter from '$lib/components/icon/Scatter.svelte';
 	import TrendingUp from '$lib/components/icon/TrendingUp.svelte';
+	import Tornado from '$lib/components/icon/Tornado.svelte';
+	import Compare from '$lib/components/icon/Compare.svelte';
+	import Target from '$lib/components/icon/Target.svelte';
 	import Sparkles from '$lib/components/icon/Sparkles.svelte';
 	import Users from '$lib/components/icon/Users.svelte';
 	import Settings from '$lib/components/icon/Settings.svelte';
@@ -23,6 +26,9 @@
 
 	const analysisModules = [
 		{ href: '/analysis/regression', label: '回帰分析', icon: Scatter },
+		{ href: '/analysis/sensitivity', label: '感度分析', icon: Tornado },
+		{ href: '/analysis/scenario', label: 'シナリオ比較', icon: Compare },
+		{ href: '/analysis/goal-seek', label: 'ゴールシーク', icon: Target },
 		{ href: '/analysis/trend', label: 'トレンド予測', icon: TrendingUp }
 	];
 

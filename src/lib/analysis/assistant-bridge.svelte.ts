@@ -5,7 +5,7 @@
 export const ANALYSIS_BRIDGE_KEY = 'analysis-bridge';
 
 export type AnalysisBridge = {
-	analysisType: 'regression' | 'trend' | null;
+	analysisType: 'regression' | 'trend' | 'sensitivity' | 'scenario' | 'goal-seek' | null;
 	/** 現在の設定値（スネークケース。AIアシスタントのツール呼び出しと同じキー形式に揃える） */
 	config: Record<string, unknown>;
 	/** 現在のモデルの精度指標等。AIアシスタントが妥当性について答える際の材料にする */

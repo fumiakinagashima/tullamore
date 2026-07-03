@@ -8,7 +8,7 @@
 	type ChatMessage = { role: 'user' | 'assistant'; text: string };
 
 	type Props = {
-		analysisType: 'regression' | 'trend' | null;
+		analysisType: 'regression' | 'trend' | 'sensitivity' | 'scenario' | 'goal-seek' | null;
 		sources: SourceInfo[];
 		config: Record<string, unknown>;
 		resultSummary?: Record<string, unknown> | null;
@@ -103,13 +103,15 @@
 		}
 	}
 
-	const emptyHint = $derived(
-		analysisType === 'regression'
-			? '「広告費と来店数が売上に与える影響を見たい」のように伝えると設定します。使い方や結果の見方の質問もどうぞ。'
-			: analysisType === 'trend'
-				? '「売上の推移を1年後まで予測して」のように伝えると設定します。使い方や結果の見方の質問もどうぞ。'
-				: '回帰分析・トレンド予測、どちらを試したいですか？'
-	);
+	const EMPTY_HINTS: Record<Exclude<Props['analysisType'], null>, string> = {
+		regression: '「広告費と来店数が売上に与える影響を見たい」のように伝えると設定します。使い方や結果の見方の質問もどうぞ。',
+		trend: '「売上の推移を1年後まで予測して」のように伝えると設定します。使い方や結果の見方の質問もどうぞ。',
+		sensitivity: '「売上にどの変数が一番効いているか見たい」のように伝えると設定します。使い方や結果の見方の質問もどうぞ。',
+		scenario: '「広告費と来店数で売上を比較したい」のように伝えると設定します。シナリオの値はグリッドで編集してください。',
+		'goal-seek': '「売上を目標値にするには広告費をいくらにすればいいか」のように伝えると設定します。使い方の質問もどうぞ。'
+	};
+
+	const emptyHint = $derived(analysisType ? EMPTY_HINTS[analysisType] : 'どの分析を試したいですか？サイドバーから選ぶか、内容を伝えてください。');
 </script>
 
 <div class="assistant">
