@@ -267,7 +267,7 @@
 		gap: 12px;
 		padding: 10px 14px;
 		margin-bottom: 24px;
-		background: var(--color-info-bg);
+		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: 8px;
 		font-size: 0.8125rem;
