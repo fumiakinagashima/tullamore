@@ -10,22 +10,8 @@
 	import Sigma from '$lib/components/icon/Sigma.svelte';
 	import Flask from '$lib/components/icon/Flask.svelte';
 	import Split from '$lib/components/icon/Split.svelte';
-	import Layers from '$lib/components/icon/Layers.svelte';
-	import Flag from '$lib/components/icon/Flag.svelte';
 
 	const modules = [
-		{
-			href: '/analysis/composite-report',
-			label: '複合分析レポート',
-			desc: '相関分析・回帰分析・記述統計を同時に実行し、手法間の結論の一致・矛盾を踏まえた統合レポートを作成します。「このデータについて一通り見て報告して」という時に使います。',
-			icon: Layers
-		},
-		{
-			href: '/analysis/kpi-planning',
-			label: 'KPI設定',
-			desc: '目的変数（例: 売上）の目標値から、KPI候補（説明変数）の目標値を実測レンジ内で逆算します。「来年度の売上目標からKPIを作りたい」というときに使います。',
-			icon: Flag
-		},
 		{
 			href: '/analysis/descriptive-stats',
 			label: '記述統計',

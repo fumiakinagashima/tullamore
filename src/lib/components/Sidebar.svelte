@@ -29,9 +29,12 @@
 	type Props = { account: AccountRow };
 	let { account }: Props = $props();
 
+	const workModules = [
+		{ href: '/composite-report', label: '複合分析レポート', icon: Layers },
+		{ href: '/kpi', label: 'KPI管理', icon: Flag }
+	];
+
 	const analysisModules = [
-		{ href: '/analysis/composite-report', label: '複合分析レポート', icon: Layers },
-		{ href: '/analysis/kpi-planning', label: 'KPI設定', icon: Flag },
 		{ href: '/analysis/descriptive-stats', label: '記述統計', icon: Sigma },
 		{ href: '/analysis/correlation', label: '相関分析', icon: Grid },
 		{ href: '/analysis/ab-test', label: 'A/Bテスト', icon: Flask },
@@ -81,6 +84,14 @@
 	</a>
 
 	<nav class="history">
+		<p class="group-label">業務</p>
+		{#each workModules as mod (mod.href)}
+			<a href={mod.href} class="analysis-link" class:active={page.url.pathname === mod.href}>
+				<mod.icon size={14} />
+				{mod.label}
+			</a>
+		{/each}
+		
 		<p class="group-label">分析</p>
 		{#each analysisModules as mod (mod.href)}
 			<a href={mod.href} class="analysis-link" class:active={page.url.pathname === mod.href}>
@@ -88,10 +99,6 @@
 				{mod.label}
 			</a>
 		{/each}
-		<a href="/kpi" class="analysis-link" class:active={page.url.pathname.startsWith('/kpi')}>
-			<Flag size={14} />
-			保存済みKPI一覧
-		</a>
 
 		<p class="group-label">データソース</p>
 		{#each dataSourceModules as mod (mod.href)}

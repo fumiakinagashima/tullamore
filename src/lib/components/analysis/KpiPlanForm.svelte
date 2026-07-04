@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import type { PageData } from './$types';
 	import type { LinearRegressionModel } from '$lib/analysis/types';
 	import type { ValidityAssessment } from '$lib/analysis/validity';
 	import type { CorrelationMatrix } from '$lib/analysis/correlation-matrix';
@@ -14,7 +13,27 @@
 	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 
-	let { data }: { data: PageData } = $props();
+	type SourceInfo = { id: string; name: string; columns: { key: string; label: string; type: 'text' | 'number' | 'date' | 'boolean' }[] };
+
+	type Initial = {
+		name: string;
+		dataSourceId: string;
+		targetColumn: string;
+		featureColumns: string[];
+		targetValue: number;
+		periodType: 'year' | 'month' | 'week' | 'custom';
+		periodLabel: string;
+		model: LinearRegressionModel;
+		validity: ValidityAssessment;
+		plan: KpiPlanResult;
+	};
+
+	let { sources, mode, planId, initial }: {
+		sources: SourceInfo[];
+		mode: 'create' | 'edit';
+		planId?: string;
+		initial?: Initial;
+	} = $props();
 
 	const bridge = getContext<AnalysisBridge>(ANALYSIS_BRIDGE_KEY);
 
@@ -25,27 +44,27 @@
 		{ value: 'custom', label: '自由入力' }
 	];
 
-	let dataSourceId = $state('');
-	let targetColumn = $state('');
-	let featureColumns = $state<string[]>([]);
-	let targetValueText = $state('');
-	let periodType = $state<'year' | 'month' | 'week' | 'custom'>('year');
-	let periodLabel = $state('');
+	let dataSourceId = $state(initial?.dataSourceId ?? '');
+	let targetColumn = $state(initial?.targetColumn ?? '');
+	let featureColumns = $state<string[]>(initial?.featureColumns ?? []);
+	let targetValueText = $state(initial ? String(initial.targetValue) : '');
+	let periodType = $state<'year' | 'month' | 'week' | 'custom'>(initial?.periodType ?? 'year');
+	let periodLabel = $state(initial?.periodLabel ?? '');
 	let loading = $state(false);
 	let error = $state('');
 
-	let model = $state<LinearRegressionModel | null>(null);
-	let validity = $state<ValidityAssessment | null>(null);
-	let plan = $state<KpiPlanResult | null>(null);
+	let model = $state<LinearRegressionModel | null>(initial?.model ?? null);
+	let validity = $state<ValidityAssessment | null>(initial?.validity ?? null);
+	let plan = $state<KpiPlanResult | null>(initial?.plan ?? null);
 
 	let correlations = $state<Record<string, number>>({});
 	let correlationsLoading = $state(false);
 
 	let saving = $state(false);
 	let saveError = $state('');
-	let planName = $state('');
+	let planName = $state(initial?.name ?? '');
 
-	const selectedSource = $derived(data.sources.find((s) => s.id === dataSourceId));
+	const selectedSource = $derived(sources.find((s) => s.id === dataSourceId));
 	const numericColumns = $derived(selectedSource ? continuousColumns(selectedSource.columns) : []);
 	const targetOptions = $derived(numericColumns.map((c) => ({ value: c.key, label: c.label })));
 	const featureCandidates = $derived(
@@ -54,7 +73,7 @@
 			.map((c) => ({ ...c, correlation: correlations[c.key] }))
 			.sort((a, b) => Math.abs(b.correlation ?? 0) - Math.abs(a.correlation ?? 0))
 	);
-	const sourceOptions = $derived(data.sources.map((s) => ({ value: s.id, label: s.name })));
+	const sourceOptions = $derived(sources.map((s) => ({ value: s.id, label: s.name })));
 	const targetValue = $derived(targetValueText === '' ? null : Number(targetValueText));
 
 	function labelOf(key: string): string {
@@ -67,8 +86,11 @@
 		plan = null;
 	}
 
+	// データソースを切り替えた時だけ配下の設定をリセットする（初期表示・編集時のプリフィルでは発火させない）
+	let prevDataSourceId = dataSourceId;
 	$effect(() => {
-		dataSourceId;
+		if (dataSourceId === prevDataSourceId) return;
+		prevDataSourceId = dataSourceId;
 		targetColumn = '';
 		featureColumns = [];
 		correlations = {};
@@ -199,14 +221,14 @@
 				validity,
 				plan
 			};
-			const res = await fetch('/api/kpi-plans', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name: planName.trim(), dataSourceId, targetColumn, periodLabel: periodLabel.trim(), periodType, snapshot })
-			});
-			const body = (await res.json()) as { id?: string; error?: string };
-			if (!res.ok) throw new Error(body.error ?? '保存に失敗しました');
-			await goto(`/kpi/${body.id}`);
+			const body = JSON.stringify({ name: planName.trim(), dataSourceId, targetColumn, periodLabel: periodLabel.trim(), periodType, snapshot });
+			const res =
+				mode === 'edit'
+					? await fetch(`/api/kpi-plans/${planId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body })
+					: await fetch('/api/kpi-plans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+			const resBody = (await res.json()) as { id?: string; error?: string };
+			if (!res.ok) throw new Error(resBody.error ?? '保存に失敗しました');
+			await goto(`/kpi/${mode === 'edit' ? planId : resBody.id}`);
 		} catch (e) {
 			saveError = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -242,7 +264,7 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">KPI設定</h1>
+		<h1 class="page-title">{mode === 'edit' ? 'KPI編集' : 'KPI新規登録'}</h1>
 		<p class="page-sub">目的変数の目標値から、KPI候補（説明変数）の目標値を実測レンジ内に収まる形で逆算します</p>
 	</div>
 
@@ -269,7 +291,7 @@
 				<div class="save-row">
 					<Textbox label="このKPIプランの名前" bind:value={planName} placeholder="例: 2027年度 売上目標KPI" />
 					<button class="run-btn" onclick={savePlan} disabled={saving || !planName.trim() || !periodLabel.trim()}>
-						{saving ? '保存中…' : '保存する'}
+						{saving ? '保存中…' : mode === 'edit' ? '更新する' : '保存する'}
 					</button>
 				</div>
 				{#if saveError}<p class="error-text">{saveError}</p>{/if}

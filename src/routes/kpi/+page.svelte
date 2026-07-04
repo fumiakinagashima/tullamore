@@ -18,16 +18,17 @@
 <div class="page">
 	<div class="page-header">
 		<h1 class="page-title">KPI一覧</h1>
+		<a href="/kpi/new" class="btn-secondary-sm">新規登録</a>
 	</div>
 	<p class="page-desc">
-		「/analysis/kpi-planning」で作成・保存したKPIプランの一覧です。年次・月次・週次など自由な期間単位で管理できます。
+		作成・保存したKPIプランの一覧です。年次・月次・週次など自由な期間単位で管理できます。
 	</p>
 
 	{#if data.plans.length === 0}
 		<div class="empty">
 			<Flag size={32} />
 			<p>保存されたKPIプランがまだありません</p>
-			<p class="empty-sub">「KPI設定」画面でKPIプランを作成し、保存してください。</p>
+			<p class="empty-sub"><a href="/kpi/new">KPI新規登録</a>からKPIプランを作成し、保存してください。</p>
 		</div>
 	{:else}
 		<div class="plan-grid">
@@ -114,7 +115,11 @@
 		color: var(--color-text-muted);
 
 		p { margin: 0; }
-		.empty-sub { font-size: 0.875rem; }
+		.empty-sub {
+			font-size: 0.875rem;
+
+			a { color: var(--color-primary); }
+		}
 	}
 
 	.plan-grid {

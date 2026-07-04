@@ -99,6 +99,7 @@
 			</p>
 		</div>
 		<div class="header-actions">
+			<a href="/kpi/{plan.id}/build" class="btn-secondary">編集</a>
 			<button class="btn-secondary" onclick={createReport}>レポートを作成</button>
 			<button class="btn-danger" onclick={deletePlan}>削除</button>
 		</div>
@@ -180,12 +181,14 @@
 	}
 
 	.btn-secondary {
+		display: inline-block;
 		padding: 6px 14px;
 		background: transparent;
 		color: var(--color-text);
 		border: 1px solid var(--color-border);
 		border-radius: 6px;
 		font-size: 0.8125rem;
+		text-decoration: none;
 		cursor: pointer;
 		transition: background 0.15s;
 
