@@ -2,10 +2,12 @@
 	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import type { CorrelationMatrix } from '$lib/analysis/correlation-matrix';
+	import type { ValidityAssessment } from '$lib/analysis/validity';
 	import { continuousColumns } from '$lib/analysis/column-type';
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import CorrelationHeatmap from '$lib/components/ui/CorrelationHeatmap.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -16,6 +18,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let result = $state<CorrelationMatrix | null>(null);
+	let validity = $state<ValidityAssessment | null>(null);
 
 	const selectedSource = $derived(data.sources.find((s) => s.id === dataSourceId));
 	const numericColumns = $derived(selectedSource ? continuousColumns(selectedSource.columns) : []);
@@ -29,6 +32,7 @@
 		dataSourceId;
 		selectedColumns = [];
 		result = null;
+		validity = null;
 		error = '';
 	});
 
@@ -54,7 +58,8 @@
 								b: labelOf(strongestPair.b),
 								correlation: strongestPair.value
 							}
-						: null
+						: null,
+					validity: validity ? { overall: validity.overallLevel, comment: validity.overallComment } : undefined
 				}
 			: null;
 	});
@@ -88,9 +93,10 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ dataSourceId, columns: selectedColumns })
 			});
-			const body = (await res.json()) as { matrix?: CorrelationMatrix; error?: string };
+			const body = (await res.json()) as { matrix?: CorrelationMatrix; validity?: ValidityAssessment; error?: string };
 			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
 			result = body.matrix ?? null;
+			validity = body.validity ?? null;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -124,6 +130,9 @@
 	<section class="results-panel">
 		{#if result}
 			<div class="results-card">
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
 				{#if strongestPair}
 					<p class="highlight-text">
 						最も相関が強いのは「{labelOf(strongestPair.a)}」と「{labelOf(strongestPair.b)}」（r = {strongestPair.value.toFixed(2)}）

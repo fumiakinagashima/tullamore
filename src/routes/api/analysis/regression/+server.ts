@@ -4,6 +4,7 @@ import type { RequestHandler } from './$types';
 import { createDb } from '$lib/server/db';
 import { getDataSource } from '$lib/server/db/data-source-service';
 import { fitModelFromDataSource } from '$lib/server/analysis/engine';
+import { assessRegressionValidity } from '$lib/server/analysis/validity';
 import { errors } from '$lib/server/errors';
 
 const bodySchema = z.object({
@@ -26,7 +27,8 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 			targetColumn: body.targetColumn,
 			featureColumns: body.featureColumns
 		});
-		return json({ model });
+		const validity = await assessRegressionValidity(platform.env.DB, source.tableName, model);
+		return json({ model, validity });
 	} catch (e) {
 		return errors.badRequest(e instanceof Error ? e.message : String(e));
 	}

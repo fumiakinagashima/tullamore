@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { welchTTest, twoProportionZTest, type GroupMeanStats, type GroupProportionStats } from './ab-test';
+import { welchTTest, twoProportionZTest, assessAbTestValidity, type GroupMeanStats, type GroupProportionStats } from './ab-test';
 import { twoTailedPValueFromZ } from './statistics';
 
 const ALPHA = 0.05;
@@ -92,5 +92,31 @@ describe('twoProportionZTest', () => {
 		expect(result.significant).toBe(false);
 		expect(result.ci95[0]).toBeLessThan(0);
 		expect(result.ci95[1]).toBeGreaterThan(0);
+	});
+});
+
+describe('assessAbTestValidity', () => {
+	it('rates good for a large, well-balanced proportion test', () => {
+		const a: GroupProportionStats = { group: 'A', n: 200, successes: 60 };
+		const b: GroupProportionStats = { group: 'B', n: 200, successes: 80 };
+		const result = twoProportionZTest(a, b, ALPHA);
+		const validity = assessAbTestValidity(result);
+		expect(validity.overallLevel).toBe('good');
+	});
+
+	it('flags poor sample size when a group is very small', () => {
+		const a: GroupMeanStats = { group: 'A', n: 5, mean: 100, variance: 25 };
+		const b: GroupMeanStats = { group: 'B', n: 5, mean: 110, variance: 25 };
+		const result = welchTTest(a, b, ALPHA);
+		const validity = assessAbTestValidity(result);
+		expect(validity.overallLevel).toBe('poor');
+	});
+
+	it('flags the normal-approximation caveat when expected successes/failures are too few', () => {
+		const a: GroupProportionStats = { group: 'A', n: 50, successes: 1 }; // n*p = 1, well below 5
+		const b: GroupProportionStats = { group: 'B', n: 50, successes: 2 };
+		const result = twoProportionZTest(a, b, ALPHA);
+		const validity = assessAbTestValidity(result);
+		expect(validity.checks.some((c) => c.label === '正規近似の妥当性' && c.level === 'caution')).toBe(true);
 	});
 });

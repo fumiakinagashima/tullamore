@@ -1,5 +1,6 @@
 import { Matrix, solve } from 'ml-matrix';
 import type { FeatureRange } from '../types';
+import { assessSampleSizeAdequacy, combineOverall, type ValidityAssessment, type ValidityCheckItem } from '../validity';
 
 export type LogisticRegressionMetrics = {
 	sampleSize: number;
@@ -171,6 +172,71 @@ export function fitLogisticRegression(
 		confusionMatrix: { truePositive, falsePositive, trueNegative, falseNegative },
 		featureRanges
 	};
+}
+
+/**
+ * McFadden's pseudo-R²から当てはまりの良さを評価する。線形回帰のR²と異なりスケールが違う点に注意
+ * （McFadden(1974)は0.2〜0.4を「非常に良い当てはまり」としており、線形回帰のR²の閾値をそのまま流用すると
+ * 実際には良好なモデルを過小評価してしまう）。
+ */
+function assessPseudoR2(pseudoR2: number): ValidityCheckItem {
+	if (pseudoR2 >= 0.4) {
+		return { label: '当てはまりの良さ', level: 'good', comment: `疑似R²(McFadden)=${pseudoR2.toFixed(3)}で非常に良好な当てはまりです` };
+	}
+	if (pseudoR2 >= 0.2) {
+		return { label: '当てはまりの良さ', level: 'good', comment: `疑似R²(McFadden)=${pseudoR2.toFixed(3)}で良好な当てはまりです（0.2〜0.4は良好とされます）` };
+	}
+	if (pseudoR2 >= 0.1) {
+		return { label: '当てはまりの良さ', level: 'caution', comment: `疑似R²(McFadden)=${pseudoR2.toFixed(3)}で当てはまりはやや弱く、参考程度に留めてください` };
+	}
+	return { label: '当てはまりの良さ', level: 'poor', comment: `疑似R²(McFadden)=${pseudoR2.toFixed(3)}で当てはまりが弱く、この説明変数では十分に予測できていません` };
+}
+
+/**
+ * 分類モデルの妥当性を評価する。当てはまり（疑似R²）・サンプル数の十分性・
+ * IRLSの収束・目的変数のクラスバランス（極端な偏りがあると少数派クラスの予測精度が低くなりやすい）をチェックする。
+ */
+export function assessClassificationValidity(model: LogisticRegressionModel): ValidityAssessment {
+	const checks: ValidityCheckItem[] = [
+		assessPseudoR2(model.metrics.pseudoR2),
+		assessSampleSizeAdequacy(model.metrics.sampleSize, model.featureColumns.length)
+	];
+
+	if (!model.metrics.converged) {
+		checks.push({
+			label: '学習の収束',
+			level: 'poor',
+			comment: '最大反復回数に達し、学習が収束しませんでした。係数の信頼性が低い可能性があります'
+		});
+	} else {
+		checks.push({ label: '学習の収束', level: 'good', comment: `${model.metrics.iterations}回の反復で収束しました` });
+	}
+
+	const cm = model.confusionMatrix;
+	const total = cm.truePositive + cm.falsePositive + cm.trueNegative + cm.falseNegative;
+	const positiveRate = total > 0 ? (cm.truePositive + cm.falseNegative) / total : 0;
+	const minorityRate = Math.min(positiveRate, 1 - positiveRate);
+	if (minorityRate >= 0.2) {
+		checks.push({ label: 'クラスバランス', level: 'good', comment: `正例の割合は${(positiveRate * 100).toFixed(1)}%で、両クラスのバランスは概ね取れています` });
+	} else if (minorityRate >= 0.05) {
+		checks.push({
+			label: 'クラスバランス',
+			level: 'caution',
+			comment: `正例の割合が${(positiveRate * 100).toFixed(1)}%とやや偏っています。少数派クラスの予測精度が低い可能性があります`
+		});
+	} else {
+		checks.push({
+			label: 'クラスバランス',
+			level: 'poor',
+			comment: `正例の割合が${(positiveRate * 100).toFixed(1)}%と極端に偏っています。正解率が高く見えても少数派クラスをほとんど当てられていない可能性があります`
+		});
+	}
+
+	const { overallLevel, overallComment } = combineOverall(
+		checks,
+		'この分類モデルは妥当性チェックの主要な観点で問題は見つかりませんでした'
+	);
+	return { overallLevel, overallComment, checks };
 }
 
 /** 保存済みモデルから予測確率（0〜1、正例と判定した確率）を計算する純粋関数 */

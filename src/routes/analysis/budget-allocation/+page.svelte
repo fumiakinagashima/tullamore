@@ -2,6 +2,7 @@
 	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import type { LinearRegressionModel } from '$lib/analysis/types';
+	import type { ValidityAssessment } from '$lib/analysis/validity';
 	import { continuousColumns } from '$lib/analysis/column-type';
 	import {
 		optimizeBudgetAllocation,
@@ -15,6 +16,7 @@
 	import Table from '$lib/components/ui/Table.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import NumberInput from '$lib/components/ui/NumberInput.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -26,6 +28,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let model = $state<LinearRegressionModel | null>(null);
+	let validity = $state<ValidityAssessment | null>(null);
 
 	let boundsRows = $state<Record<string, ChannelBounds>>({});
 	let totalBudget = $state(0);
@@ -46,6 +49,7 @@
 		targetColumn = '';
 		featureColumns = [];
 		model = null;
+		validity = null;
 		result = null;
 		error = '';
 	});
@@ -73,7 +77,8 @@
 					predicted_optimal: result.predictedOptimal,
 					uplift: result.uplift,
 					infeasible: result.infeasible,
-					allocation: Object.fromEntries(result.channels.map((c) => [c.key, c.allocated]))
+					allocation: Object.fromEntries(result.channels.map((c) => [c.key, c.allocated])),
+					validity: validity ? { overall: validity.overallLevel, comment: validity.overallComment } : undefined
 				}
 			: null;
 	});
@@ -110,9 +115,10 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
-			const body = (await res.json()) as { model?: LinearRegressionModel; error?: string };
+			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
 			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
 			model = body.model ?? null;
+			validity = body.validity ?? null;
 			result = null;
 			if (model) {
 				boundsRows = Object.fromEntries(model.featureColumns.map((k) => [k, defaultChannelBounds(model!, k)]));
@@ -176,6 +182,9 @@
 	<section class="results-panel">
 		{#if result}
 			<div class="results-card">
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
 				{#if result.infeasible}
 					<p class="warning-text">
 						指定した予算総額はチャネルの上下限の合計に収まらないため、配分は目安値です。上下限を見直してください。

@@ -1,5 +1,6 @@
 import { maxFeaturePairCorrelation } from '$lib/analysis/correlation';
 import type { LinearRegressionModel } from '$lib/analysis/types';
+import { assessFitQuality, assessSampleSizeAdequacy } from '$lib/analysis/validity';
 import { computeSufficientStats } from './sufficient-stats';
 
 export type SimulatorReview = {
@@ -12,32 +13,23 @@ export type SimulatorReview = {
 	overallComment: string;
 };
 
+// $lib/analysis/validity.ts の ValidityLevel（good/caution/poor）を、この関数の既存の
+// 語彙（excellent/good/moderate/weak, sufficient/marginal/insufficient）にマッピングする。
+// SimulatorReview は review_simulator MCPツール・/simulators/[id] が既に消費している型のため、
+// 判定ロジックは共通化しつつ外部から見える形は変えない
 function assessFit(r2: number): { fitQuality: SimulatorReview['fitQuality']; fitComment: string } {
-	if (r2 >= 0.8) return { fitQuality: 'excellent', fitComment: `R²=${r2.toFixed(3)}で当てはまりは非常に良好です` };
-	if (r2 >= 0.5) return { fitQuality: 'good', fitComment: `R²=${r2.toFixed(3)}で当てはまりは良好です` };
-	if (r2 >= 0.3) return { fitQuality: 'moderate', fitComment: `R²=${r2.toFixed(3)}で当てはまりはやや弱く、参考程度に留めてください` };
-	return { fitQuality: 'weak', fitComment: `R²=${r2.toFixed(3)}で当てはまりが弱く、この説明変数では十分に予測できていません` };
+	const { level, comment } = assessFitQuality(r2);
+	const fitQuality = level === 'poor' ? 'weak' : r2 >= 0.8 ? 'excellent' : level === 'good' ? 'good' : 'moderate';
+	return { fitQuality, fitComment: comment };
 }
 
 function assessSampleSize(
 	sampleSize: number,
 	featureCount: number
 ): { sampleSizeAdequacy: SimulatorReview['sampleSizeAdequacy']; sampleSizeComment: string } {
-	const ideal = 10 * (featureCount + 1);
-	const marginal = 5 * (featureCount + 1);
-	if (sampleSize >= ideal) {
-		return { sampleSizeAdequacy: 'sufficient', sampleSizeComment: `サンプル数${sampleSize}件は説明変数${featureCount}個に対して十分です` };
-	}
-	if (sampleSize >= marginal) {
-		return {
-			sampleSizeAdequacy: 'marginal',
-			sampleSizeComment: `サンプル数${sampleSize}件は説明変数${featureCount}個に対してやや少なめです（目安: ${ideal}件以上）。データを追加できると信頼性が上がります`
-		};
-	}
-	return {
-		sampleSizeAdequacy: 'insufficient',
-		sampleSizeComment: `サンプル数${sampleSize}件は説明変数${featureCount}個に対して不足しています（目安: ${ideal}件以上）。係数の信頼性が低い可能性があります`
-	};
+	const { level, comment } = assessSampleSizeAdequacy(sampleSize, featureCount);
+	const sampleSizeAdequacy = level === 'good' ? 'sufficient' : level === 'caution' ? 'marginal' : 'insufficient';
+	return { sampleSizeAdequacy, sampleSizeComment: comment };
 }
 
 /**

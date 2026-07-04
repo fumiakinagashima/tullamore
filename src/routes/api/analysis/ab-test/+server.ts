@@ -4,6 +4,7 @@ import type { RequestHandler } from './$types';
 import { createDb } from '$lib/server/db';
 import { getDataSource } from '$lib/server/db/data-source-service';
 import { runAbTestFromDataSource } from '$lib/server/analysis/ab-test';
+import { assessAbTestValidity } from '$lib/analysis/ab-test';
 import { AB_TEST_SIGNIFICANCE_ALPHA } from '$lib/constants';
 import { errors } from '$lib/server/errors';
 
@@ -29,7 +30,8 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 			testType: body.testType,
 			alpha: AB_TEST_SIGNIFICANCE_ALPHA
 		});
-		return json({ result });
+		const validity = assessAbTestValidity(result);
+		return json({ result, validity });
 	} catch (e) {
 		return errors.badRequest(e instanceof Error ? e.message : String(e));
 	}

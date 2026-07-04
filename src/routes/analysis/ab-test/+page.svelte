@@ -2,10 +2,12 @@
 	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import type { TTestResult, ProportionTestResult } from '$lib/analysis/ab-test';
+	import type { ValidityAssessment } from '$lib/analysis/validity';
 	import { continuousColumns } from '$lib/analysis/column-type';
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import { AB_TEST_SIGNIFICANCE_ALPHA } from '$lib/constants';
 	import Select from '$lib/components/ui/Select.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -23,6 +25,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let result = $state<TTestResult | ProportionTestResult | null>(null);
+	let validity = $state<ValidityAssessment | null>(null);
 
 	const selectedSource = $derived(data.sources.find((s) => s.id === dataSourceId));
 	const allColumns = $derived(selectedSource?.columns ?? []);
@@ -36,6 +39,7 @@
 		groupColumn = '';
 		metricColumn = '';
 		result = null;
+		validity = null;
 		error = '';
 	});
 
@@ -56,7 +60,8 @@
 					significant: result.significant,
 					...(result.kind === 'mean'
 						? { group_a: result.groupA, group_b: result.groupB, mean_diff: result.meanDiff }
-						: { group_a: result.groupA, group_b: result.groupB, diff: result.diff })
+						: { group_a: result.groupA, group_b: result.groupB, diff: result.diff }),
+					validity: validity ? { overall: validity.overallLevel, comment: validity.overallComment } : undefined
 				}
 			: null;
 	});
@@ -90,9 +95,14 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ dataSourceId, groupColumn, metricColumn, testType })
 			});
-			const body = (await res.json()) as { result?: TTestResult | ProportionTestResult; error?: string };
+			const body = (await res.json()) as {
+				result?: TTestResult | ProportionTestResult;
+				validity?: ValidityAssessment;
+				error?: string;
+			};
 			if (!res.ok) throw new Error(body.error ?? '検定に失敗しました');
 			result = body.result ?? null;
+			validity = body.validity ?? null;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -118,6 +128,9 @@
 	<section class="results-panel">
 		{#if result}
 			<div class="results-card">
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
 				<p class="verdict" class:significant={result.significant}>
 					{result.significant
 						? `統計的に有意な差があります（p = ${fmt(result.pValue)} < ${AB_TEST_SIGNIFICANCE_ALPHA}）`

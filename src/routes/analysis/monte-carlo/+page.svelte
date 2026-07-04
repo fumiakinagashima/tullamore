@@ -2,6 +2,7 @@
 	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import type { LinearRegressionModel } from '$lib/analysis/types';
+	import type { ValidityAssessment } from '$lib/analysis/validity';
 	import { continuousColumns } from '$lib/analysis/column-type';
 	import { runMonteCarlo, type FeatureDistribution, type MonteCarloResult } from '$lib/analysis/monte-carlo';
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
@@ -16,6 +17,7 @@
 	import Select from '$lib/components/ui/Select.svelte';
 	import NumberInput from '$lib/components/ui/NumberInput.svelte';
 	import Toggle from '$lib/components/ui/Toggle.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -34,6 +36,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let model = $state<LinearRegressionModel | null>(null);
+	let validity = $state<ValidityAssessment | null>(null);
 
 	// Select は string を bindable として扱うため kind は string で持ち、使用時に FeatureDistribution へ絞る
 	// （trend/+page.svelte の granularityValue と同じパターン）
@@ -74,6 +77,7 @@
 		targetColumn = '';
 		featureColumns = [];
 		model = null;
+		validity = null;
 		result = null;
 		error = '';
 	});
@@ -98,7 +102,8 @@
 					draws: result.summary.draws,
 					mean: result.summary.mean,
 					stddev: result.summary.stddev,
-					percentiles: Object.fromEntries(result.summary.percentiles.map((p) => [`p${p.p}`, p.value]))
+					percentiles: Object.fromEntries(result.summary.percentiles.map((p) => [`p${p.p}`, p.value])),
+					validity: validity ? { overall: validity.overallLevel, comment: validity.overallComment } : undefined
 				}
 			: null;
 	});
@@ -136,9 +141,10 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
-			const body = (await res.json()) as { model?: LinearRegressionModel; error?: string };
+			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
 			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
 			model = body.model ?? null;
+			validity = body.validity ?? null;
 			result = null;
 			if (model) {
 				distRows = Object.fromEntries(
@@ -197,6 +203,9 @@
 	<section class="results-panel">
 		{#if result}
 			<div class="results-card">
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
 				<div class="metrics-row">
 					<div class="metric">
 						<span class="metric-label">平均</span>

@@ -4,6 +4,7 @@ import type { RequestHandler } from './$types';
 import { createDb } from '$lib/server/db';
 import { getDataSource } from '$lib/server/db/data-source-service';
 import { fitClassifierFromDataSource } from '$lib/server/analysis/classification';
+import { assessClassificationValidity } from '$lib/analysis/methods/logistic-regression';
 import { LOGISTIC_REGRESSION_MAX_ROWS } from '$lib/constants';
 import { errors } from '$lib/server/errors';
 
@@ -27,7 +28,8 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 			featureColumns: body.featureColumns,
 			maxRows: LOGISTIC_REGRESSION_MAX_ROWS
 		});
-		return json({ model, truncated });
+		const validity = assessClassificationValidity(model);
+		return json({ model, truncated, validity });
 	} catch (e) {
 		return errors.badRequest(e instanceof Error ? e.message : String(e));
 	}

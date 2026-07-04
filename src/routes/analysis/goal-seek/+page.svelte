@@ -2,12 +2,14 @@
 	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import type { LinearRegressionModel } from '$lib/analysis/types';
+	import type { ValidityAssessment } from '$lib/analysis/validity';
 	import { continuousColumns } from '$lib/analysis/column-type';
 	import { solveForFeature } from '$lib/analysis/goal-seek';
 	import { predict } from '$lib/analysis/registry';
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import Textbox from '$lib/components/ui/Textbox.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -24,6 +26,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let model = $state<LinearRegressionModel | null>(null);
+	let validity = $state<ValidityAssessment | null>(null);
 
 	let solveFeature = $state('');
 	let targetValueText = $state('');
@@ -55,6 +58,7 @@
 		targetColumn = '';
 		featureColumns = [];
 		model = null;
+		validity = null;
 		error = '';
 	});
 
@@ -99,7 +103,8 @@
 						target_value: targetValue,
 						solved_feature: solveFeature,
 						solved_value: r.value,
-						is_out_of_range: r.isOutOfRange
+						is_out_of_range: r.isOutOfRange,
+						validity: validity ? { overall: validity.overallLevel, comment: validity.overallComment } : undefined
 					}
 				: null;
 	});
@@ -134,9 +139,10 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
-			const body = (await res.json()) as { model?: LinearRegressionModel; error?: string };
+			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
 			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
 			model = body.model ?? null;
+			validity = body.validity ?? null;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -154,6 +160,9 @@
 	<section class="results-panel">
 		{#if model}
 			<div class="goal-form">
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
 				<div class="goal-row">
 					<Select label="逆算する変数" bind:value={solveFeature} options={solveFeatureOptions} />
 					<Textbox label="{labelOf(targetColumn)}の目標値" type="number" bind:value={targetValueText} />

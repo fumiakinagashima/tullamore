@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCorrelationMatrix } from './correlation-matrix';
+import { buildCorrelationMatrix, assessCorrelationValidity } from './correlation-matrix';
 import type { SufficientStats } from './types';
 
 function sum(values: number[]): number {
@@ -92,5 +92,24 @@ describe('buildCorrelationMatrix', () => {
 		const stats = buildStats(data, ['a']);
 		const result = buildCorrelationMatrix(stats, ['a']);
 		expect(result.matrix).toEqual([[1]]);
+	});
+
+	it('reports the sample size used', () => {
+		const data = { a: [1, 2, 3, 4, 5], b: [2, 4, 6, 8, 10] };
+		const stats = buildStats(data, ['a', 'b']);
+		const result = buildCorrelationMatrix(stats, ['a', 'b']);
+		expect(result.sampleSize).toBe(5);
+	});
+});
+
+describe('assessCorrelationValidity', () => {
+	it('rates good for a large sample', () => {
+		const validity = assessCorrelationValidity({ columns: ['a', 'b'], matrix: [[1, 0.5], [0.5, 1]], sampleSize: 100 });
+		expect(validity.overallLevel).toBe('good');
+	});
+
+	it('rates poor for a very small sample', () => {
+		const validity = assessCorrelationValidity({ columns: ['a', 'b'], matrix: [[1, 0.5], [0.5, 1]], sampleSize: 5 });
+		expect(validity.overallLevel).toBe('poor');
 	});
 });

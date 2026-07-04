@@ -1,4 +1,5 @@
 import { twoTailedPValueFromT, twoTailedPValueFromZ, studentTInverseCDF, normalInverseCDF } from './statistics';
+import { combineOverall, type ValidityAssessment, type ValidityCheckItem } from './validity';
 
 export type GroupMeanStats = { group: string; n: number; mean: number; variance: number };
 export type GroupProportionStats = { group: string; n: number; successes: number };
@@ -94,4 +95,54 @@ export function twoProportionZTest(a: GroupProportionStats, b: GroupProportionSt
 		ci95: [diff - margin, diff + margin],
 		significant: pValue < alpha
 	};
+}
+
+/**
+ * 検定結果の妥当性を評価する。サンプル数の十分性（目安: グループごとに30件以上）に加え、
+ * 比率の検定では正規近似が成り立つ条件（各グループで成功/失敗の期待件数がともに5件以上、
+ * 二項分布を正規分布で近似する際の標準的な経験則）もチェックする。
+ */
+export function assessAbTestValidity(result: TTestResult | ProportionTestResult): ValidityAssessment {
+	const checks: ValidityCheckItem[] = [];
+	const minN = Math.min(result.groupA.n, result.groupB.n);
+
+	if (minN >= 30) {
+		checks.push({ label: 'サンプル数', level: 'good', comment: `両グループとも十分なサンプル数があります（最小n=${minN}）` });
+	} else if (minN >= 10) {
+		checks.push({
+			label: 'サンプル数',
+			level: 'caution',
+			comment: `サンプル数がやや少なめです（最小n=${minN}）。目安はグループごとに30件以上です`
+		});
+	} else {
+		checks.push({
+			label: 'サンプル数',
+			level: 'poor',
+			comment: `サンプル数が不足しています（最小n=${minN}）。検定結果の信頼性が低い可能性があります（目安: グループごとに30件以上）`
+		});
+	}
+
+	if (result.kind === 'proportion') {
+		const aOk = result.groupA.n * result.propA >= 5 && result.groupA.n * (1 - result.propA) >= 5;
+		const bOk = result.groupB.n * result.propB >= 5 && result.groupB.n * (1 - result.propB) >= 5;
+		if (aOk && bOk) {
+			checks.push({
+				label: '正規近似の妥当性',
+				level: 'good',
+				comment: '両グループとも正規近似が有効な条件（成功・失敗ともに期待件数5件以上）を満たしています'
+			});
+		} else {
+			checks.push({
+				label: '正規近似の妥当性',
+				level: 'caution',
+				comment: '成功または失敗の件数が少なく、正規近似に基づくp値の精度が低下している可能性があります'
+			});
+		}
+	}
+
+	const { overallLevel, overallComment } = combineOverall(
+		checks,
+		'この検定は妥当性チェックの主要な観点で問題は見つかりませんでした'
+	);
+	return { overallLevel, overallComment, checks };
 }

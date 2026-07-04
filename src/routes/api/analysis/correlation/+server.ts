@@ -4,6 +4,7 @@ import type { RequestHandler } from './$types';
 import { createDb } from '$lib/server/db';
 import { getDataSource } from '$lib/server/db/data-source-service';
 import { computeCorrelationMatrixFromDataSource } from '$lib/server/analysis/correlation';
+import { assessCorrelationValidity } from '$lib/analysis/correlation-matrix';
 import { errors } from '$lib/server/errors';
 
 const bodySchema = z.object({
@@ -21,7 +22,8 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 	try {
 		const matrix = await computeCorrelationMatrixFromDataSource(platform.env.DB, source, body.columns);
-		return json({ matrix });
+		const validity = assessCorrelationValidity(matrix);
+		return json({ matrix, validity });
 	} catch (e) {
 		return errors.badRequest(e instanceof Error ? e.message : String(e));
 	}

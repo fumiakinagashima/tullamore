@@ -2,11 +2,13 @@
 	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import type { LinearRegressionModel } from '$lib/analysis/types';
+	import type { ValidityAssessment } from '$lib/analysis/validity';
 	import { continuousColumns } from '$lib/analysis/column-type';
 	import { computeSensitivity } from '$lib/analysis/sensitivity';
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import TornadoChart from '$lib/components/ui/TornadoChart.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -18,6 +20,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let model = $state<LinearRegressionModel | null>(null);
+	let validity = $state<ValidityAssessment | null>(null);
 
 	const selectedSource = $derived(data.sources.find((s) => s.id === dataSourceId));
 	const numericColumns = $derived(selectedSource ? continuousColumns(selectedSource.columns) : []);
@@ -44,6 +47,7 @@
 		targetColumn = '';
 		featureColumns = [];
 		model = null;
+		validity = null;
 		error = '';
 	});
 
@@ -65,7 +69,8 @@
 			? {
 					target_column: targetColumn,
 					base_prediction: t.base,
-					sensitivity: t.bars.map((b) => ({ feature: b.label, low: b.low, high: b.high, swing: b.high - b.low }))
+					sensitivity: t.bars.map((b) => ({ feature: b.label, low: b.low, high: b.high, swing: b.high - b.low })),
+					validity: validity ? { overall: validity.overallLevel, comment: validity.overallComment } : undefined
 				}
 			: null;
 	});
@@ -100,9 +105,10 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
-			const body = (await res.json()) as { model?: LinearRegressionModel; error?: string };
+			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
 			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
 			model = body.model ?? null;
+			validity = body.validity ?? null;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -119,6 +125,11 @@
 
 	<section class="results-panel">
 		{#if tornadoData}
+			{#if validity}
+				<div class="validity-row">
+					<ValidityCard {validity} />
+				</div>
+			{/if}
 			<TornadoChart bars={tornadoData.bars} base={tornadoData.base} title="{labelOf(targetColumn)}への影響度（振れ幅が大きい順）" />
 			<p class="base-note">点線はベースライン（他の変数を平均値に固定した時の予測値: {tornadoData.base.toLocaleString('ja-JP', { maximumFractionDigits: 1 })}）</p>
 		{:else}
@@ -187,6 +198,10 @@
 		font-size: 0.75rem;
 		color: var(--color-text-muted);
 		margin: 8px 0 0;
+	}
+
+	.validity-row {
+		margin-bottom: 16px;
 	}
 
 	.empty-results {

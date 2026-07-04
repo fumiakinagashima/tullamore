@@ -66,5 +66,36 @@ describe('computeDescriptiveStats', () => {
 		const result = computeDescriptiveStats(aggregates, values, 5);
 		expect(result.stddev).toBe(0);
 		expect(result.median).toBe(42);
+		expect(result.outlierCount).toBe(0);
+	});
+
+	it('counts values outside the IQR fences as outliers', () => {
+		// tight cluster around 10 plus two clear outliers (-100, 1000)
+		const values = [8, 9, 10, 10, 10, 11, 12, -100, 1000];
+		const aggregates = aggregatesOf(values);
+		const result = computeDescriptiveStats(aggregates, values, 5);
+		expect(result.outlierCount).toBe(2);
+	});
+
+	it('reports good validity for a large, unsampled dataset', () => {
+		const values = Array.from({ length: 50 }, (_, i) => i);
+		const aggregates = aggregatesOf(values);
+		const result = computeDescriptiveStats(aggregates, values, 10);
+		expect(result.validity.overallLevel).toBe('good');
+	});
+
+	it('reports poor validity for a very small dataset', () => {
+		const values = [1, 2, 3];
+		const aggregates = aggregatesOf(values);
+		const result = computeDescriptiveStats(aggregates, values, 5);
+		expect(result.validity.overallLevel).toBe('poor');
+	});
+
+	it('flags the sampling caveat in validity checks when capped', () => {
+		const fullPopulation = Array.from({ length: 1000 }, (_, i) => i);
+		const aggregates = aggregatesOf(fullPopulation);
+		const sample = fullPopulation.slice(0, 100);
+		const result = computeDescriptiveStats(aggregates, sample, 10);
+		expect(result.validity.checks.some((c) => c.label === '中央値・四分位数の精度')).toBe(true);
 	});
 });

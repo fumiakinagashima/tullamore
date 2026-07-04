@@ -1,10 +1,12 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import type { DataQualityReport } from '$lib/server/analysis/data-quality';
 	import { goto, invalidateAll } from '$app/navigation';
 	import Download from '$lib/components/icon/Download.svelte';
 	import DataGrid from '$lib/components/ui/DataGrid.svelte';
 	import FileUpload from '$lib/components/ui/FileUpload.svelte';
 	import Toggle from '$lib/components/ui/Toggle.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let { source, sync, connectionName } = $derived(data);
@@ -107,9 +109,25 @@
 		previewLoaded = true;
 	}
 
+	// データ品質チェック
+	let qualityReport = $state<DataQualityReport | null>(null);
+	let qualityLoading = $state(false);
+
+	async function loadQuality() {
+		qualityLoading = true;
+		try {
+			const res = await fetch(`/api/data-sources/${source.id}/quality`);
+			const json = (await res.json()) as { report?: DataQualityReport };
+			qualityReport = json.report ?? null;
+		} finally {
+			qualityLoading = false;
+		}
+	}
+
 	$effect(() => {
 		void source.id;
 		loadPreview();
+		loadQuality();
 	});
 
 	// 削除
@@ -173,6 +191,57 @@
 				{/each}
 			</tbody>
 		</table>
+	</section>
+
+	<section class="section">
+		<h2 class="section-title">データ品質チェック</h2>
+		{#if qualityLoading}
+			<p class="empty-text">確認中...</p>
+		{:else if qualityReport}
+			{#if qualityReport.lowRowCountWarning}
+				<p class="import-result error">
+					データ件数（{qualityReport.rowCount.toLocaleString()}件）が少なく、分析の信頼性に影響する可能性があります（目安: 30件以上）
+				</p>
+			{/if}
+			{#if qualityReport.columns.length === 0}
+				<p class="empty-text">品質チェックの対象になる数値列がありません</p>
+			{:else}
+				<div class="quality-table-wrap">
+					<table class="quality-table">
+						<thead>
+							<tr>
+								<th>列</th>
+								<th>件数</th>
+								<th>欠損</th>
+								<th>外れ値候補</th>
+								<th>判定</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each qualityReport.columns as col (col.key)}
+								<tr>
+									<td>{col.label}</td>
+									<td>{col.n.toLocaleString()}</td>
+									<td>{col.missingCount.toLocaleString()}</td>
+									<td>{col.outlierCount.toLocaleString()}</td>
+									<td>
+										<span class="quality-badge level-{col.validity.overallLevel}">
+											{col.validity.overallLevel === 'good' ? '妥当' : col.validity.overallLevel === 'caution' ? '要注意' : '要検討'}
+										</span>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+				{#each qualityReport.columns.filter((c) => c.validity.overallLevel !== 'good') as col (col.key)}
+					<div class="quality-detail">
+						<p class="quality-detail-title">{col.label}</p>
+						<ValidityCard validity={col.validity} />
+					</div>
+				{/each}
+			{/if}
+		{/if}
 	</section>
 
 	<section class="section">
@@ -311,6 +380,51 @@
 	}
 
 	.type-badge { color: var(--color-text-muted); font-size: 0.8125rem; }
+
+	.quality-table-wrap {
+		overflow-x: auto;
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+	}
+
+	.quality-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.875rem;
+
+		th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--color-border); }
+		th { font-weight: 500; color: var(--color-text-muted); background: var(--color-surface); }
+		tr:last-child td { border-bottom: none; }
+	}
+
+	.quality-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 2px 9px;
+		border-radius: 999px;
+		font-size: 0.75rem;
+		font-weight: 600;
+		background: var(--color-neutral-bg);
+		color: var(--color-neutral);
+
+		&.level-good { background: var(--color-success-bg); color: var(--color-success); }
+		&.level-caution { background: color-mix(in srgb, var(--color-warning) 12%, var(--color-background)); color: var(--color-warning); }
+		&.level-poor { background: var(--color-error-bg); color: var(--color-error); }
+	}
+
+	.quality-detail {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		margin-top: 12px;
+	}
+
+	.quality-detail-title {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--color-text);
+		margin: 0;
+	}
 
 	.file-label {
 		display: inline-flex;

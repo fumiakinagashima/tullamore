@@ -2,12 +2,14 @@
 	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import type { LinearRegressionModel } from '$lib/analysis/types';
+	import type { ValidityAssessment } from '$lib/analysis/validity';
 	import { continuousColumns } from '$lib/analysis/column-type';
 	import { predict } from '$lib/analysis/registry';
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import BarChart from '$lib/components/ui/BarChart.svelte';
 	import DataGrid from '$lib/components/ui/DataGrid.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	type GridRow = Record<string, string | number | null>;
 
@@ -21,6 +23,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let model = $state<LinearRegressionModel | null>(null);
+	let validity = $state<ValidityAssessment | null>(null);
 	let rows = $state<GridRow[]>([]);
 
 	const selectedSource = $derived(data.sources.find((s) => s.id === dataSourceId));
@@ -63,6 +66,7 @@
 		targetColumn = '';
 		featureColumns = [];
 		model = null;
+		validity = null;
 		rows = [];
 		error = '';
 	});
@@ -93,7 +97,8 @@
 			model && scenarios.length > 0
 				? {
 						target_column: targetColumn,
-						scenarios: scenarios.map((s) => ({ name: s.name, predicted_value: s.value }))
+						scenarios: scenarios.map((s) => ({ name: s.name, predicted_value: s.value })),
+						validity: validity ? { overall: validity.overallLevel, comment: validity.overallComment } : undefined
 					}
 				: null;
 	});
@@ -128,9 +133,10 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
-			const body = (await res.json()) as { model?: LinearRegressionModel; error?: string };
+			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
 			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
 			model = body.model ?? null;
+			validity = body.validity ?? null;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -147,6 +153,11 @@
 
 	<section class="results-panel">
 		{#if model && chartData.length > 0}
+			{#if validity}
+				<div class="validity-row">
+					<ValidityCard {validity} />
+				</div>
+			{/if}
 			<BarChart data={chartData} title="シナリオ別の{labelOf(targetColumn)}予測値" />
 		{:else}
 			<div class="empty-results">
@@ -237,6 +248,10 @@
 		flex-direction: column;
 		gap: 10px;
 		margin-bottom: 24px;
+	}
+
+	.validity-row {
+		margin-bottom: 16px;
 	}
 
 	.config-panel {

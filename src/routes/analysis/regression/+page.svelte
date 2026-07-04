@@ -2,11 +2,13 @@
 	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import type { LinearRegressionModel } from '$lib/analysis/types';
+	import type { ValidityAssessment } from '$lib/analysis/validity';
 	import { continuousColumns } from '$lib/analysis/column-type';
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import Simulator from '$lib/components/chat/Simulator.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import Textbox from '$lib/components/ui/Textbox.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -19,6 +21,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let model = $state<LinearRegressionModel | null>(null);
+	let validity = $state<ValidityAssessment | null>(null);
 
 	const selectedSource = $derived(data.sources.find((s) => s.id === dataSourceId));
 	const numericColumns = $derived(selectedSource ? continuousColumns(selectedSource.columns) : []);
@@ -57,6 +60,7 @@
 		targetColumn = '';
 		featureColumns = [];
 		model = null;
+		validity = null;
 		error = '';
 	});
 
@@ -82,7 +86,8 @@
 					r2: m.metrics.r2,
 					adjusted_r2: m.metrics.adjustedR2,
 					sample_size: m.metrics.sampleSize,
-					coefficients: Object.fromEntries(m.featureColumns.map((c, i) => [c, m.coefficients[i]]))
+					coefficients: Object.fromEntries(m.featureColumns.map((c, i) => [c, m.coefficients[i]])),
+					validity: validity ? { overall: validity.overallLevel, comment: validity.overallComment } : undefined
 				}
 			: null;
 	});
@@ -120,9 +125,10 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
-			const body = (await res.json()) as { model?: LinearRegressionModel; error?: string };
+			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
 			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
 			model = body.model ?? null;
+			validity = body.validity ?? null;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -139,6 +145,11 @@
 
 	<section class="results-panel">
 		{#if simulatorProps}
+			{#if validity}
+				<div class="validity-row">
+					<ValidityCard {validity} />
+				</div>
+			{/if}
 			<Simulator {...simulatorProps} />
 		{:else}
 			<div class="empty-results">
@@ -203,6 +214,10 @@
 		:global(.simulator) {
 			max-width: none;
 		}
+	}
+
+	.validity-row {
+		margin-bottom: 16px;
 	}
 
 	.empty-results {

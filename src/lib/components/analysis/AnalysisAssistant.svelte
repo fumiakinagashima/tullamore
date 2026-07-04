@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import ArrowUp from '$lib/components/icon/ArrowUp.svelte';
+	import FileText from '$lib/components/icon/FileText.svelte';
+	import ReportModal from './ReportModal.svelte';
 	import { marked } from 'marked';
 	import { filterXSS } from 'xss';
 
@@ -34,6 +36,11 @@
 	let loading = $state(false);
 	let listEl = $state<HTMLElement | null>(null);
 
+	let reportModalOpen = $state(false);
+	let reportLoading = $state(false);
+	let report = $state<string | null>(null);
+	let reportError = $state<string | null>(null);
+
 	$effect(() => {
 		void messages.length;
 		tick().then(() => {
@@ -43,6 +50,28 @@
 
 	function renderMarkdown(text: string): string {
 		return filterXSS(marked.parse(text, { async: false }) as string);
+	}
+
+	async function createReport() {
+		if (!analysisType || !resultSummary) return;
+		reportModalOpen = true;
+		reportLoading = true;
+		report = null;
+		reportError = null;
+		try {
+			const res = await fetch('/api/analysis/report', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ analysisType, config, resultSummary })
+			});
+			const body = (await res.json()) as { report?: string; error?: string };
+			if (!res.ok) throw new Error(body.error ?? 'レポートの作成に失敗しました');
+			report = body.report ?? null;
+		} catch (e) {
+			reportError = e instanceof Error ? e.message : String(e);
+		} finally {
+			reportLoading = false;
+		}
 	}
 
 	async function send() {
@@ -134,7 +163,15 @@
 </script>
 
 <div class="assistant">
-	<div class="assistant-header">AI アシスタント</div>
+	<div class="assistant-header">
+		<span>AI アシスタント</span>
+		{#if resultSummary}
+			<button class="report-btn" onclick={createReport} title="分析結果からレポートを作成">
+				<FileText size={13} />
+				レポート作成
+			</button>
+		{/if}
+	</div>
 	<div class="assistant-messages" bind:this={listEl}>
 		{#if messages.length === 0}
 			<p class="assistant-empty">{emptyHint}</p>
@@ -167,6 +204,14 @@
 	</div>
 </div>
 
+<ReportModal
+	open={reportModalOpen}
+	loading={reportLoading}
+	report={report}
+	error={reportError}
+	onClose={() => (reportModalOpen = false)}
+/>
+
 <style lang="scss">
 	.assistant {
 		/* 幅は親（+layout.svelte のドラッグでリサイズ可能な .analysis-sidebar）が決める */
@@ -178,6 +223,10 @@
 	}
 
 	.assistant-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
 		padding: 14px 14px 10px;
 		font-size: 0.75rem;
 		font-weight: 600;
@@ -186,6 +235,25 @@
 		letter-spacing: 0.06em;
 		border-bottom: 1px solid var(--color-border);
 		flex-shrink: 0;
+	}
+
+	.report-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		padding: 4px 9px;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		font-size: 0.6875rem;
+		font-weight: 500;
+		text-transform: none;
+		letter-spacing: normal;
+		color: var(--color-text);
+		cursor: pointer;
+		transition: background 0.15s;
+
+		&:hover { background: var(--color-background); }
 	}
 
 	.assistant-messages {

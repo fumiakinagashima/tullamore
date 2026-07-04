@@ -6,6 +6,7 @@
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import BarChart from '$lib/components/ui/BarChart.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -48,7 +49,18 @@
 			? Object.fromEntries(
 					Object.entries(result).map(([key, s]) => [
 						labelOf(key),
-						{ n: s.n, mean: s.mean, stddev: s.stddev, min: s.min, max: s.max, median: s.median, q1: s.q1, q3: s.q3 }
+						{
+							n: s.n,
+							mean: s.mean,
+							stddev: s.stddev,
+							min: s.min,
+							max: s.max,
+							median: s.median,
+							q1: s.q1,
+							q3: s.q3,
+							outlier_count: s.outlierCount,
+							validity: { overall: s.validity.overallLevel, comment: s.validity.overallComment }
+						}
 					])
 				)
 			: null;
@@ -115,11 +127,7 @@
 				{#each Object.entries(result) as [key, s] (key)}
 					<div class="stats-card">
 						<p class="stats-card-title">{labelOf(key)}</p>
-						{#if s.sampled}
-							<p class="sample-note">
-								中央値・四分位数・ヒストグラムは先頭{s.sampleSize.toLocaleString()}件のサンプルに基づく近似値です（全{s.n.toLocaleString()}件）
-							</p>
-						{/if}
+						<ValidityCard validity={s.validity} />
 						<div class="metrics-row">
 							<div class="metric"><span class="metric-label">件数</span><span class="metric-value">{s.n.toLocaleString()}</span></div>
 							<div class="metric"><span class="metric-label">平均</span><span class="metric-value highlight">{fmt(s.mean)}</span></div>
@@ -130,6 +138,7 @@
 							<div class="metric"><span class="metric-label">Q1</span><span class="metric-value">{fmt(s.q1)}</span></div>
 							<div class="metric"><span class="metric-label">Q3</span><span class="metric-value">{fmt(s.q3)}</span></div>
 							<div class="metric"><span class="metric-label">IQR</span><span class="metric-value">{fmt(s.iqr)}</span></div>
+							<div class="metric"><span class="metric-label">外れ値候補</span><span class="metric-value">{s.outlierCount}件</span></div>
 						</div>
 						<BarChart data={histogramBars(s)} title="分布" />
 					</div>
@@ -228,12 +237,6 @@
 		font-size: 0.9375rem;
 		font-weight: 600;
 		color: var(--color-text);
-		margin: 0;
-	}
-
-	.sample-note {
-		font-size: 0.6875rem;
-		color: var(--color-text-muted);
 		margin: 0;
 	}
 

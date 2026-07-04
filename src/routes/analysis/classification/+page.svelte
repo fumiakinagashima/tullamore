@@ -2,10 +2,12 @@
 	import { getContext, tick } from 'svelte';
 	import type { PageData } from './$types';
 	import type { LogisticRegressionModel } from '$lib/analysis/methods/logistic-regression';
+	import type { ValidityAssessment } from '$lib/analysis/validity';
 	import { continuousColumns, inferAnalysisColumnType } from '$lib/analysis/column-type';
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -17,6 +19,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let model = $state<LogisticRegressionModel | null>(null);
+	let validity = $state<ValidityAssessment | null>(null);
 	let truncated = $state(false);
 
 	const selectedSource = $derived(data.sources.find((s) => s.id === dataSourceId));
@@ -41,6 +44,7 @@
 		targetColumn = '';
 		featureColumns = [];
 		model = null;
+		validity = null;
 		error = '';
 	});
 
@@ -65,7 +69,8 @@
 					recall: model.metrics.recall,
 					f1: model.metrics.f1,
 					pseudo_r2: model.metrics.pseudoR2,
-					converged: model.metrics.converged
+					converged: model.metrics.converged,
+					validity: validity ? { overall: validity.overallLevel, comment: validity.overallComment } : undefined
 				}
 			: null;
 	});
@@ -100,9 +105,15 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
-			const body = (await res.json()) as { model?: LogisticRegressionModel; truncated?: boolean; error?: string };
+			const body = (await res.json()) as {
+				model?: LogisticRegressionModel;
+				truncated?: boolean;
+				validity?: ValidityAssessment;
+				error?: string;
+			};
 			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
 			model = body.model ?? null;
+			validity = body.validity ?? null;
 			truncated = body.truncated ?? false;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -144,8 +155,8 @@
 	<section class="results-panel">
 		{#if model}
 			<div class="results-card">
-				{#if !model.metrics.converged}
-					<p class="warning-text">学習が収束しませんでした（最大反復回数に達しました）。係数の信頼性が低い可能性があります。</p>
+				{#if validity}
+					<ValidityCard {validity} />
 				{/if}
 				{#if truncated}
 					<p class="warning-text">データ件数が多いため先頭の一部（{model.metrics.sampleSize.toLocaleString()}件）のみで学習しました。</p>

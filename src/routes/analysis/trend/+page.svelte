@@ -3,11 +3,13 @@
 	import type { PageData } from './$types';
 	import { continuousColumns } from '$lib/analysis/column-type';
 	import { fitTrendFromRows, buildTrendSeries, type TrendRawRow, type TrendGranularity } from '$lib/analysis/trend';
+	import { assessFitQuality, assessSampleSizeAdequacy, combineOverall, type ValidityAssessment } from '$lib/analysis/validity';
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import LineChart from '$lib/components/ui/LineChart.svelte';
 	import DataGrid from '$lib/components/ui/DataGrid.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import Textbox from '$lib/components/ui/Textbox.svelte';
+	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -85,6 +87,16 @@
 		}
 	});
 
+	// トレンド予測は説明変数が「時間」の1個のみ（TREND_TIME_FEATURE）なので多重共線性チェックは対象外。
+	// D1に問い合わせる必要が無いためクライアント側で完結する（サーバー往復なし、他の計算と同じ考え方）
+	const validity = $derived.by<ValidityAssessment | null>(() => {
+		const m = liveModel;
+		if (!m) return null;
+		const checks = [assessFitQuality(m.metrics.r2), assessSampleSizeAdequacy(m.metrics.sampleSize, m.featureColumns.length)];
+		const { overallLevel, overallComment } = combineOverall(checks, 'このトレンド予測は妥当性チェックの主要な観点で問題は見つかりませんでした');
+		return { overallLevel, overallComment, checks };
+	});
+
 	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
@@ -118,7 +130,8 @@
 					change_per_period: periodChange,
 					r2: m.metrics.r2,
 					adjusted_r2: m.metrics.adjustedR2,
-					sample_size: m.metrics.sampleSize
+					sample_size: m.metrics.sampleSize,
+					validity: validity ? { overall: validity.overallLevel, comment: validity.overallComment } : undefined
 				}
 			: null;
 	});
@@ -185,6 +198,9 @@
 	<section class="results-panel">
 		{#if liveModel && liveSeries}
 			<div class="results-card">
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
 				<div class="metrics-row">
 					<div class="metric">
 						<span class="metric-label">{PERIOD_LABEL[granularity]}</span>
