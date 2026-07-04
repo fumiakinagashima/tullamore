@@ -18,6 +18,7 @@ import {
 } from '$lib/server/db/db-connection-service';
 import { getDriver, type DbConnectionProvider } from '$lib/server/db-connections/registry';
 import { ingestExternalTable } from '$lib/server/db-connections/ingest';
+import type { IngestQueueMessage } from '$lib/server/db-connections/queue-consumer';
 import { errors } from '$lib/server/errors';
 
 const columnSchema = z.object({
@@ -92,32 +93,47 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
 
 		const columnMapping = JSON.stringify(Object.fromEntries(body.columns.map((c) => [c.key, c.externalName])));
 		const existingSync = await getExternalTableSyncByDataSource(db, dataSourceId);
+		const syncId = existingSync?.id ?? crypto.randomUUID();
+		const syncFields = {
+			dbConnectionId: connection.id,
+			externalSchema: body.externalSchema,
+			externalTable: body.externalTable,
+			columnMapping,
+			lastSyncStatus: (result.truncated ? 'syncing' : 'success') as 'syncing' | 'success',
+			lastSyncError: null,
+			lastSyncRowCount: result.inserted,
+			lastSyncOffset: result.inserted,
+			...(result.truncated ? {} : { lastSyncedAt: new Date() })
+		};
 		if (existingSync) {
-			await updateExternalTableSync(db, existingSync.id, {
-				dbConnectionId: connection.id,
-				externalSchema: body.externalSchema,
-				externalTable: body.externalTable,
-				columnMapping,
-				lastSyncStatus: 'success',
-				lastSyncError: null,
-				lastSyncRowCount: result.inserted,
-				lastSyncedAt: new Date()
-			});
+			await updateExternalTableSync(db, syncId, syncFields);
 		} else {
-			await createExternalTableSync(db, {
-				id: crypto.randomUUID(),
-				dbConnectionId: connection.id,
-				dataSourceId,
-				externalSchema: body.externalSchema,
-				externalTable: body.externalTable,
-				columnMapping,
-				lastSyncStatus: 'success',
-				lastSyncRowCount: result.inserted,
-				lastSyncedAt: new Date()
-			});
+			await createExternalTableSync(db, { id: syncId, dataSourceId, ...syncFields });
 		}
 
-		return json({ dataSourceId, inserted: result.inserted, truncated: result.truncated });
+		let queued = false;
+		if (result.truncated) {
+			if (platform.env.INGEST_QUEUE) {
+				const message: IngestQueueMessage = {
+					syncId,
+					dataSourceId,
+					dbConnectionId: connection.id,
+					tableName,
+					table,
+					columns: body.columns,
+					offset: result.inserted
+				};
+				await platform.env.INGEST_QUEUE.send(message);
+				queued = true;
+			} else {
+				await updateExternalTableSync(db, syncId, {
+					lastSyncStatus: 'failed',
+					lastSyncError: 'INGEST_QUEUE バインディングが設定されていないため継続取り込みできません'
+				});
+			}
+		}
+
+		return json({ dataSourceId, inserted: result.inserted, truncated: result.truncated, queued });
 	} catch (e) {
 		return errors.badRequest(`取り込みに失敗しました: ${e instanceof Error ? e.message : String(e)}`);
 	} finally {

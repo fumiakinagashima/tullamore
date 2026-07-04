@@ -5,6 +5,7 @@ import { getDataSource, updateDataSource, parseSchema } from '$lib/server/db/dat
 import { getDbConnection, getExternalTableSyncByDataSource, updateExternalTableSync } from '$lib/server/db/db-connection-service';
 import { getDriver, type DbConnectionProvider } from '$lib/server/db-connections/registry';
 import { ingestExternalTable, type SyncColumn } from '$lib/server/db-connections/ingest';
+import type { IngestQueueMessage } from '$lib/server/db-connections/queue-consumer';
 import { errors } from '$lib/server/errors';
 
 // /database/[id] の「今すぐ再同期」ボタン用。列選択をやり直さず、前回の設定（external_table_syncs）を
@@ -35,12 +36,36 @@ export const POST: RequestHandler = async ({ params, platform }) => {
 		const result = await ingestExternalTable(platform.env.DB, driver, table, source.tableName, columns);
 		await updateDataSource(db, params.id, { rowCount: result.inserted });
 		await updateExternalTableSync(db, sync.id, {
-			lastSyncStatus: 'success',
+			lastSyncStatus: result.truncated ? 'syncing' : 'success',
 			lastSyncError: null,
 			lastSyncRowCount: result.inserted,
-			lastSyncedAt: new Date()
+			lastSyncOffset: result.inserted,
+			...(result.truncated ? {} : { lastSyncedAt: new Date() })
 		});
-		return json({ inserted: result.inserted, truncated: result.truncated });
+
+		let queued = false;
+		if (result.truncated) {
+			if (platform.env.INGEST_QUEUE) {
+				const message: IngestQueueMessage = {
+					syncId: sync.id,
+					dataSourceId: params.id,
+					dbConnectionId: connection.id,
+					tableName: source.tableName,
+					table,
+					columns,
+					offset: result.inserted
+				};
+				await platform.env.INGEST_QUEUE.send(message);
+				queued = true;
+			} else {
+				await updateExternalTableSync(db, sync.id, {
+					lastSyncStatus: 'failed',
+					lastSyncError: 'INGEST_QUEUE バインディングが設定されていないため継続取り込みできません'
+				});
+			}
+		}
+
+		return json({ inserted: result.inserted, truncated: result.truncated, queued });
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
 		await updateExternalTableSync(db, sync.id, { lastSyncStatus: 'failed', lastSyncError: message });

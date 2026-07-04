@@ -51,9 +51,12 @@ export const externalTableSyncs = sqliteTable('external_table_syncs', {
 	externalTable: text('external_table').notNull(),
 	// { [dataSourcesの列key]: 外部DB側の実際の列名 } のJSON。再同期時に毎回列選択をやり直さずに済むよう保持する
 	columnMapping: text('column_mapping').notNull().default('{}'),
-	lastSyncStatus: text('last_sync_status', { enum: ['success', 'failed'] }),
+	// 'syncing' はQueue経由の大規模テーブル継続取り込みが進行中（MAX_ROWSを超えて打ち切った続きをバックグラウンドで処理中）
+	lastSyncStatus: text('last_sync_status', { enum: ['success', 'failed', 'syncing'] }),
 	lastSyncError: text('last_sync_error'),
 	lastSyncRowCount: integer('last_sync_row_count').notNull().default(0),
+	// Queue継続取り込みの再開位置（次にfetchRowsするoffset）。同期完了時はlastSyncRowCountと一致する
+	lastSyncOffset: integer('last_sync_offset').notNull().default(0),
 	lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)

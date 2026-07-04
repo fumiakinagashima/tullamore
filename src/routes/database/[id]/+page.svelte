@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import type { DataQualityReport } from '$lib/server/analysis/data-quality';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { INGEST_SYNC_POLL_INTERVAL_MS } from '$lib/constants';
 	import Download from '$lib/components/icon/Download.svelte';
 	import DataGrid from '$lib/components/ui/DataGrid.svelte';
 	import FileUpload from '$lib/components/ui/FileUpload.svelte';
@@ -19,9 +20,11 @@
 		resyncResult = null;
 		try {
 			const res = await fetch(`/api/data-sources/${source.id}/resync`, { method: 'POST' });
-			const body = (await res.json()) as { inserted?: number; error?: string };
+			const body = (await res.json()) as { inserted?: number; truncated?: boolean; queued?: boolean; error?: string };
 			if (!res.ok) throw new Error(body.error ?? '再同期に失敗しました');
-			resyncResult = `${body.inserted}件を再取り込みしました`;
+			resyncResult = body.queued
+				? `${body.inserted}件まで取り込み、続きはバックグラウンドで処理中です`
+				: `${body.inserted}件を再取り込みしました`;
 			await invalidateAll();
 		} catch (e) {
 			resyncResult = `エラー: ${e instanceof Error ? e.message : String(e)}`;
@@ -29,6 +32,14 @@
 			resyncing = false;
 		}
 	}
+
+	// Queueによる大規模テーブル継続取り込み中（lastSyncStatus === 'syncing'）は、完了・失敗するまで
+	// 一定間隔で再読み込みして進捗（lastSyncRowCount）を反映する
+	$effect(() => {
+		if (sync?.lastSyncStatus !== 'syncing') return;
+		const timer = setInterval(() => invalidateAll(), INGEST_SYNC_POLL_INTERVAL_MS);
+		return () => clearInterval(timer);
+	});
 
 	type Col = { key: string; label: string; type: 'text' | 'number' | 'date' | 'boolean' };
 	let columns: Col[] = $derived(JSON.parse(source.schemaJson));
@@ -170,9 +181,15 @@
 		<div class="sync-banner">
 			<span class="sync-info">
 				取り込み元: {connectionName} / {sync.externalSchema}.{sync.externalTable}
-				{#if sync.lastSyncedAt}（最終同期: {new Date(sync.lastSyncedAt).toLocaleString('ja-JP')}）{/if}
+				{#if sync.lastSyncStatus === 'syncing'}
+					<span class="sync-status-badge syncing">バックグラウンド取り込み中（{sync.lastSyncRowCount.toLocaleString()}件済み）</span>
+				{:else if sync.lastSyncStatus === 'failed'}
+					<span class="sync-status-badge failed">取り込み失敗{sync.lastSyncError ? `: ${sync.lastSyncError}` : ''}</span>
+				{:else if sync.lastSyncedAt}
+					（最終同期: {new Date(sync.lastSyncedAt).toLocaleString('ja-JP')}）
+				{/if}
 			</span>
-			<button class="btn-secondary" onclick={resync} disabled={resyncing}>
+			<button class="btn-secondary" onclick={resync} disabled={resyncing || sync.lastSyncStatus === 'syncing'}>
 				{resyncing ? '同期中...' : '今すぐ再同期'}
 			</button>
 		</div>
@@ -344,6 +361,25 @@
 	}
 
 	.sync-info { min-width: 0; }
+
+	.sync-status-badge {
+		display: inline-flex;
+		margin-left: 6px;
+		padding: 1px 8px;
+		border-radius: 999px;
+		font-size: 0.6875rem;
+		font-weight: 600;
+
+		&.syncing {
+			background: var(--color-info-bg);
+			color: var(--color-info);
+		}
+
+		&.failed {
+			background: var(--color-error-bg);
+			color: var(--color-error);
+		}
+	}
 
 	.meta-chip {
 		display: inline-flex;

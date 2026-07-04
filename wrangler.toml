@@ -38,5 +38,18 @@ binding = "HYPERDRIVE_LOCAL_SAMPLE_MYSQL"
 id = "local-sample-mysql-placeholder"
 localConnectionString = "mysql://tullamore:tullamore@localhost:3306/tullamore_sample"
 
+# 外部DB接続（データ連携）の大規模テーブル継続取り込み用Queue。SYNC_ROW_BUDGET（ingest.ts）を超えた分を
+# バックグラウンドで処理する（src/lib/server/db-connections/queue-consumer.ts、docs/DATA_CONNECTIONS.md 参照）。
+# 本番へデプロイする前に `wrangler queues create tullamore-ingest` を実行しておくこと
+# （`wrangler dev` のローカル実行時はMiniflareがメモリ内でシミュレートするため事前作成不要）。
+[[queues.producers]]
+binding = "INGEST_QUEUE"
+queue = "tullamore-ingest"
+
+[[queues.consumers]]
+queue = "tullamore-ingest"
+max_batch_size = 1
+max_retries = 2
+
 [vars]
 MOCK_AI = "false"

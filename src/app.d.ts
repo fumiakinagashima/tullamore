@@ -33,6 +33,9 @@ declare global {
 				// 複数接続に対応するため、`HYPERDRIVE_`で始まる名前のバインディングを実行時にスキャンして使う
 				// （src/lib/server/db-connections/hyperdrive.ts の listAvailableHyperdriveBindings 参照）
 				[key: `HYPERDRIVE_${string}`]: Hyperdrive | undefined;
+				// 外部DB接続の大規模テーブル継続取り込み用Queue（worker.tsのqueue()ハンドラが消費する。
+				// src/lib/server/db-connections/queue-consumer.ts 参照）
+				INGEST_QUEUE?: Queue<import('$lib/server/db-connections/queue-consumer').IngestQueueMessage>;
 			};
 		}
 	}

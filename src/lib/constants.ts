@@ -1,5 +1,7 @@
 // ── Polling ────────────────────────────────────────────────────────────────
 export const NOTIFICATION_POLL_INTERVAL_MS = 15000;
+// /database/[id] でexternal_table_syncsがQueue継続取り込み中（syncing）の間、進捗確認のため再読み込みする間隔
+export const INGEST_SYNC_POLL_INTERVAL_MS = 5000;
 
 // ── Chat ───────────────────────────────────────────────────────────────────
 export const CHAT_TITLE_MAX_LENGTH = 24;
