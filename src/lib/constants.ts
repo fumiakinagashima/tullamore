@@ -11,7 +11,6 @@ export const LIST_PAGE_SIZE = 20;
 
 // ── Session / KV ──────────────────────────────────────────────────────────
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
-export const DOCUMENT_JOB_TTL_SECONDS = 3600;
 
 // ── Rate limits ───────────────────────────────────────────────────────────
 export const FORGOT_PASSWORD_RATE_LIMIT = 5;

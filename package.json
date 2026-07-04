@@ -38,14 +38,11 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.102.0",
     "@inlang/paraglide-sveltekit": "^0.16.1",
-    "docx": "^9.7.1",
     "drizzle-orm": "^0.45.2",
-    "exceljs": "^4.4.0",
     "marked": "^18.0.5",
     "ml-matrix": "^6.13.0",
     "mysql2": "^3.22.5",
     "pg": "^8.22.0",
-    "pptxgenjs": "^4.0.1",
     "xss": "^1.0.15",
     "zod": "^4.4.3"
   },
