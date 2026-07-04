@@ -19,6 +19,8 @@
 	import Sigma from '$lib/components/icon/Sigma.svelte';
 	import Flask from '$lib/components/icon/Flask.svelte';
 	import Split from '$lib/components/icon/Split.svelte';
+	import Layers from '$lib/components/icon/Layers.svelte';
+	import Flag from '$lib/components/icon/Flag.svelte';
 	import Users from '$lib/components/icon/Users.svelte';
 	import Settings from '$lib/components/icon/Settings.svelte';
 	import LogOut from '$lib/components/icon/LogOut.svelte';
@@ -28,6 +30,8 @@
 	let { account }: Props = $props();
 
 	const analysisModules = [
+		{ href: '/analysis/composite-report', label: '複合分析レポート', icon: Layers },
+		{ href: '/analysis/kpi-planning', label: 'KPI設定', icon: Flag },
 		{ href: '/analysis/descriptive-stats', label: '記述統計', icon: Sigma },
 		{ href: '/analysis/correlation', label: '相関分析', icon: Grid },
 		{ href: '/analysis/ab-test', label: 'A/Bテスト', icon: Flask },
@@ -84,6 +88,10 @@
 				{mod.label}
 			</a>
 		{/each}
+		<a href="/kpi" class="analysis-link" class:active={page.url.pathname.startsWith('/kpi')}>
+			<Flag size={14} />
+			保存済みKPI一覧
+		</a>
 
 		<p class="group-label">データソース</p>
 		{#each dataSourceModules as mod (mod.href)}

@@ -22,6 +22,8 @@
 			| 'descriptive-stats'
 			| 'ab-test'
 			| 'classification'
+			| 'composite-report'
+			| 'kpi-planning'
 			| null;
 		sources: SourceInfo[];
 		config: Record<string, unknown>;
@@ -156,7 +158,9 @@
 		correlation: '「売上・広告費・来店数の関係を見たい」のように伝えると設定します。列は2つ以上必要です。',
 		'descriptive-stats': '「売上の基本統計を見たい」のように伝えると設定します。列は1つ以上選択できます。',
 		'ab-test': '「施策Aと施策Bでコンバージョン率に差があるか調べたい」のように伝えると設定します。検定方法（平均/比率）はページ側でも切り替えられます。',
-		classification: '「広告費や来店数から購入するかどうかを予測したい」のように伝えると設定します。目的変数は2値の列を選んでください。'
+		classification: '「広告費や来店数から購入するかどうかを予測したい」のように伝えると設定します。目的変数は2値の列を選んでください。',
+		'composite-report': '「売上とその要因についてまとめて分析したい」のように伝えると設定します。レポートの作成は画面上の専用ボタンから行ってください。',
+		'kpi-planning': '「来年度の売上を3,000万円にするためのKPIを作りたい」のように伝えると設定します。KPI候補・目標値・期間は画面上で調整してください。'
 	};
 
 	const emptyHint = $derived(analysisType ? EMPTY_HINTS[analysisType] : 'どの分析を試したいですか？サイドバーから選ぶか、内容を伝えてください。');

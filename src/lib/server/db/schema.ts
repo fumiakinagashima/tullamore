@@ -101,6 +101,19 @@ export const simulators = sqliteTable('simulators', {
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
 });
 
+export const kpiPlans = sqliteTable('kpi_plans', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	dataSourceId: text('data_source_id').notNull(),
+	targetColumn: text('target_column').notNull(),
+	periodLabel: text('period_label').notNull(),
+	periodType: text('period_type').notNull().default('custom'),
+	planJson: text('plan_json').notNull(),
+	createdBy: text('created_by'),
+	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+});
+
 export const notifications = sqliteTable('notifications', {
 	id: text('id').primaryKey(),
 	type: text('type').notNull().default('generic'),
@@ -142,5 +155,7 @@ export type AiSettings = typeof aiSettings.$inferSelect;
 export type Account = typeof accounts.$inferSelect;
 export type Simulator = typeof simulators.$inferSelect;
 export type NewSimulator = typeof simulators.$inferInsert;
+export type KpiPlan = typeof kpiPlans.$inferSelect;
+export type NewKpiPlan = typeof kpiPlans.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
