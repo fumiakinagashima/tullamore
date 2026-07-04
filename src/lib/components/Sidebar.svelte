@@ -15,6 +15,10 @@
 	import Target from '$lib/components/icon/Target.svelte';
 	import Dice from '$lib/components/icon/Dice.svelte';
 	import Coins from '$lib/components/icon/Coins.svelte';
+	import Grid from '$lib/components/icon/Grid.svelte';
+	import Sigma from '$lib/components/icon/Sigma.svelte';
+	import Flask from '$lib/components/icon/Flask.svelte';
+	import Split from '$lib/components/icon/Split.svelte';
 	import Users from '$lib/components/icon/Users.svelte';
 	import Settings from '$lib/components/icon/Settings.svelte';
 	import LogOut from '$lib/components/icon/LogOut.svelte';
@@ -24,7 +28,11 @@
 	let { account }: Props = $props();
 
 	const analysisModules = [
+		{ href: '/analysis/descriptive-stats', label: '記述統計', icon: Sigma },
+		{ href: '/analysis/correlation', label: '相関分析', icon: Grid },
+		{ href: '/analysis/ab-test', label: 'A/Bテスト', icon: Flask },
 		{ href: '/analysis/regression', label: '回帰分析', icon: Scatter },
+		{ href: '/analysis/classification', label: 'ロジスティック回帰', icon: Split },
 		{ href: '/analysis/sensitivity', label: '感度分析', icon: Tornado },
 		{ href: '/analysis/scenario', label: 'シナリオ比較', icon: Compare },
 		{ href: '/analysis/goal-seek', label: 'ゴールシーク', icon: Target },

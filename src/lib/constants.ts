@@ -29,3 +29,20 @@ export const MONTE_CARLO_PERCENTILES = [10, 25, 50, 75, 90];
 
 // ── Analysis: Budget allocation ──────────────────────────────────────────
 export const BUDGET_ALLOCATION_COEF_EPSILON = 1e-9;
+
+// ── Analysis: Descriptive statistics ─────────────────────────────────────
+// n/mean/stddev/min/maxはSQL集計で正確に計算するが、中央値・四分位数・ヒストグラムは
+// 生データが必要なため、このサンプル件数を上限にフェッチする（超える場合は非復元抽出的な
+// 先頭N件のサンプルとして扱う。詳細はsrc/lib/server/analysis/descriptive-stats.tsを参照）
+export const DESCRIPTIVE_STATS_SAMPLE_MAX_ROWS = 50000;
+export const DESCRIPTIVE_STATS_HISTOGRAM_BINS = 20;
+
+// ── Analysis: A/B test ────────────────────────────────────────────────────
+export const AB_TEST_SIGNIFICANCE_ALPHA = 0.05;
+
+// ── Analysis: Classification (logistic regression) ───────────────────────
+// ロジスティック回帰はOLSと異なりサマリー統計量に還元できず（IRLSの反復ごとに重みが変わるため）、
+// 生の行データが必要。Workers CPU時間を守るためフェッチする行数の上限
+export const LOGISTIC_REGRESSION_MAX_ROWS = 20000;
+export const LOGISTIC_REGRESSION_MAX_ITERATIONS = 50;
+export const LOGISTIC_REGRESSION_CONVERGENCE_TOLERANCE = 1e-6;

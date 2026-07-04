@@ -1,0 +1,90 @@
+import { describe, it, expect } from 'vitest';
+import { fitLogisticRegression, predictLogisticRegression, type LogisticRegressionRow } from './logistic-regression';
+import { createSeededRng } from '../monte-carlo';
+
+const OPTS = { maxIterations: 50, tolerance: 1e-6 };
+
+describe('fitLogisticRegression', () => {
+	it('matches the classic "hours studied vs exam pass" textbook example', () => {
+		// Well-known worked example (hours of study -> pass/fail). Known reference coefficients
+		// are roughly intercept ≈ -4.08, hours ≈ 1.50 — we check the fit lands in the right
+		// ballpark rather than pinning exact literature values.
+		const hours = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 4, 4.25, 4.5, 4.75, 5, 5.5];
+		const pass = [0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1];
+		const rows: LogisticRegressionRow[] = hours.map((h, i) => ({ features: [h], target: pass[i] as 0 | 1 }));
+
+		const model = fitLogisticRegression(rows, 'pass', ['hours'], 'pass', OPTS);
+
+		expect(model.metrics.converged).toBe(true);
+		expect(model.coefficients[0]).toBeGreaterThan(0.8);
+		expect(model.coefficients[0]).toBeLessThan(2.5);
+		expect(model.intercept).toBeLessThan(-2);
+		expect(model.intercept).toBeGreaterThan(-7);
+
+		// monotonicity: more study hours -> higher predicted probability of passing
+		const pLow = predictLogisticRegression(model, { hours: 0.5 });
+		const pHigh = predictLogisticRegression(model, { hours: 5.5 });
+		expect(pLow).toBeLessThan(0.5);
+		expect(pHigh).toBeGreaterThan(0.5);
+		expect(pHigh).toBeGreaterThan(pLow);
+	});
+
+	it('recovers roughly correct coefficients on synthetic data generated from a known logistic model', () => {
+		const rng = createSeededRng(42);
+		const trueIntercept = -1;
+		const trueCoefX1 = 0.8;
+		const trueCoefX2 = -0.5;
+
+		const rows: LogisticRegressionRow[] = [];
+		for (let i = 0; i < 400; i++) {
+			const x1 = rng() * 10;
+			const x2 = rng() * 10;
+			const p = 1 / (1 + Math.exp(-(trueIntercept + trueCoefX1 * x1 + trueCoefX2 * x2)));
+			const target = rng() < p ? 1 : 0;
+			rows.push({ features: [x1, x2], target });
+		}
+
+		const model = fitLogisticRegression(rows, 'y', ['x1', 'x2'], 'yes', OPTS);
+
+		expect(model.metrics.converged).toBe(true);
+		expect(model.coefficients[0]).toBeGreaterThan(0); // same sign as trueCoefX1
+		expect(model.coefficients[1]).toBeLessThan(0); // same sign as trueCoefX2
+		expect(model.coefficients[0]).toBeCloseTo(trueCoefX1, 0); // within ~0.5
+		expect(model.coefficients[1]).toBeCloseTo(trueCoefX2, 0);
+		expect(model.metrics.pseudoR2).toBeGreaterThan(0.1);
+		expect(model.metrics.accuracy).toBeGreaterThan(0.6);
+
+		const { truePositive, falsePositive, trueNegative, falseNegative } = model.confusionMatrix;
+		expect(truePositive + falsePositive + trueNegative + falseNegative).toBe(400);
+	});
+
+	it('throws when the target is constant (no positive/negative split)', () => {
+		const rows: LogisticRegressionRow[] = Array.from({ length: 10 }, (_, i) => ({ features: [i], target: 1 as const }));
+		expect(() => fitLogisticRegression(rows, 'y', ['x'], 'yes', OPTS)).toThrow();
+	});
+
+	it('throws when sample size is insufficient relative to feature count', () => {
+		const rows: LogisticRegressionRow[] = [
+			{ features: [1, 2], target: 0 },
+			{ features: [2, 3], target: 1 }
+		];
+		expect(() => fitLogisticRegression(rows, 'y', ['x1', 'x2'], 'yes', OPTS)).toThrow();
+	});
+});
+
+describe('predictLogisticRegression', () => {
+	it('returns 0.5 when the linear predictor is exactly 0', () => {
+		const model = {
+			method: 'logistic_regression' as const,
+			targetColumn: 'y',
+			featureColumns: ['x'],
+			positiveClassLabel: 'yes',
+			intercept: 0,
+			coefficients: [0],
+			metrics: { sampleSize: 1, accuracy: 1, precision: 1, recall: 1, f1: 1, pseudoR2: 1, iterations: 1, converged: true },
+			confusionMatrix: { truePositive: 0, falsePositive: 0, trueNegative: 0, falseNegative: 0 },
+			featureRanges: { x: { min: 0, max: 1, mean: 0.5 } }
+		};
+		expect(predictLogisticRegression(model, { x: 100 })).toBeCloseTo(0.5, 9);
+	});
+});

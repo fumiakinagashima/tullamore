@@ -16,6 +16,10 @@
 			| 'goal-seek'
 			| 'monte-carlo'
 			| 'budget-allocation'
+			| 'correlation'
+			| 'descriptive-stats'
+			| 'ab-test'
+			| 'classification'
 			| null;
 		sources: SourceInfo[];
 		config: Record<string, unknown>;
@@ -119,7 +123,11 @@
 		'goal-seek': '「売上を目標値にするには広告費をいくらにすればいいか」のように伝えると設定します。使い方の質問もどうぞ。',
 		'monte-carlo': '「広告費と来店数から売上のばらつきを見たい」のように伝えると設定します。各変数の分布や実行はページ側で設定してください。',
 		'budget-allocation':
-			'「広告費とSNS広告費の予算配分を最適化したい」のように伝えると設定します。予算総額やチャネルごとの上限はページ側で設定してください。'
+			'「広告費とSNS広告費の予算配分を最適化したい」のように伝えると設定します。予算総額やチャネルごとの上限はページ側で設定してください。',
+		correlation: '「売上・広告費・来店数の関係を見たい」のように伝えると設定します。列は2つ以上必要です。',
+		'descriptive-stats': '「売上の基本統計を見たい」のように伝えると設定します。列は1つ以上選択できます。',
+		'ab-test': '「施策Aと施策Bでコンバージョン率に差があるか調べたい」のように伝えると設定します。検定方法（平均/比率）はページ側でも切り替えられます。',
+		classification: '「広告費や来店数から購入するかどうかを予測したい」のように伝えると設定します。目的変数は2値の列を選んでください。'
 	};
 
 	const emptyHint = $derived(analysisType ? EMPTY_HINTS[analysisType] : 'どの分析を試したいですか？サイドバーから選ぶか、内容を伝えてください。');

@@ -6,13 +6,41 @@
 	import Target from '$lib/components/icon/Target.svelte';
 	import Dice from '$lib/components/icon/Dice.svelte';
 	import Coins from '$lib/components/icon/Coins.svelte';
+	import Grid from '$lib/components/icon/Grid.svelte';
+	import Sigma from '$lib/components/icon/Sigma.svelte';
+	import Flask from '$lib/components/icon/Flask.svelte';
+	import Split from '$lib/components/icon/Split.svelte';
 
 	const modules = [
+		{
+			href: '/analysis/descriptive-stats',
+			label: '記述統計',
+			desc: '選択した列の平均・中央値・標準偏差・四分位数とヒストグラムを見ます。データの分布や外れ値をまず把握したいときに使います。',
+			icon: Sigma
+		},
+		{
+			href: '/analysis/correlation',
+			label: '相関分析',
+			desc: '選択した列どうしのピアソン相関係数をヒートマップで見ます。「どの変数とどの変数が関係していそうか」を、回帰分析の前に探索的に把握したいときに使います。',
+			icon: Grid
+		},
+		{
+			href: '/analysis/ab-test',
+			label: 'A/Bテスト・有意差検定',
+			desc: '2つのグループ間で指標に統計的な有意差があるかを検定します（平均はt検定、比率はz検定）。「施策Aと施策Bでどちらが良いと言えるか」を確かめたいときに使います。',
+			icon: Flask
+		},
 		{
 			href: '/analysis/regression',
 			label: '回帰分析',
 			desc: '説明変数を動かすと目的変数がどう変化するかをシミュレーションします。「広告費を増やしたら売上はどうなるか」のような、ドライバーの影響度を調べたいときに使います。',
 			icon: Scatter
+		},
+		{
+			href: '/analysis/classification',
+			label: 'ロジスティック回帰・分類',
+			desc: '目的変数が2値（購入した/しない等）の場合に、説明変数からその確率を予測するモデルを作ります。「どんな顧客が購入・解約しやすいか」を知りたいときに使います。',
+			icon: Split
 		},
 		{
 			href: '/analysis/sensitivity',

@@ -13,6 +13,10 @@ export type AnalysisBridge = {
 		| 'goal-seek'
 		| 'monte-carlo'
 		| 'budget-allocation'
+		| 'correlation'
+		| 'descriptive-stats'
+		| 'ab-test'
+		| 'classification'
 		| null;
 	/** 現在の設定値（スネークケース。AIアシスタントのツール呼び出しと同じキー形式に揃える） */
 	config: Record<string, unknown>;

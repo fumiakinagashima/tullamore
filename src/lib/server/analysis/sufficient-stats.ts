@@ -1,9 +1,5 @@
 import type { SufficientStats } from '$lib/analysis/types';
-
-/** SQL識別子として埋め込む前にバッククォート自体をエスケープする（SQLite標準の `` `` `` 記法） */
-function quoteIdent(name: string): string {
-	return `\`${name.replace(/`/g, '``')}\``;
-}
+import { quoteIdent } from './sql-ident';
 
 /**
  * 回帰分析に必要なサマリー統計量（Σx, Σy, Σxᵢxⱼ 等）を1本のSQL集計クエリでD1から取得する。

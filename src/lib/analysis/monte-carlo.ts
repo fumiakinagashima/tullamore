@@ -1,5 +1,6 @@
 import type { FeatureRange, LinearRegressionModel } from './types';
 import { predict } from './registry';
+import { percentile, buildHistogram, type HistogramBin } from './stats-utils';
 
 export type FeatureDistribution =
 	| { kind: 'fixed'; value: number }
@@ -15,7 +16,7 @@ export type MonteCarloOptions = {
 };
 
 export type PercentileEntry = { p: number; value: number };
-export type HistogramBin = { binStart: number; binEnd: number; count: number };
+export type { HistogramBin };
 
 export type MonteCarloSummary = {
 	draws: number;
@@ -111,16 +112,6 @@ export function drawMonteCarloSamples(
 	return values;
 }
 
-function percentile(sorted: number[], p: number): number {
-	if (sorted.length === 1) return sorted[0];
-	const index = (p / 100) * (sorted.length - 1);
-	const lower = Math.floor(index);
-	const upper = Math.ceil(index);
-	if (lower === upper) return sorted[lower];
-	const frac = index - lower;
-	return sorted[lower] * (1 - frac) + sorted[upper] * frac;
-}
-
 export function summarizeMonteCarlo(
 	values: number[],
 	opts?: { percentiles?: number[]; histogramBins?: number; threshold?: number }
@@ -136,16 +127,7 @@ export function summarizeMonteCarlo(
 	const percentiles = (opts?.percentiles ?? [10, 25, 50, 75, 90]).map((p) => ({ p, value: percentile(sorted, p) }));
 
 	const binCount = opts?.histogramBins ?? 20;
-	const binWidth = (max - min) / binCount || 1;
-	const histogram: HistogramBin[] = Array.from({ length: binCount }, (_, i) => ({
-		binStart: min + i * binWidth,
-		binEnd: min + (i + 1) * binWidth,
-		count: 0
-	}));
-	for (const v of values) {
-		const idx = Math.min(binCount - 1, Math.floor((v - min) / binWidth));
-		histogram[idx].count++;
-	}
+	const histogram = buildHistogram(values, min, max, binCount);
 
 	const probabilityAboveThreshold =
 		opts?.threshold !== undefined ? values.filter((v) => v > opts.threshold!).length / n : undefined;
