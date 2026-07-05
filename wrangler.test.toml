@@ -1,0 +1,13 @@
+# @cloudflare/vitest-pool-workers 向けの最小構成。
+# 本番用 wrangler.toml は main(worker.ts)・queues consumer 等を持ち、これをそのまま読み込むと
+# vitest-pool-workers 側のバンドラーが worker.ts を解決しようとして $lib エイリアスで失敗するため、
+# D1 バインディングのテストに必要な最小限だけを別ファイルとして切り出す。
+name = "tullamore-test"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tullamore-test"
+database_id = "test-d1-database"
+migrations_dir = "drizzle"

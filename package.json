@@ -13,10 +13,11 @@
     "db:studio": "drizzle-kit studio --config=drizzle.local.config.ts",
     "db:seed:demo": "bun run scripts/seed-demo-data.ts",
     "db:seed:remote-sql": "bun run scripts/generate-seed-sql.ts",
-    "test:unit": "vitest run",
+    "test:unit": "vitest run && vitest run --config vitest.workers.config.ts",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.18.0",
     "@cloudflare/workers-types": "^4.20260607.1",
     "@libsql/client": "^0.17.3",
     "@playwright/test": "^1.60.0",
