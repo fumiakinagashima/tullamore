@@ -15,7 +15,10 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 			id: plan.id,
 			name: plan.name,
 			periodLabel: plan.periodLabel,
-			periodType: plan.periodType as 'year' | 'month' | 'week' | 'custom'
+			periodType: plan.periodType as 'year' | 'month' | 'week' | 'custom',
+			dateColumn: plan.dateColumn,
+			periodFrom: plan.periodFrom,
+			periodTo: plan.periodTo
 		},
 		snapshot
 	};

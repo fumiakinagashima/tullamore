@@ -17,6 +17,9 @@
 		targetValue: data.snapshot.targetValue,
 		periodType: data.plan.periodType,
 		periodLabel: data.plan.periodLabel,
+		dateColumn: data.plan.dateColumn,
+		periodFrom: data.plan.periodFrom,
+		periodTo: data.plan.periodTo,
 		model: data.snapshot.model,
 		validity: data.snapshot.validity,
 		plan: data.snapshot.plan

@@ -53,14 +53,35 @@ async function fetchColumnSample(db: D1Database, tableName: string, column: stri
  * 列の現在の平均値だけを、生データのサンプリングなしに1本の集計クエリで取得する。
  * KPI達成率トラッキングのように「平均だけ分かればよい」用途向け（中央値・ヒストグラム等が要らないぶん軽い）。
  */
-export async function computeCurrentMean(db: D1Database, dataSource: DataSource, column: string): Promise<number> {
+export async function computeCurrentMean(
+	db: D1Database,
+	dataSource: DataSource,
+	column: string,
+	dateRange?: { column: string; from: string; to: string }
+): Promise<number> {
 	const schemaColumns = parseSchema(dataSource.schemaJson);
 	const usable = new Set(continuousColumns(schemaColumns).map((c) => c.key));
 	if (!usable.has(column)) {
 		throw new Error(`"${column}" は数値列ではありません`);
 	}
-	const aggregates = await computeColumnAggregates(db, dataSource.tableName, [column]);
-	return aggregates[column].sum / aggregates[column].n;
+
+	if (!dateRange) {
+		const aggregates = await computeColumnAggregates(db, dataSource.tableName, [column]);
+		return aggregates[column].sum / aggregates[column].n;
+	}
+
+	// 日付部分だけの比較にする（date()でSQLite側の日時文字列表現の揺れを正規化する）ため、
+	// computeColumnAggregates共通ロジックは使わずWHERE付きの専用クエリを組み立てる
+	const c = quoteIdent(column);
+	const d = quoteIdent(dateRange.column);
+	const table = quoteIdent(dataSource.tableName);
+	const sql = `SELECT COUNT(${c}) AS n, SUM(${c}) AS total FROM ${table} WHERE date(${d}) BETWEEN date(?) AND date(?)`;
+	const row = await db.prepare(sql).bind(dateRange.from, dateRange.to).first<{ n: number; total: number | null }>();
+	const n = Number(row?.n ?? 0);
+	if (n === 0) {
+		throw new Error(`指定した期間（${dateRange.from} 〜 ${dateRange.to}）に "${column}" の値のある行がありません`);
+	}
+	return Number(row!.total ?? 0) / n;
 }
 
 export async function computeDescriptiveStatsFromDataSource(

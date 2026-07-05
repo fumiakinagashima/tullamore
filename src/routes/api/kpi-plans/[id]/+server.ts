@@ -11,6 +11,9 @@ const bodySchema = z.object({
 	targetColumn: z.string(),
 	periodLabel: z.string().min(1),
 	periodType: z.enum(['year', 'month', 'week', 'custom']),
+	dateColumn: z.string().min(1).nullable().optional(),
+	periodFrom: z.string().min(1).nullable().optional(),
+	periodTo: z.string().min(1).nullable().optional(),
 	snapshot: z.record(z.string(), z.unknown())
 });
 
@@ -27,6 +30,9 @@ export const PUT: RequestHandler = async ({ params, request, platform }) => {
 		targetColumn: body.targetColumn,
 		periodLabel: body.periodLabel,
 		periodType: body.periodType,
+		dateColumn: body.dateColumn ?? null,
+		periodFrom: body.periodFrom ?? null,
+		periodTo: body.periodTo ?? null,
 		planJson: JSON.stringify(body.snapshot)
 	});
 	return json(updated);

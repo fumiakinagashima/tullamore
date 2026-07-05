@@ -24,7 +24,17 @@ export async function createKpiPlan(db: Db, data: NewKpiPlan): Promise<KpiPlan> 
 export async function updateKpiPlan(
 	db: Db,
 	id: string,
-	data: { name: string; dataSourceId: string; targetColumn: string; periodLabel: string; periodType: string; planJson: string }
+	data: {
+		name: string;
+		dataSourceId: string;
+		targetColumn: string;
+		periodLabel: string;
+		periodType: string;
+		dateColumn: string | null;
+		periodFrom: string | null;
+		periodTo: string | null;
+		planJson: string;
+	}
 ): Promise<KpiPlan> {
 	await db.update(kpiPlans).set({ ...data, updatedAt: new Date() }).where(eq(kpiPlans.id, id));
 	return (await getKpiPlan(db, id))!;

@@ -111,6 +111,10 @@ export const kpiPlans = sqliteTable('kpi_plans', {
 	targetColumn: text('target_column').notNull(),
 	periodLabel: text('period_label').notNull(),
 	periodType: text('period_type').notNull().default('custom'),
+	/** 達成率トラッキングの対象期間を絞り込む日時カラム＋FROM/TO（"YYYY-MM-DD"）。未設定＝全期間が対象 */
+	dateColumn: text('date_column'),
+	periodFrom: text('period_from'),
+	periodTo: text('period_to'),
 	planJson: text('plan_json').notNull(),
 	createdBy: text('created_by'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),

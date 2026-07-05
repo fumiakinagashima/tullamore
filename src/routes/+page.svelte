@@ -20,6 +20,9 @@
 					<a href="/kpi/{a.planId}" class="kpi-gauge-link">
 						<GaugeChart title={a.name} value={a.current} target={a.targetValue} size={150} />
 						<span class="kpi-gauge-period">{a.periodLabel}</span>
+						{#if !a.periodScoped}
+							<span class="kpi-gauge-note">期間未設定のため全期間のデータで計算</span>
+						{/if}
 					</a>
 				{/each}
 			</div>
@@ -94,6 +97,10 @@
 	.kpi-gauge-period {
 		font-size: 0.75rem;
 		color: var(--color-text-muted);
+	}
+	.kpi-gauge-note {
+		font-size: 0.6875rem;
+		color: var(--color-warning);
 	}
 	.list {
 		margin-top: 16px;

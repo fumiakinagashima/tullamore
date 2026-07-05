@@ -119,7 +119,13 @@
 			<div class="achievement-row">
 				<GaugeChart value={achievement.current} target={achievement.targetValue} size={170} />
 				<p class="achievement-note">
-					目的変数「{labelOf(achievement.targetColumn)}」の現在の平均値と目標値から算出した達成率です（データソースの最新の値を都度再取得します）。
+					目的変数「{labelOf(achievement.targetColumn)}」の
+					{#if achievement.periodScoped}
+						指定した期間内の平均値
+					{:else}
+						現在の平均値（期間未設定のため全期間が対象）
+					{/if}
+					と目標値から算出した達成率です（データソースの最新の値を都度再取得します）。
 				</p>
 			</div>
 		{/if}

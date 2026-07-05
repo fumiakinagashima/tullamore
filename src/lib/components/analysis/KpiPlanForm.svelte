@@ -10,6 +10,7 @@
 	import { ANALYSIS_BRIDGE_KEY, type AnalysisBridge } from '$lib/analysis/assistant-bridge.svelte';
 	import Select from '$lib/components/ui/Select.svelte';
 	import Textbox from '$lib/components/ui/Textbox.svelte';
+	import DatePicker from '$lib/components/ui/DatePicker.svelte';
 	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 
@@ -23,6 +24,9 @@
 		targetValue: number;
 		periodType: 'year' | 'month' | 'week' | 'custom';
 		periodLabel: string;
+		dateColumn: string | null;
+		periodFrom: string | null;
+		periodTo: string | null;
 		model: LinearRegressionModel;
 		validity: ValidityAssessment;
 		plan: KpiPlanResult;
@@ -50,6 +54,9 @@
 	let targetValueText = $state(initial ? String(initial.targetValue) : '');
 	let periodType = $state<'year' | 'month' | 'week' | 'custom'>(initial?.periodType ?? 'year');
 	let periodLabel = $state(initial?.periodLabel ?? '');
+	let dateColumn = $state(initial?.dateColumn ?? '');
+	let periodFrom = $state(initial?.periodFrom ?? '');
+	let periodTo = $state(initial?.periodTo ?? '');
 	let loading = $state(false);
 	let error = $state('');
 
@@ -76,6 +83,12 @@
 	const sourceOptions = $derived(sources.map((s) => ({ value: s.id, label: s.name })));
 	const targetValue = $derived(targetValueText === '' ? null : Number(targetValueText));
 
+	// このデータソースに日付列がある場合のみ、達成率トラッキングの対象期間（日付列＋FROM/TO）の入力を必須にする
+	const dateCandidates = $derived(selectedSource ? selectedSource.columns.filter((c) => c.type === 'date') : []);
+	const dateOptions = $derived(dateCandidates.map((c) => ({ value: c.key, label: c.label })));
+	const needsPeriodRange = $derived(dateCandidates.length > 0);
+	const periodRangeValid = $derived(!needsPeriodRange || (!!dateColumn && !!periodFrom && !!periodTo && periodFrom <= periodTo));
+
 	function labelOf(key: string): string {
 		return selectedSource?.columns.find((c) => c.key === key)?.label ?? key;
 	}
@@ -94,6 +107,9 @@
 		targetColumn = '';
 		featureColumns = [];
 		correlations = {};
+		dateColumn = '';
+		periodFrom = '';
+		periodTo = '';
 		resetResults();
 		error = '';
 	});
@@ -208,7 +224,7 @@
 	}
 
 	async function savePlan() {
-		if (!model || !plan || !validity || !planName.trim() || !periodLabel.trim()) return;
+		if (!model || !plan || !validity || !planName.trim() || !periodLabel.trim() || !periodRangeValid) return;
 		saving = true;
 		saveError = '';
 		try {
@@ -221,7 +237,17 @@
 				validity,
 				plan
 			};
-			const body = JSON.stringify({ name: planName.trim(), dataSourceId, targetColumn, periodLabel: periodLabel.trim(), periodType, snapshot });
+			const body = JSON.stringify({
+				name: planName.trim(),
+				dataSourceId,
+				targetColumn,
+				periodLabel: periodLabel.trim(),
+				periodType,
+				dateColumn: dateColumn || null,
+				periodFrom: periodFrom || null,
+				periodTo: periodTo || null,
+				snapshot
+			});
 			const res =
 				mode === 'edit'
 					? await fetch(`/api/kpi-plans/${planId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body })
@@ -288,9 +314,13 @@
 
 				<Table columns={tableColumns} rows={tableRows} />
 
+				{#if needsPeriodRange && !periodRangeValid}
+					<p class="warning-text">保存するには、下の設定欄で達成率トラッキングの対象期間（日付列・期間FROM/TO）を指定してください。</p>
+				{/if}
+
 				<div class="save-row">
 					<Textbox label="このKPIプランの名前" bind:value={planName} placeholder="例: 2027年度 売上目標KPI" />
-					<button class="run-btn" onclick={savePlan} disabled={saving || !planName.trim() || !periodLabel.trim()}>
+					<button class="run-btn" onclick={savePlan} disabled={saving || !planName.trim() || !periodLabel.trim() || !periodRangeValid}>
 						{saving ? '保存中…' : mode === 'edit' ? '更新する' : '保存する'}
 					</button>
 				</div>
@@ -315,6 +345,22 @@
 			<Select label="期間の種類" bind:value={periodType} options={PERIOD_TYPE_OPTIONS} />
 			<Textbox label="期間ラベル" bind:value={periodLabel} placeholder="例: 2027年度 / 2026年7月 / 第3四半期" />
 		</div>
+
+		{#if dataSourceId}
+			{#if needsPeriodRange}
+				<div class="config-row">
+					<Select label="達成率トラッキングの対象の日時カラム" bind:value={dateColumn} options={dateOptions} />
+					<DatePicker label="期間FROM" bind:value={periodFrom} required max={periodTo || undefined} />
+					<DatePicker label="期間TO" bind:value={periodTo} required min={periodFrom || undefined} />
+				</div>
+				<p class="hint">
+					達成率トラッキング（現在の実績・達成率のゲージ表示）は、この日時カラムがFROM〜TOの範囲に入っている行だけを対象に計算します。
+					回帰モデル自体の学習は、これまで通りデータソースの全期間のデータを使います。
+				</p>
+			{:else}
+				<p class="hint">このデータソースには日時型の列がないため、達成率トラッキングはデータソースの全期間を対象に計算されます。</p>
+			{/if}
+		{/if}
 
 		<div class="feature-picker">
 			<span class="field-label">
