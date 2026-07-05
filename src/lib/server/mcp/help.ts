@@ -42,11 +42,12 @@ const HELP: Record<string, object> = {
 			{ name: 'メール送信', topic: 'email', examples: ['レポートをメールで送って'] }
 		],
 		tips: [
-			'自然な日本語で質問するだけで、AIが適したSQL・分析手法・グラフを選んで答えます',
-			'手法選びに迷ったときは、サイドバーの各分析画面右側のAIアシスタントに相談すると設定を代わりにセットしてくれます',
+			'チャット（/chat）では自然な日本語のまま質問するとSQLを組み立てて集計・グラフ化する。決まった分析メニューに当てはまらない、その場限りの質問に向いている',
+			'特定の統計手法を明示的に使いたい場合はサイドバーの「分析」欄の各画面を直接使う。手法選びに迷ったときは、各分析画面右側のAIアシスタントに相談すると設定を代わりにセットしてくれる',
 			'データソースはサイドメニューの「データベース管理」から登録・管理できます'
 		],
 		relatedPages: [
+			{ label: 'チャット', href: '/chat', description: '自然言語での質問・集計・シミュレーター作成' },
 			{ label: 'レポート作成', href: '/report-create', description: '分析手法を選んでAIにレポートを作らせられます' },
 			{ label: 'KPI管理', href: '/kpi', description: '目標からKPIを逆算し、達成率を確認できます' },
 			{ label: 'データベース管理', href: '/database', description: 'データの登録・CSV取り込みができます' },
@@ -93,7 +94,10 @@ const HELP: Record<string, object> = {
 			'結果には妥当性チェック（サンプル数・当てはまりの良さ等）が自動表示されるので、数値をそのまま鵜呑みにせず確認できます',
 			'複数の手法をまとめてAIにレポートさせたい場合は「レポート作成」を使ってください'
 		],
-		relatedPages: [{ label: '分析', href: '/analysis', description: '記述統計・相関分析・回帰分析など専用の分析ツール一覧' }]
+		relatedPages: [
+			{ label: '分析', href: '/analysis', description: '記述統計・相関分析・回帰分析など専用の分析ツール一覧' },
+			{ label: 'チャット', href: '/chat', description: '自然言語のまま質問して集計・グラフ化する' }
+		]
 	},
 	report_create: {
 		title: 'レポート作成',
