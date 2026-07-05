@@ -18,7 +18,14 @@
 			<div class="kpi-gauges">
 				{#each data.kpiAchievements as a (a.planId)}
 					<a href="/kpi/{a.planId}" class="kpi-gauge-link">
-						<GaugeChart title={a.name} value={a.current} target={a.targetValue} size={150} />
+						{#if a.hasActuals}
+							<GaugeChart title={a.name} value={a.current} target={a.targetValue} size={150} />
+						{:else}
+							<div class="kpi-gauge-empty" style:width="150px">
+								<p class="kpi-gauge-empty-title">{a.name}</p>
+								<p class="kpi-gauge-empty-text">この期間の実績データはまだありません</p>
+							</div>
+						{/if}
 						<span class="kpi-gauge-period">{a.periodLabel}</span>
 						{#if !a.periodScoped}
 							<span class="kpi-gauge-note">期間未設定のため全期間のデータで計算</span>
@@ -93,6 +100,25 @@
 		&:hover {
 			opacity: 0.8;
 		}
+	}
+	.kpi-gauge-empty {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		min-height: 100px;
+		text-align: center;
+	}
+	.kpi-gauge-empty-title {
+		font-size: 0.8125rem;
+		color: var(--color-text);
+		margin: 0;
+	}
+	.kpi-gauge-empty-text {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
+		margin: 0;
 	}
 	.kpi-gauge-period {
 		font-size: 0.75rem;

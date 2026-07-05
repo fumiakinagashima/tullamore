@@ -53,12 +53,19 @@ async function fetchColumnSample(db: D1Database, tableName: string, column: stri
  * 列の現在の平均値だけを、生データのサンプリングなしに1本の集計クエリで取得する。
  * KPI達成率トラッキングのように「平均だけ分かればよい」用途向け（中央値・ヒストグラム等が要らないぶん軽い）。
  */
+/**
+ * dateRangeを指定した場合、その期間に該当する行が1件も無ければ null を返す（例外にしない）。
+ * 未来の期間を対象にしたKPIプラン作成直後など、「まだ実績データが無い」のは正常な状態であり、
+ * データソース削除済み等の本当のエラーと区別して呼び出し側が「実績データがまだありません」と
+ * 明示的に表示できるようにするため。dateRangeを指定しない場合（全期間）に対象列自体に値が
+ * 1件も無いのは実際のエラーなので、そちらは従来通り例外を投げる。
+ */
 export async function computeCurrentMean(
 	db: D1Database,
 	dataSource: DataSource,
 	column: string,
 	dateRange?: { column: string; from: string; to: string }
-): Promise<number> {
+): Promise<number | null> {
 	const schemaColumns = parseSchema(dataSource.schemaJson);
 	const usable = new Set(continuousColumns(schemaColumns).map((c) => c.key));
 	if (!usable.has(column)) {
@@ -78,9 +85,7 @@ export async function computeCurrentMean(
 	const sql = `SELECT COUNT(${c}) AS n, SUM(${c}) AS total FROM ${table} WHERE date(${d}) BETWEEN date(?) AND date(?)`;
 	const row = await db.prepare(sql).bind(dateRange.from, dateRange.to).first<{ n: number; total: number | null }>();
 	const n = Number(row?.n ?? 0);
-	if (n === 0) {
-		throw new Error(`指定した期間（${dateRange.from} 〜 ${dateRange.to}）に "${column}" の値のある行がありません`);
-	}
+	if (n === 0) return null;
 	return Number(row!.total ?? 0) / n;
 }
 

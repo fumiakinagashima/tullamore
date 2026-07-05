@@ -13,9 +13,11 @@ export type KpiAchievement = {
 	targetValue: number;
 	/** 期間（date_column・period_from/to）で絞り込んだ実績から計算したか。falseは期間未設定の旧プランで、全期間の平均を使っている */
 	periodScoped: boolean;
-	/** 現在値（目的変数列の平均値。periodScopedがtrueなら期間内の行のみが対象） */
+	/** 対象期間に実績データが1件もまだ無い場合false（未来の期間を対象にしたKPIプラン作成直後等）。この場合current/achievementRateは0 */
+	hasActuals: boolean;
+	/** 現在値（目的変数列の平均値。periodScopedがtrueなら期間内の行のみが対象。hasActualsがfalseなら0） */
 	current: number;
-	/** current / targetValue（100%を超えることもある） */
+	/** current / targetValue（100%を超えることもある。hasActualsがfalseなら0） */
 	achievementRate: number;
 };
 
@@ -38,6 +40,7 @@ export async function computeKpiAchievement(db: Db, d1: D1Database, plan: KpiPla
 				: undefined;
 		const current = await computeCurrentMean(d1, dataSource, snapshot.targetColumn, dateRange);
 		const targetValue = snapshot.plan.targetValue;
+		const hasActuals = current !== null;
 		return {
 			planId: plan.id,
 			name: plan.name,
@@ -46,8 +49,9 @@ export async function computeKpiAchievement(db: Db, d1: D1Database, plan: KpiPla
 			targetColumn: snapshot.targetColumn,
 			targetValue,
 			periodScoped: !!dateRange,
-			current,
-			achievementRate: targetValue !== 0 ? current / targetValue : 0
+			hasActuals,
+			current: hasActuals ? current : 0,
+			achievementRate: hasActuals && targetValue !== 0 ? current / targetValue : 0
 		};
 	} catch {
 		return null;

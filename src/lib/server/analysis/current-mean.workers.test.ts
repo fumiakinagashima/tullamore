@@ -64,7 +64,9 @@ describe('computeCurrentMean (real D1)', () => {
 		expect(mean).toBeCloseTo((200 + 400) / 2);
 	});
 
-	it('throws when no rows fall within the given date range', async () => {
+	it('returns null (not an error) when no rows fall within the given date range', async () => {
+		// 未来の期間を対象にしたKPIプラン作成直後等、期間内に実績がまだ無いのは正常な状態のため
+		// 例外にはせず null を返す（呼び出し側がプランごと非表示にせず「実績データがまだ無い」と案内できるように）
 		const db = createDb(env.DB);
 		const tableName = makeTableName('mean-test-empty-range');
 		await env.DB.exec(`CREATE TABLE ${tableName} (id INTEGER PRIMARY KEY, sold_at TEXT, revenue REAL)`);
@@ -80,8 +82,11 @@ describe('computeCurrentMean (real D1)', () => {
 			rowCount: 1
 		});
 
-		await expect(
-			computeCurrentMean(env.DB, dataSource, 'revenue', { column: 'sold_at', from: '2026-01-01', to: '2026-12-31' })
-		).rejects.toThrow();
+		const mean = await computeCurrentMean(env.DB, dataSource, 'revenue', {
+			column: 'sold_at',
+			from: '2026-01-01',
+			to: '2026-12-31'
+		});
+		expect(mean).toBeNull();
 	});
 });
