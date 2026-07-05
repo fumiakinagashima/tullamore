@@ -78,9 +78,9 @@
 		<span class="logo">TULLAMORE</span>
 	</div>
 
-	<a href="/" class="new-chat-row" onclick={() => chatSession.startNew()}>
+	<a href="/" class="new-chat-row" class:active={page.url.pathname === '/'}>
 		<Plus size={14} />
-		{m.new_chat()}
+		ダッシュボード
 	</a>
 
 	<nav class="history">
