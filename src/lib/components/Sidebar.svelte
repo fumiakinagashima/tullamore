@@ -421,7 +421,7 @@
 		align-items: center;
 		border-radius: 8px;
 		transition: background 0.15s;
-
+		padding-left: 20px;
 		&:hover,
 		&.active { background: var(--sidebar-hover); }
 

@@ -183,7 +183,7 @@
 	}
 
 	.messages-inner {
-		max-width: 720px;
+		max-width: var(--chat-width);
 		width: 100%;
 		margin: 0 auto;
 		display: flex;
@@ -201,8 +201,8 @@
 	.user-bubble {
 		max-width: 72%;
 		padding: 10px 16px;
-		background: var(--color-primary);
-		color: #fff;
+		background: var(--color-surface);
+		color: var(--color-text);
 		border-radius: 18px 18px 4px 18px;
 		font-size: 0.9375rem;
 		line-height: 1.5;
@@ -265,7 +265,7 @@
 		   開始後はJS(repositionInput)が top(px)/translateX(-50%) を設定して下部へスライドする。 */
 		top: 50%;
 		transform: translate(-50%, -50%);
-		width: min(720px, calc(100% - 48px));
+		width: min(var(--chat-width), calc(100% - 48px));
 		z-index: 5;
 		transition: opacity 0.2s;
 	}
