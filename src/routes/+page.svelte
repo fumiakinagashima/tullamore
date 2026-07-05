@@ -2,6 +2,7 @@
 	import { toast } from '$lib/stores/toast.svelte';
 	import { createChatState, renderMarkdown, dashboard } from './index.svelte';
 	import type { PageData } from './$types';
+	import GaugeChart from '$lib/components/ui/GaugeChart.svelte';
 
 	let { data }: { data: PageData } = $props();
 	const s = createChatState(() => data);
@@ -13,9 +14,20 @@
 <div class="main">
 	<section class="kpi">
 		<p class="section-title">KPI達成状況</p>
-		<div>
-			...
-		</div>
+		{#if data.kpiAchievements.length > 0}
+			<div class="kpi-gauges">
+				{#each data.kpiAchievements as a (a.planId)}
+					<a href="/kpi/{a.planId}" class="kpi-gauge-link">
+						<GaugeChart title={a.name} value={a.current} target={a.targetValue} size={150} />
+						<span class="kpi-gauge-period">{a.periodLabel}</span>
+					</a>
+				{/each}
+			</div>
+		{:else}
+			<p class="kpi-empty">
+				KPIプランを作成すると、目的変数の実績と目標の達成率がここに表示されます。<a href="/kpi/new">KPIを作成する</a>
+			</p>
+		{/if}
 	</section>
 	
 	{#each dashboard as d}
@@ -47,6 +59,41 @@
 	.section-title {
 		font-size: 0.9rem;
 		color: var(--sidebar-text-muted);
+	}
+	.kpi-empty {
+		margin-top: 16px;
+		font-size: 0.875rem;
+		color: var(--color-text-muted);
+
+		a {
+			color: var(--color-primary);
+		}
+	}
+	.kpi-gauges {
+		margin-top: 16px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 16px;
+	}
+	.kpi-gauge-link {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		padding: 16px 20px;
+		background-color: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: 2px;
+		text-decoration: none;
+		transition: opacity 0.15s;
+
+		&:hover {
+			opacity: 0.8;
+		}
+	}
+	.kpi-gauge-period {
+		font-size: 0.75rem;
+		color: var(--color-text-muted);
 	}
 	.list {
 		margin-top: 16px;

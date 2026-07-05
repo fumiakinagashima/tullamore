@@ -3,10 +3,11 @@
 	import { goto } from '$app/navigation';
 	import ValidityCard from '$lib/components/ui/ValidityCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
+	import GaugeChart from '$lib/components/ui/GaugeChart.svelte';
 	import ReportModal from '$lib/components/analysis/ReportModal.svelte';
 
 	let { data }: { data: PageData } = $props();
-	let { plan, snapshot, columns, dataSourceName } = $derived(data);
+	let { plan, snapshot, columns, dataSourceName, achievement } = $derived(data);
 
 	const PERIOD_TYPE_LABEL: Record<string, string> = { year: '年次', month: '月次', week: '週次', custom: '自由' };
 
@@ -112,6 +113,15 @@
 			<p class="warning-text">
 				選択したKPI候補の実測レンジ内だけでは目標に届きません（不足分: {fmt(snapshot.plan.gap - snapshot.plan.coveredGap)}）。
 			</p>
+		{/if}
+
+		{#if achievement}
+			<div class="achievement-row">
+				<GaugeChart value={achievement.current} target={achievement.targetValue} size={170} />
+				<p class="achievement-note">
+					目的変数「{labelOf(achievement.targetColumn)}」の現在の平均値と目標値から算出した達成率です（データソースの最新の値を都度再取得します）。
+				</p>
+			</div>
 		{/if}
 
 		<div class="metrics-row">
@@ -224,6 +234,21 @@
 		background: color-mix(in srgb, var(--color-warning) 12%, var(--color-background));
 		border-radius: 6px;
 		padding: 8px 12px;
+		margin: 0;
+	}
+
+	.achievement-row {
+		display: flex;
+		align-items: center;
+		gap: 24px;
+		padding: 12px 4px;
+		border-top: 1px solid var(--color-border);
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.achievement-note {
+		font-size: 0.8125rem;
+		color: var(--color-text-muted);
 		margin: 0;
 	}
 

@@ -49,6 +49,20 @@ async function fetchColumnSample(db: D1Database, tableName: string, column: stri
 	return res.results.map((r) => Number(r.v));
 }
 
+/**
+ * 列の現在の平均値だけを、生データのサンプリングなしに1本の集計クエリで取得する。
+ * KPI達成率トラッキングのように「平均だけ分かればよい」用途向け（中央値・ヒストグラム等が要らないぶん軽い）。
+ */
+export async function computeCurrentMean(db: D1Database, dataSource: DataSource, column: string): Promise<number> {
+	const schemaColumns = parseSchema(dataSource.schemaJson);
+	const usable = new Set(continuousColumns(schemaColumns).map((c) => c.key));
+	if (!usable.has(column)) {
+		throw new Error(`"${column}" は数値列ではありません`);
+	}
+	const aggregates = await computeColumnAggregates(db, dataSource.tableName, [column]);
+	return aggregates[column].sum / aggregates[column].n;
+}
+
 export async function computeDescriptiveStatsFromDataSource(
 	db: D1Database,
 	dataSource: DataSource,
