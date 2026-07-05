@@ -252,8 +252,8 @@
 		left: 0;
 		right: 0;
 		bottom: 0;
-		height: 140px;
-		background: linear-gradient(to bottom, transparent, var(--color-background) 65%);
+		height: 168px;
+		background: linear-gradient(to bottom, transparent, var(--color-background) 30%);
 		pointer-events: none;
 		z-index: 4;
 	}
