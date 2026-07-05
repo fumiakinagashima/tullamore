@@ -10,7 +10,7 @@
 	import Bell from '$lib/components/icon/Bell.svelte';
 	import Database from '$lib/components/icon/Database.svelte';
 	import Plug from '$lib/components/icon/Plug.svelte';
-	import Plus from '$lib/components/icon/Plus.svelte';
+	import MessageCircle from '$lib/components/icon/MessageCircle.svelte';
 	import MoreVertical from '$lib/components/icon/MoreVertical.svelte';
 	import Scatter from '$lib/components/icon/Scatter.svelte';
 	import TrendingUp from '$lib/components/icon/TrendingUp.svelte';
@@ -179,7 +179,7 @@
 
 	<nav class="history">
 		<button class="group-label" onclick={() => toggleGroup('works')} aria-expanded={!collapsedGroups.works}>
-			<ChevronDown size={12} class="group-chevron {collapsedGroups.works ? 'collapsed' : ''}" />
+			<span class="group-chevron" class:collapsed={collapsedGroups.works}><ChevronDown size={12} /></span>
 			業務
 		</button>
 		{#if !collapsedGroups.works}
@@ -192,7 +192,7 @@
 		{/if}
 
 		<button class="group-label" onclick={() => toggleGroup('analysis')} aria-expanded={!collapsedGroups.analysis}>
-			<ChevronDown size={12} class="group-chevron {collapsedGroups.analysis ? 'collapsed' : ''}" />
+			<span class="group-chevron" class:collapsed={collapsedGroups.analysis}><ChevronDown size={12} /></span>
 			分析
 		</button>
 		{#if !collapsedGroups.analysis}
@@ -205,7 +205,7 @@
 		{/if}
 
 		<button class="group-label" onclick={() => toggleGroup('data-source')} aria-expanded={!collapsedGroups['data-source']}>
-			<ChevronDown size={12} class="group-chevron {collapsedGroups['data-source'] ? 'collapsed' : ''}" />
+			<span class="group-chevron" class:collapsed={collapsedGroups['data-source']}><ChevronDown size={12} /></span>
 			データソース
 		</button>
 		{#if !collapsedGroups['data-source']}
@@ -218,12 +218,12 @@
 		{/if}
 
 		<button class="group-label" onclick={() => toggleGroup('chat')} aria-expanded={!collapsedGroups.chat}>
-			<ChevronDown size={12} class="group-chevron {collapsedGroups.chat ? 'collapsed' : ''}" />
+			<span class="group-chevron" class:collapsed={collapsedGroups.chat}><ChevronDown size={12} /></span>
 			チャット
 		</button>
 		{#if !collapsedGroups.chat}
 			<a href="/chat" class="new-chat-row" onclick={() => chatSession.startNew()}>
-				<Plus size={14} />
+				<MessageCircle size={14} />
 				{m.new_chat()}
 			</a>
 
@@ -374,6 +374,7 @@
 	}
 
 	.group-chevron {
+		display: inline-flex;
 		flex-shrink: 0;
 		transition: transform 0.15s ease;
 
