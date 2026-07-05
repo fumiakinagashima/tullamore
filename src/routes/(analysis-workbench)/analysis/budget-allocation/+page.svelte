@@ -400,7 +400,7 @@
 	.config-row {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(220px, 320px));
-		gap: 12px;
+		gap: 24px;
 	}
 
 	.feature-picker {
