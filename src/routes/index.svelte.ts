@@ -471,7 +471,7 @@ export const dashboard =  [
 		key: 'works',
 		label : '業務',
 		items: [
-			{ title: '複合分析レポート', desc: 'データ分析を実行し、手法間の結論の一致・矛盾を踏まえた統合レポートを作成します。', href: '/composite-report', icon: Layers },
+			{ title: 'レポート作成', desc: '相関分析・回帰分析・記述統計・分類・A/Bテストから選んだ手法を実行し、結果を踏まえたレポートを作成します。', href: '/report-create', icon: Layers },
 			{ title: 'KPI管理', desc: '目的変数の目標値から、KPI候補（説明変数）の目標値を実測レンジ内に収まる形で逆算し、KPIプランとして管理します。', href: '/kpi', icon: Flag },
 		]
 	},

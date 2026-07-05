@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { generateCompositeAnalysisReport, type AnalysisReportInput } from '$lib/server/ai/analysis-report';
+import { generateReport, type AnalysisReportInput } from '$lib/server/ai/analysis-report';
 import { errors } from '$lib/server/errors';
 
 export const POST: RequestHandler = async ({ request, platform }) => {
@@ -14,15 +14,15 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 	if (mockMode) {
 		const report = [
-			'# 複合分析レポート（モック）',
+			'# レポート（モック）',
 			'',
 			'## 概要',
 			'モックモードのため簡易レポートを返しています。',
 			'',
-			'## 各分析の結果',
+			'## 主な発見',
 			'- (モック)',
 			'',
-			'## 総合的な解釈',
+			'## 統計的な妥当性',
 			'- (モック)',
 			'',
 			'## 推奨される次のアクション',
@@ -35,7 +35,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	if (!apiKey) return errors.internal(new Error('ANTHROPIC_API_KEY が設定されていません'));
 
 	try {
-		const report = await generateCompositeAnalysisReport(apiKey, body.analyses);
+		const report = await generateReport(apiKey, body.analyses);
 		return json({ report });
 	} catch (e) {
 		return errors.internal(e);

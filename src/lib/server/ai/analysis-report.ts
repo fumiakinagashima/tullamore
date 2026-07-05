@@ -124,3 +124,16 @@ export async function generateCompositeAnalysisReport(
 
 	return callClaude(apiKey, COMPOSITE_SYSTEM_PROMPT, userMessage, model);
 }
+
+/**
+ * 「レポート作成」画面向けの入口。選択された分析が1件なら単一分析用（多重比較の注意書きが不要）、
+ * 複数件なら複合分析用のプロンプトを使う。
+ */
+export async function generateReport(
+	apiKey: string,
+	analyses: AnalysisReportInput[],
+	model = 'claude-haiku-4-5-20251001'
+): Promise<string> {
+	if (analyses.length === 1) return generateAnalysisReport(apiKey, analyses[0], model);
+	return generateCompositeAnalysisReport(apiKey, analyses, model);
+}

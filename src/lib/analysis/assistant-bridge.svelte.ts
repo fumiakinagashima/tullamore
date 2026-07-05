@@ -17,7 +17,7 @@ export type AnalysisBridge = {
 		| 'descriptive-stats'
 		| 'ab-test'
 		| 'classification'
-		| 'composite-report'
+		| 'report-create'
 		| 'kpi-planning'
 		| null;
 	/** 現在の設定値（スネークケース。AIアシスタントのツール呼び出しと同じキー形式に揃える） */

@@ -30,7 +30,7 @@
 	let { account }: Props = $props();
 
 	const workModules = [
-		{ href: '/composite-report', label: '複合分析レポート', icon: Layers },
+		{ href: '/report-create', label: 'レポート作成', icon: Layers },
 		{ href: '/kpi', label: 'KPI管理', icon: Flag }
 	];
 

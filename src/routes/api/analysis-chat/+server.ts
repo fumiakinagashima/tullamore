@@ -55,6 +55,14 @@ const SET_CONFIG_TOOL: Tool = {
 				type: 'string',
 				enum: ['mean', 'proportion'],
 				description: '検定方法（A/Bテストのみ）。mean=平均の差のt検定（連続値の指標）、proportion=比率の差のz検定（0/1の指標）'
+			},
+			methods: {
+				type: 'array',
+				items: { type: 'string', enum: ['correlation', 'regression', 'descriptive-stats', 'classification', 'ab-test'] },
+				description:
+					'レポート作成画面で実行する分析手法（複数選択可、レポート作成のみ）。' +
+					'correlation=相関分析、regression=回帰分析、descriptive-stats=記述統計、classification=ロジスティック回帰（分類）、ab-test=A/Bテスト。' +
+					'classification・ab-testは他の3つと目的変数が異なってよい（例: 回帰分析は売上、分類は解約有無）。'
 			}
 		}
 	}
@@ -72,7 +80,7 @@ type AnalysisType =
 	| 'descriptive-stats'
 	| 'ab-test'
 	| 'classification'
-	| 'composite-report'
+	| 'report-create'
 	| 'kpi-planning'
 	| null;
 
@@ -153,12 +161,15 @@ function buildSystemPrompt(
 				'説明変数（数値列、複数可、feature_columns）を設定すると結果が表示されます。' +
 				'正解率・適合率・再現率・混同行列・オッズ比が表示されます。回帰分析（連続値の予測）との違いは目的変数が2値である点です。'
 		);
-	} else if (analysisType === 'composite-report') {
+	} else if (analysisType === 'report-create') {
 		sections.push(
-			'現在の画面は「複合分析レポート」です。相関分析・回帰分析・記述統計を同じデータソース・目的変数・説明変数に対して' +
-				'同時に実行し、手法間で結論が一致しているか矛盾していないかを踏まえた統合レポートを作成する画面です。' +
-				'データソース・目的変数・説明変数を設定すると3つの分析が実行されます。レポート自体の生成は画面上の専用ボタン' +
-				'（AIアシスタントの「レポート作成」ボタンではない）から行ってください。'
+			'現在の画面は「レポート作成」です。相関分析・回帰分析・記述統計・ロジスティック回帰（分類）・A/Bテストの中から' +
+				'ユーザーが選んだ手法をまとめて実行し、その結果を踏まえたレポートを作成する画面です（1手法だけでも複数の組み合わせでも使えます）。' +
+				'ユーザーがやりたいことを伝えてきたら、まず methods でどの手法を含めるかを設定すること。' +
+				'相関分析・回帰分析・記述統計は target_column（目的変数）・feature_columns（説明変数）を共有します。' +
+				'classification（分類）は目的変数が2値である必要があり、他の手法と異なる目的変数を使いたい場合はこのアシスタントでは設定できないため' +
+				'画面上の専用の入力欄で選ぶよう案内すること。ab-test（A/Bテスト）は group_column・test_type を使う。' +
+				'レポート自体の生成は画面上の専用ボタン（AIアシスタントの「レポート作成」ボタンではない）から行ってください。'
 		);
 	} else if (analysisType === 'kpi-planning') {
 		sections.push(
@@ -170,7 +181,7 @@ function buildSystemPrompt(
 	} else {
 		sections.push(
 			'ユーザーはまだ分析画面（回帰分析・感度分析・シナリオ比較・ゴールシーク・トレンド予測・モンテカルロ・シミュレーション・' +
-				'予算配分最適化・相関分析・記述統計・A/Bテスト・ロジスティック回帰・複合分析レポート・KPI設定のいずれか）を開いていません。' +
+				'予算配分最適化・相関分析・記述統計・A/Bテスト・ロジスティック回帰・レポート作成・KPI設定のいずれか）を開いていません。' +
 				'何を分析したいか聞き、適した画面をサイドバーから開くよう案内してください（このアシスタントは開いた画面の設定を手伝えます）。'
 		);
 	}
