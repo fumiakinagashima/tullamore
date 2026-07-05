@@ -117,12 +117,10 @@
 
 		{#if achievement}
 			<div class="achievement-row">
-				{#if achievement.hasActuals}
-					<GaugeChart value={achievement.current} target={achievement.targetValue} size={170} />
-				{/if}
+				<GaugeChart value={achievement.current} target={achievement.targetValue} size={170} />
 				<p class="achievement-note">
 					{#if !achievement.hasActuals}
-						対象期間（{achievement.periodLabel}）の実績データはまだありません。データが登録されると達成率が表示されます。
+						対象期間（{achievement.periodLabel}）の実績データはまだありません。データが登録されると達成率が更新されます。
 					{:else}
 						目的変数「{labelOf(achievement.targetColumn)}」の
 						{#if achievement.periodScoped}
