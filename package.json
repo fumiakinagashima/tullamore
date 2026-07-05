@@ -11,15 +11,12 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "db:studio": "drizzle-kit studio --config=drizzle.local.config.ts",
-    "db:seed:demo": "bun run scripts/seed-demo-data.ts",
-    "db:seed:remote-sql": "bun run scripts/generate-seed-sql.ts",
     "test:unit": "vitest run && vitest run --config vitest.workers.config.ts",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.18.0",
     "@cloudflare/workers-types": "^4.20260607.1",
-    "@libsql/client": "^0.17.3",
     "@playwright/test": "^1.60.0",
     "@sveltejs/adapter-auto": "^7.0.1",
     "@sveltejs/adapter-cloudflare": "^7.2.8",
@@ -28,7 +25,6 @@
     "@types/node": "^25.9.2",
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
-    "jszip": "^3.10.1",
     "sass": "^1.100.0",
     "svelte": "^5.55.2",
     "svelte-check": "^4.4.6",
