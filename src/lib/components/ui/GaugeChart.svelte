@@ -75,7 +75,6 @@
 
 	.track {
 		fill: none;
-		stroke: var(--color-neutral-bg);
 		stroke-linecap: round;
 	}
 
@@ -84,6 +83,11 @@
 		stroke-linecap: round;
 		transition: stroke-dasharray 0.3s ease;
 	}
+
+	/* トラック（未達成分）はfillと同系色を薄くした色にする。単純なニュートラルグレーだとカード背景とほぼ同色で見えなかったため */
+	.level-good .track { stroke: color-mix(in srgb, var(--color-success) 18%, var(--color-background)); }
+	.level-caution .track { stroke: color-mix(in srgb, var(--color-warning) 18%, var(--color-background)); }
+	.level-poor .track { stroke: color-mix(in srgb, var(--color-error) 18%, var(--color-background)); }
 
 	.level-good .fill { stroke: var(--color-success); }
 	.level-caution .fill { stroke: var(--color-warning); }
