@@ -4,7 +4,7 @@
 	import { notificationCenter } from '$lib/stores/notifications.svelte';
 	import { chatSession } from '$lib/stores/chat-session.svelte';
 	import NotificationDrawer from '$lib/components/ui/NotificationDrawer.svelte';
-	import Plus from '$lib/components/icon/Plus.svelte';
+	import Dashboard from '$lib/components/icon/Dashboard.svelte';
 	import Bell from '$lib/components/icon/Bell.svelte';
 	import Database from '$lib/components/icon/Database.svelte';
 	import Plug from '$lib/components/icon/Plug.svelte';
@@ -78,9 +78,9 @@
 		<span class="logo">TULLAMORE</span>
 	</div>
 
-	<a href="/" class="new-chat-row" class:active={page.url.pathname === '/'}>
-		<Plus size={14} />
-		ダッシュボード
+	<a href="/" class="portal" class:active={page.url.pathname === '/'}>
+		<Dashboard size={14} />
+		ポータル
 	</a>
 
 	<nav class="history">
@@ -165,7 +165,7 @@
 		font-family: Georgia, 'Times New Roman', Times, serif;
 	}
 
-	.new-chat-row {
+	.portal {
 		display: flex;
 		align-items: center;
 		gap: 8px;
@@ -178,6 +178,11 @@
 		transition: background 0.15s;
 
 		&:hover { background: var(--sidebar-hover); }
+		&.active {
+			background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+			color: var(--color-primary);
+			font-weight: 500;
+		}
 	}
 
 	.history {
