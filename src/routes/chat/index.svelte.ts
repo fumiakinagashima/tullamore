@@ -30,8 +30,6 @@ function seedMessagesFromChat(
 	return seed.messages.map((msg) => ({ id: msg.id, role: msg.role, contents: msg.contents, createdAt: msg.createdAt }));
 }
 
-type Turn = { id: string; userMsg: Message | null; assistantMsgs: Message[] };
-
 export function createChatState(getData: () => PageData) {
 	let messages = $state<Message[]>(untrack(() =>
 		getData().seedChat ? seedMessagesFromChat(getData().seedChat) : seedMessageFromNotification(getData().seedNotification)
@@ -50,29 +48,6 @@ export function createChatState(getData: () => PageData) {
 	let inputReady = $state(untrack(() => !hasStarted));
 	let currentChatId: string | null = untrack(() => getData().seedChat?.id ?? null);
 	let panelForm = $state<FormContent | null>(null);
-	let historyDrawerOpen = $state(false);
-
-	let turns = $derived.by(() => {
-		const result: Turn[] = [];
-		let current: Turn | null = null;
-		for (const msg of messages) {
-			if (msg.role === 'user') {
-				current = { id: msg.id, userMsg: msg, assistantMsgs: [] };
-				result.push(current);
-			} else if (current) {
-				current.assistantMsgs.push(msg);
-			} else {
-				current = { id: msg.id, userMsg: null, assistantMsgs: [msg] };
-				result.push(current);
-			}
-		}
-		return result;
-	});
-	let latestTurn = $derived<Turn | null>(turns.length > 0 ? turns[turns.length - 1] : null);
-	let pastTurns = $derived(turns.slice(0, -1));
-	let latestTurnMessages = $derived<Message[]>(
-		latestTurn ? [...(latestTurn.userMsg ? [latestTurn.userMsg] : []), ...latestTurn.assistantMsgs] : []
-	);
 
 	let streamingText = $state('');
 	let streamingUIContents = $state<MessageContent[]>([]);
@@ -437,10 +412,7 @@ export function createChatState(getData: () => PageData) {
 		get inputReady() { return inputReady; },
 		get panelForm() { return panelForm; },
 		set panelForm(v) { panelForm = v; },
-		get historyDrawerOpen() { return historyDrawerOpen; },
-		set historyDrawerOpen(v) { historyDrawerOpen = v; },
-		get pastTurns() { return pastTurns; },
-		get latestTurnMessages() { return latestTurnMessages; },
+		get messages() { return messages; },
 		autoGrow,
 		handleSubmit,
 		handleActionSelect,

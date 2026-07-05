@@ -8,12 +8,10 @@
 	import Reply from '$lib/components/chat/Reply.svelte';
 	import Simulator from '$lib/components/chat/Simulator.svelte';
 	import FormDialog from '$lib/components/dialog/FormDialog.svelte';
-	import TurnHistoryDrawer from '$lib/components/chat/TurnHistoryDrawer.svelte';
 	import TypingIndicator from '$lib/components/ui/TypingIndicator.svelte';
 	import type { MessageContent, ValuesContent, ChartContent, LinkContent, ReplyContent, SimulatorContent } from '$lib/types/chat';
 	import * as m from '$lib/paraglide/messages.js';
 	import ArrowUp from '$lib/components/icon/ArrowUp.svelte';
-	import Clock from '$lib/components/icon/Clock.svelte';
 	import { createChatState, renderMarkdown } from './index.svelte';
 	import type { PageData } from './$types';
 
@@ -27,15 +25,9 @@
 		<p>データについて質問してください</p>
 	</div>
 
-	{#if s.hasStarted && s.pastTurns.length > 0}
-		<button class="history-btn" onclick={() => (s.historyDrawerOpen = true)} aria-label="会話履歴">
-			<Clock size={16} />
-		</button>
-	{/if}
-
 	<div class="messages" class:visible={s.hasStarted} bind:this={s.listEl}>
 		<div class="messages-inner">
-			{#each s.latestTurnMessages as msg (msg.id)}
+			{#each s.messages as msg (msg.id)}
 				<div class="message {msg.role}">
 					{#if msg.role === 'user'}
 						<div class="user-bubble">
@@ -134,7 +126,6 @@
 			oncancel={s.handlePanelCancel}
 		/>
 	{/if}
-	<TurnHistoryDrawer turns={s.pastTurns} open={s.historyDrawerOpen} onclose={() => (s.historyDrawerOpen = false)} />
 </div>
 
 <style lang="scss">
@@ -174,26 +165,6 @@
 		font-size: 1rem;
 		color: var(--color-text-muted);
 		margin: 0;
-	}
-
-	.history-btn {
-		position: absolute;
-		top: 12px;
-		right: 12px;
-		z-index: 6;
-		width: 32px;
-		height: 32px;
-		border-radius: 50%;
-		background: var(--color-surface);
-		color: var(--color-text-muted);
-		border: 1px solid var(--color-border);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-		transition: background 0.15s;
-
-		&:hover { background: var(--color-background); }
 	}
 
 	.messages {
