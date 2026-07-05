@@ -55,7 +55,7 @@
 
 <style lang="scss">
 	.main {
-		padding: 16px 24px;
+		padding: 24px;
 		display: flex;
 		flex-direction: column;
 		gap: 56px;

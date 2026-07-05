@@ -253,7 +253,7 @@
 		</p>
 
 		{#if tcpItems.length === 0 && !showTcpForm}
-			<p class="empty">接続がまだありません。「+ 接続を追加」から作成してください。</p>
+			<p class="empty">接続がまだありません。</p>
 		{/if}
 
 		<ul class="list">
@@ -315,6 +315,7 @@
 	.page {
 		padding: 28px 32px;
 		max-width: 780px;
+		margin: 0 auto;
 	}
 
 	.page-header {
@@ -354,7 +355,7 @@
 	.lead {
 		font-size: 0.8125rem;
 		color: var(--color-text-muted);
-		margin: 0 0 16px;
+		margin: 8px 0 16px;
 	}
 
 	.add-btn {
