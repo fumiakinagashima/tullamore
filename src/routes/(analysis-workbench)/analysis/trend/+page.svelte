@@ -195,12 +195,32 @@
 		<p class="page-sub">実績データから将来の推移を線で予測します（日次・週次・月次で集計粒度を切り替えられます）</p>
 	</div>
 
+	<section class="config-panel">
+		<p class="config-title">設定</p>
+		<div class="config-row">
+			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="日付列" bind:value={dateColumn} options={dateOptions} disabled={!dataSourceId} />
+			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+		</div>
+
+		<div class="config-row">
+			<Select label="集計粒度" bind:value={granularityValue} options={GRANULARITY_OPTIONS} />
+			<Select label="予測期間" bind:value={horizonMonths} options={HORIZON_OPTIONS} />
+		</div>
+
+		<Textbox label="分析メモ（任意）" bind:value={note} placeholder="例: 今後1年の会員数推移を見たい" />
+
+		<div class="run-row">
+			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
+				{loading ? '予測中…' : '予測を実行'}
+			</button>
+			{#if error}<p class="error-text">{error}</p>{/if}
+		</div>
+	</section>
+
 	<section class="results-panel">
 		{#if liveModel && liveSeries}
 			<div class="results-card">
-				{#if validity}
-					<ValidityCard {validity} />
-				{/if}
 				<div class="metrics-row">
 					<div class="metric">
 						<span class="metric-label">{PERIOD_LABEL[granularity]}</span>
@@ -233,10 +253,14 @@
 						{ name: 'トレンド予測', data: liveSeries.trend }
 					]}
 				/>
+
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>下の設定欄でデータソース・日付列・目的変数を選び、「予測を実行」を押してください</p>
+				<p>上の設定欄でデータソース・日付列・目的変数を選び、「予測を実行」を押してください</p>
 			</div>
 		{/if}
 	</section>
@@ -250,29 +274,6 @@
 			<DataGrid columns={gridColumns} bind:rows maxHeight={320} />
 		</section>
 	{/if}
-
-	<section class="config-panel">
-		<p class="config-title">設定</p>
-		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="日付列" bind:value={dateColumn} options={dateOptions} disabled={!dataSourceId} />
-			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
-		</div>
-
-		<div class="config-row">
-			<Select label="集計粒度" bind:value={granularityValue} options={GRANULARITY_OPTIONS} />
-			<Select label="予測期間" bind:value={horizonMonths} options={HORIZON_OPTIONS} />
-		</div>
-
-		<Textbox label="分析メモ（任意）" bind:value={note} placeholder="例: 今後1年の会員数推移を見たい" />
-
-		<div class="run-row">
-			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '予測中…' : '予測を実行'}
-			</button>
-			{#if error}<p class="error-text">{error}</p>{/if}
-		</div>
-	</section>
 </div>
 
 <style lang="scss">

@@ -35,24 +35,7 @@
 	.validity-card {
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
-		padding: 14px 16px;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: var(--color-neutral-bg);
-
-		&.level-good {
-			background: var(--color-success-bg);
-			border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
-		}
-		&.level-caution {
-			background: color-mix(in srgb, var(--color-warning) 12%, var(--color-background));
-			border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);
-		}
-		&.level-poor {
-			background: var(--color-error-bg);
-			border-color: color-mix(in srgb, var(--color-error) 30%, transparent);
-		}
+		gap: 8px;
 	}
 
 	.validity-header {
@@ -66,12 +49,9 @@
 		align-items: center;
 		gap: 4px;
 		flex-shrink: 0;
-		padding: 2px 9px;
-		border-radius: 999px;
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--color-neutral);
-		background: var(--color-background);
 
 		.level-good & { color: var(--color-success); }
 		.level-caution & { color: var(--color-warning); }
@@ -90,8 +70,7 @@
 		flex-direction: column;
 		gap: 6px;
 		margin: 0;
-		padding: 10px 0 0;
-		border-top: 1px solid var(--color-border);
+		padding: 0;
 		list-style: none;
 	}
 

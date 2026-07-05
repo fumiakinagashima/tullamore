@@ -127,26 +127,6 @@
 		<p class="page-sub">選択した列どうしのピアソン相関係数を計算し、ヒートマップで表示します</p>
 	</div>
 
-	<section class="results-panel">
-		{#if result}
-			<div class="results-card">
-				{#if validity}
-					<ValidityCard {validity} />
-				{/if}
-				{#if strongestPair}
-					<p class="highlight-text">
-						最も相関が強いのは「{labelOf(strongestPair.a)}」と「{labelOf(strongestPair.b)}」（r = {strongestPair.value.toFixed(2)}）
-					</p>
-				{/if}
-				<CorrelationHeatmap columns={heatmapColumns} matrix={result.matrix} />
-			</div>
-		{:else}
-			<div class="empty-results">
-				<p>下の設定欄でデータソースと相関を見たい列（2つ以上）を選び、「相関を計算」を押してください</p>
-			</div>
-		{/if}
-	</section>
-
 	<section class="config-panel">
 		<p class="config-title">設定</p>
 		<div class="config-row">
@@ -181,6 +161,26 @@
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
+	</section>
+
+	<section class="results-panel">
+		{#if result}
+			<div class="results-card">
+				{#if strongestPair}
+					<p class="highlight-text">
+						最も相関が強いのは「{labelOf(strongestPair.a)}」と「{labelOf(strongestPair.b)}」（r = {strongestPair.value.toFixed(2)}）
+					</p>
+				{/if}
+				<CorrelationHeatmap columns={heatmapColumns} matrix={result.matrix} />
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
+			</div>
+		{:else}
+			<div class="empty-results">
+				<p>上の設定欄でデータソースと相関を見たい列（2つ以上）を選び、「相関を計算」を押してください</p>
+			</div>
+		{/if}
 	</section>
 </div>
 

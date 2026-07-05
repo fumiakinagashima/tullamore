@@ -121,36 +121,6 @@
 		<p class="page-sub">選択した列の基本統計量（平均・中央値・標準偏差・四分位数）とヒストグラムを表示します</p>
 	</div>
 
-	<section class="results-panel">
-		{#if result}
-			<div class="stats-grid">
-				{#each Object.entries(result) as [key, s] (key)}
-					<div class="stats-card">
-						<p class="stats-card-title">{labelOf(key)}</p>
-						<ValidityCard validity={s.validity} />
-						<div class="metrics-row">
-							<div class="metric"><span class="metric-label">件数</span><span class="metric-value">{s.n.toLocaleString()}</span></div>
-							<div class="metric"><span class="metric-label">平均</span><span class="metric-value highlight">{fmt(s.mean)}</span></div>
-							<div class="metric"><span class="metric-label">中央値</span><span class="metric-value">{fmt(s.median)}</span></div>
-							<div class="metric"><span class="metric-label">標準偏差</span><span class="metric-value">{fmt(s.stddev)}</span></div>
-							<div class="metric"><span class="metric-label">最小</span><span class="metric-value">{fmt(s.min)}</span></div>
-							<div class="metric"><span class="metric-label">最大</span><span class="metric-value">{fmt(s.max)}</span></div>
-							<div class="metric"><span class="metric-label">Q1</span><span class="metric-value">{fmt(s.q1)}</span></div>
-							<div class="metric"><span class="metric-label">Q3</span><span class="metric-value">{fmt(s.q3)}</span></div>
-							<div class="metric"><span class="metric-label">IQR</span><span class="metric-value">{fmt(s.iqr)}</span></div>
-							<div class="metric"><span class="metric-label">外れ値候補</span><span class="metric-value">{s.outlierCount}件</span></div>
-						</div>
-						<BarChart data={histogramBars(s)} title="分布" />
-					</div>
-				{/each}
-			</div>
-		{:else}
-			<div class="empty-results">
-				<p>下の設定欄でデータソースと統計を見たい列を選び、「統計を計算」を押してください</p>
-			</div>
-		{/if}
-	</section>
-
 	<section class="config-panel">
 		<p class="config-title">設定</p>
 		<div class="config-row">
@@ -185,6 +155,36 @@
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
+	</section>
+
+	<section class="results-panel">
+		{#if result}
+			<div class="stats-grid">
+				{#each Object.entries(result) as [key, s] (key)}
+					<div class="stats-card">
+						<p class="stats-card-title">{labelOf(key)}</p>
+						<div class="metrics-row">
+							<div class="metric"><span class="metric-label">件数</span><span class="metric-value">{s.n.toLocaleString()}</span></div>
+							<div class="metric"><span class="metric-label">平均</span><span class="metric-value highlight">{fmt(s.mean)}</span></div>
+							<div class="metric"><span class="metric-label">中央値</span><span class="metric-value">{fmt(s.median)}</span></div>
+							<div class="metric"><span class="metric-label">標準偏差</span><span class="metric-value">{fmt(s.stddev)}</span></div>
+							<div class="metric"><span class="metric-label">最小</span><span class="metric-value">{fmt(s.min)}</span></div>
+							<div class="metric"><span class="metric-label">最大</span><span class="metric-value">{fmt(s.max)}</span></div>
+							<div class="metric"><span class="metric-label">Q1</span><span class="metric-value">{fmt(s.q1)}</span></div>
+							<div class="metric"><span class="metric-label">Q3</span><span class="metric-value">{fmt(s.q3)}</span></div>
+							<div class="metric"><span class="metric-label">IQR</span><span class="metric-value">{fmt(s.iqr)}</span></div>
+							<div class="metric"><span class="metric-label">外れ値候補</span><span class="metric-value">{s.outlierCount}件</span></div>
+						</div>
+						<BarChart data={histogramBars(s)} title="分布" />
+						<ValidityCard validity={s.validity} />
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<div class="empty-results">
+				<p>上の設定欄でデータソースと統計を見たい列を選び、「統計を計算」を押してください</p>
+			</div>
+		{/if}
 	</section>
 </div>
 

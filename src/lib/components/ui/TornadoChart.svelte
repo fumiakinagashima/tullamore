@@ -45,9 +45,9 @@
 			{@const barH = ROW_H * 0.6}
 			{@const x1 = xOf(b.low)}
 			{@const x2 = xOf(b.high)}
-			<text x={PL - 10} y={y + barH / 2 + 4} text-anchor="end" fill="var(--color-text)" font-size="12">{b.label}</text>
+			<text x={PL - 10} y={y + barH / 2 + 4} text-anchor="end" fill="var(--color-text)" font-size="8">{b.label}</text>
 			<rect x={Math.min(x1, x2)} y={y} width={Math.max(Math.abs(x2 - x1), 1)} height={barH} fill="var(--chart-1)" opacity="0.85" rx="3" />
-			<text x={Math.max(x1, x2) + 8} y={y + barH / 2 + 4} fill="var(--color-text-muted)" font-size="11">{fmt(b.low)} 〜 {fmt(b.high)}</text>
+			<text x={Math.max(x1, x2) + 8} y={y + barH / 2 + 4} fill="var(--color-text-muted)" font-size="8">{fmt(b.low)} 〜 {fmt(b.high)}</text>
 		{/each}
 	</svg>
 </figure>

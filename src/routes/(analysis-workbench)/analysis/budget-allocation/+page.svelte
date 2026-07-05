@@ -179,47 +179,6 @@
 		</p>
 	</div>
 
-	<section class="results-panel">
-		{#if result}
-			<div class="results-card">
-				{#if validity}
-					<ValidityCard {validity} />
-				{/if}
-				{#if result.infeasible}
-					<p class="warning-text">
-						指定した予算総額はチャネルの上下限の合計に収まらないため、配分は目安値です。上下限を見直してください。
-					</p>
-				{/if}
-				<div class="metrics-row">
-					<div class="metric">
-						<span class="metric-label">予算総額</span>
-						<span class="metric-value">{fmt(result.totalBudget)}</span>
-					</div>
-					<div class="metric">
-						<span class="metric-label">現在配分での予測値</span>
-						<span class="metric-value">{fmt(result.predictedCurrent)}</span>
-					</div>
-					<div class="metric">
-						<span class="metric-label">最適配分での予測値</span>
-						<span class="metric-value highlight">{fmt(result.predictedOptimal)}</span>
-					</div>
-					<div class="metric">
-						<span class="metric-label">増加分</span>
-						<span class="metric-value highlight">{result.uplift >= 0 ? '+' : ''}{fmt(result.uplift)}</span>
-					</div>
-				</div>
-
-				<BarChart series={allocationChartSeries} mode="grouped" title="チャネルごとの配分比較" />
-
-				<Table columns={tableColumns} rows={tableRows} />
-			</div>
-		{:else}
-			<div class="empty-results">
-				<p>下の設定欄でデータソース・目的変数・チャネルを選んでモデルを作成し、予算総額と上下限を設定してから「配分を最適化」を押してください</p>
-			</div>
-		{/if}
-	</section>
-
 	<section class="config-panel">
 		<p class="config-title">設定</p>
 		<div class="config-row">
@@ -276,6 +235,48 @@
 
 			<div class="run-row">
 				<button class="run-btn" onclick={runOptimization}>配分を最適化</button>
+			</div>
+		{/if}
+	</section>
+
+	<section class="results-panel">
+		{#if result}
+			<div class="results-card">
+				{#if result.infeasible}
+					<p class="warning-text">
+						指定した予算総額はチャネルの上下限の合計に収まらないため、配分は目安値です。上下限を見直してください。
+					</p>
+				{/if}
+				<div class="metrics-row">
+					<div class="metric">
+						<span class="metric-label">予算総額</span>
+						<span class="metric-value">{fmt(result.totalBudget)}</span>
+					</div>
+					<div class="metric">
+						<span class="metric-label">現在配分での予測値</span>
+						<span class="metric-value">{fmt(result.predictedCurrent)}</span>
+					</div>
+					<div class="metric">
+						<span class="metric-label">最適配分での予測値</span>
+						<span class="metric-value highlight">{fmt(result.predictedOptimal)}</span>
+					</div>
+					<div class="metric">
+						<span class="metric-label">増加分</span>
+						<span class="metric-value highlight">{result.uplift >= 0 ? '+' : ''}{fmt(result.uplift)}</span>
+					</div>
+				</div>
+
+				<BarChart series={allocationChartSeries} mode="grouped" title="チャネルごとの配分比較" />
+
+				<Table columns={tableColumns} rows={tableRows} />
+
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
+			</div>
+		{:else}
+			<div class="empty-results">
+				<p>上の設定欄でデータソース・目的変数・チャネルを選んでモデルを作成し、予算総額と上下限を設定してから「配分を最適化」を押してください</p>
 			</div>
 		{/if}
 	</section>

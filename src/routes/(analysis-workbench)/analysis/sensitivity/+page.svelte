@@ -123,22 +123,6 @@
 		<p class="page-sub">各説明変数を実測レンジいっぱいに動かした時、目的変数がどれだけ振れるかをトルネードチャートで見ます</p>
 	</div>
 
-	<section class="results-panel">
-		{#if tornadoData}
-			{#if validity}
-				<div class="validity-row">
-					<ValidityCard {validity} />
-				</div>
-			{/if}
-			<TornadoChart bars={tornadoData.bars} base={tornadoData.base} title="{labelOf(targetColumn)}への影響度（振れ幅が大きい順）" />
-			<p class="base-note">点線はベースライン（他の変数を平均値に固定した時の予測値: {tornadoData.base.toLocaleString('ja-JP', { maximumFractionDigits: 1 })}）</p>
-		{:else}
-			<div class="empty-results">
-				<p>下の設定欄でデータソース・目的変数・説明変数を選び、「分析を実行」を押してください</p>
-			</div>
-		{/if}
-	</section>
-
 	<section class="config-panel">
 		<p class="config-title">設定</p>
 		<div class="config-row">
@@ -175,6 +159,22 @@
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
 	</section>
+
+	<section class="results-panel">
+		{#if tornadoData}
+			<TornadoChart bars={tornadoData.bars} base={tornadoData.base} title="{labelOf(targetColumn)}への影響度（振れ幅が大きい順）" />
+			<p class="base-note">点線はベースライン（他の変数を平均値に固定した時の予測値: {tornadoData.base.toLocaleString('ja-JP', { maximumFractionDigits: 1 })}）</p>
+			{#if validity}
+				<div class="validity-row">
+					<ValidityCard {validity} />
+				</div>
+			{/if}
+		{:else}
+			<div class="empty-results">
+				<p>上の設定欄でデータソース・目的変数・説明変数を選び、「分析を実行」を押してください</p>
+			</div>
+		{/if}
+	</section>
 </div>
 
 <style lang="scss">
@@ -201,7 +201,7 @@
 	}
 
 	.validity-row {
-		margin-bottom: 16px;
+		margin-top: 16px;
 	}
 
 	.empty-results {

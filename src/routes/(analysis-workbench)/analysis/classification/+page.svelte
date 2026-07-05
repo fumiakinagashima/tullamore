@@ -152,12 +152,46 @@
 		<p class="page-sub">目的変数が2値（購入した/しない、解約した/しない等）の場合に、説明変数からその確率を予測するモデルを作ります</p>
 	</div>
 
+	<section class="config-panel">
+		<p class="config-title">設定</p>
+		<div class="config-row">
+			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="目的変数（2値）" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+		</div>
+
+		<div class="feature-picker">
+			<span class="field-label">説明変数（数値列、複数選択可）</span>
+			{#if !targetColumn}
+				<p class="hint">先に目的変数を選択してください</p>
+			{:else if featureCandidates.length === 0}
+				<p class="hint">選択できる数値列がありません</p>
+			{:else}
+				<div class="checkbox-list">
+					{#each featureCandidates as col (col.key)}
+						<label class="checkbox-item">
+							<input
+								type="checkbox"
+								checked={featureColumns.includes(col.key)}
+								onchange={(e) => toggleFeature(col.key, e.currentTarget.checked)}
+							/>
+							{col.label}
+						</label>
+					{/each}
+				</div>
+			{/if}
+		</div>
+
+		<div class="run-row">
+			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
+				{loading ? 'モデル作成中…' : 'モデルを作成'}
+			</button>
+			{#if error}<p class="error-text">{error}</p>{/if}
+		</div>
+	</section>
+
 	<section class="results-panel">
 		{#if model}
 			<div class="results-card">
-				{#if validity}
-					<ValidityCard {validity} />
-				{/if}
 				{#if truncated}
 					<p class="warning-text">データ件数が多いため先頭の一部（{model.metrics.sampleSize.toLocaleString()}件）のみで学習しました。</p>
 				{/if}
@@ -221,49 +255,16 @@
 					<p class="subsection-title">係数（オッズ比が1より大きい＝正例になりやすい方向に働く）</p>
 					<Table columns={coefficientColumns} rows={coefficientRows} />
 				</div>
+
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>下の設定欄でデータソース・目的変数（2値）・説明変数を選び、「モデルを作成」を押してください</p>
+				<p>上の設定欄でデータソース・目的変数（2値）・説明変数を選び、「モデルを作成」を押してください</p>
 			</div>
 		{/if}
-	</section>
-
-	<section class="config-panel">
-		<p class="config-title">設定</p>
-		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="目的変数（2値）" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
-		</div>
-
-		<div class="feature-picker">
-			<span class="field-label">説明変数（数値列、複数選択可）</span>
-			{#if !targetColumn}
-				<p class="hint">先に目的変数を選択してください</p>
-			{:else if featureCandidates.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
-			{:else}
-				<div class="checkbox-list">
-					{#each featureCandidates as col (col.key)}
-						<label class="checkbox-item">
-							<input
-								type="checkbox"
-								checked={featureColumns.includes(col.key)}
-								onchange={(e) => toggleFeature(col.key, e.currentTarget.checked)}
-							/>
-							{col.label}
-						</label>
-					{/each}
-				</div>
-			{/if}
-		</div>
-
-		<div class="run-row">
-			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? 'モデル作成中…' : 'モデルを作成'}
-			</button>
-			{#if error}<p class="error-text">{error}</p>{/if}
-		</div>
 	</section>
 </div>
 

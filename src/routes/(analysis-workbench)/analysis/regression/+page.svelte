@@ -143,21 +143,6 @@
 		<p class="page-sub">説明変数を動かすと目的変数がどう変化するかをシミュレーションします</p>
 	</div>
 
-	<section class="results-panel">
-		{#if simulatorProps}
-			{#if validity}
-				<div class="validity-row">
-					<ValidityCard {validity} />
-				</div>
-			{/if}
-			<Simulator {...simulatorProps} />
-		{:else}
-			<div class="empty-results">
-				<p>下の設定欄でデータソース・目的変数・説明変数を選び、「分析を実行」を押してください</p>
-			</div>
-		{/if}
-	</section>
-
 	<section class="config-panel">
 		<p class="config-title">設定</p>
 		<div class="config-row">
@@ -196,6 +181,21 @@
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
 	</section>
+
+	<section class="results-panel">
+		{#if simulatorProps}
+			<Simulator {...simulatorProps} />
+			{#if validity}
+				<div class="validity-row">
+					<ValidityCard {validity} />
+				</div>
+			{/if}
+		{:else}
+			<div class="empty-results">
+				<p>上の設定欄でデータソース・目的変数・説明変数を選び、「分析を実行」を押してください</p>
+			</div>
+		{/if}
+	</section>
 </div>
 
 <style lang="scss">
@@ -217,7 +217,7 @@
 	}
 
 	.validity-row {
-		margin-bottom: 16px;
+		margin-top: 16px;
 	}
 
 	.empty-results {

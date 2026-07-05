@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { tick } from 'svelte';
+	import MoreVertical from '$lib/components/icon/MoreVertical.svelte';
 
 	type CellType = 'text' | 'number' | 'date' | 'select';
 
@@ -23,6 +24,8 @@
 		/** 指定すると表の高さをこの値（px）で固定し、はみ出た行は縦スクロールにする（未指定時は従来通り高さ無制限） */
 		maxHeight?: number;
 	};
+
+	const DEFAULT_COLUMN_WIDTH = 160;
 
 	let {
 		columns,
@@ -87,11 +90,12 @@
 		}
 	}
 
+	function blankRow(): GridRow {
+		return Object.fromEntries(columns.map((c) => [c.key, c.type === 'number' ? 0 : '']));
+	}
+
 	async function addRow() {
-		const newRow: GridRow = Object.fromEntries(
-			columns.map((c) => [c.key, c.type === 'number' ? 0 : ''])
-		);
-		rows = [...rows, newRow];
+		rows = [...rows, blankRow()];
 		onchange?.(rows);
 		// maxHeight指定でスクロール領域になっている場合、隠れた位置に追加されて気づきにくいので一番下まで送る
 		await tick();
@@ -106,6 +110,43 @@
 		}
 		onchange?.(rows);
 	}
+
+	// 行メニュー（コピー・ペースト・行挿入・削除）。クリップボードはこのグリッド内だけで完結する単純な内部状態
+	let openRowMenu = $state<number | null>(null);
+	let clipboardRow = $state<GridRow | null>(null);
+
+	function toggleRowMenu(i: number) {
+		openRowMenu = openRowMenu === i ? null : i;
+	}
+
+	function copyRow(i: number) {
+		clipboardRow = { ...rows[i] };
+		openRowMenu = null;
+	}
+
+	function pasteRow(i: number) {
+		if (!clipboardRow) return;
+		const pasted = clipboardRow;
+		rows = rows.map((row, idx) => (idx === i ? { ...pasted } : row));
+		onchange?.(rows);
+		openRowMenu = null;
+	}
+
+	function insertRowAt(i: number) {
+		rows = [...rows.slice(0, i), blankRow(), ...rows.slice(i)];
+		onchange?.(rows);
+		openRowMenu = null;
+	}
+
+	$effect(() => {
+		if (openRowMenu === null) return;
+		const close = () => (openRowMenu = null);
+		const id = setTimeout(() => document.addEventListener('click', close), 0);
+		return () => {
+			clearTimeout(id);
+			document.removeEventListener('click', close);
+		};
+	});
 </script>
 
 <div class="grid-wrap">
@@ -113,18 +154,43 @@
 		<table>
 			<thead>
 				<tr>
-					{#each columns as col}
-						<th style={col.width ? `width:${col.width}px` : undefined}>{col.label}</th>
-					{/each}
 					{#if deletable}<th class="ctrl-th"></th>{/if}
+					{#each columns as col}
+						<th style:width="{col.width ?? DEFAULT_COLUMN_WIDTH}px">{col.label}</th>
+					{/each}
+					<th class="filler-th"></th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each rows as row, ri}
 					<tr>
+						{#if deletable}
+							<td class="ctrl-td">
+								<button
+									type="button"
+									class="row-menu-btn"
+									aria-label="行メニュー"
+									aria-expanded={openRowMenu === ri}
+									onclick={(e) => {
+										e.stopPropagation();
+										toggleRowMenu(ri);
+									}}
+								>
+									<MoreVertical size={14} />
+								</button>
+								{#if openRowMenu === ri}
+									<div class="row-menu">
+										<button class="row-menu-item" onclick={() => copyRow(ri)}>コピー</button>
+										<button class="row-menu-item" disabled={!clipboardRow} onclick={() => pasteRow(ri)}>ペースト</button>
+										<button class="row-menu-item" onclick={() => insertRowAt(ri)}>行挿入</button>
+										<button class="row-menu-item danger" onclick={() => deleteRow(ri)}>削除</button>
+									</div>
+								{/if}
+							</td>
+						{/if}
 						{#each columns as col, ci}
 							{@const isActive = active?.row === ri && active?.col === ci}
-							<td class:active-cell={isActive} class:readonly={col.readonly}>
+							<td class:active-cell={isActive} class:readonly={col.readonly} style:width="{col.width ?? DEFAULT_COLUMN_WIDTH}px">
 								{#if col.type === 'select' && col.options}
 									<select
 										use:registerCell={{ ri, ci }}
@@ -157,17 +223,7 @@
 								{/if}
 							</td>
 						{/each}
-						{#if deletable}
-							<td class="ctrl-td">
-								<button type="button" onclick={() => deleteRow(ri)} aria-label="行を削除">
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-										<polyline points="3 6 5 6 21 6" />
-										<path d="M19 6l-1 14H6L5 6" />
-										<path d="M10 11v6M14 11v6" />
-									</svg>
-								</button>
-							</td>
-						{/if}
+						<td class="filler-td"></td>
 					</tr>
 				{/each}
 			</tbody>
@@ -195,7 +251,7 @@
 	}
 
 	table {
-		width: 100%;
+		width: auto;
 		border-collapse: collapse;
 		font-size: 0.9375rem;
 	}
@@ -219,7 +275,9 @@
 		user-select: none;
 	}
 
-	.ctrl-th { width: 40px; }
+	.ctrl-th { width: 32px; }
+	/* 列の合計幅がコンテナより狭い場合、右側は罫線の無い余白として見せる（表を無理に引き伸ばさない） */
+	.filler-th, .filler-td { border: none; }
 
 	td {
 		padding: 0;
@@ -228,7 +286,7 @@
 		position: relative;
 		cursor: cell;
 	}
-	td:last-child { border-right: none; }
+	td.filler-td { border-right: none; }
 	tr:last-child td { border-bottom: none; }
 
 	td.readonly { cursor: default; background: color-mix(in srgb, var(--color-border) 30%, transparent); }
@@ -277,28 +335,65 @@
 	.ctrl-td {
 		cursor: default;
 		border-right: none;
-		width: 40px;
+		width: 32px;
+		position: relative;
 	}
 
-	.ctrl-td button {
+	.row-menu-btn {
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		width: 100%;
 		height: 100%;
 		min-height: 37px;
-		padding: 0 8px;
+		padding: 0 6px;
 		background: none;
 		border: none;
 		color: var(--color-text-muted);
 		cursor: pointer;
 		opacity: 0;
-		transition: opacity 0.15s, color 0.15s;
+		transition: opacity 0.15s, color 0.15s, background 0.1s ease;
+
+		&:hover, &[aria-expanded='true'] { color: var(--color-text); background: var(--color-border); }
 	}
 
-	tr:hover .ctrl-td button { opacity: 1; }
-	.ctrl-td button:hover { color: var(--color-danger); }
-	.ctrl-td button svg { width: 14px; height: 14px; }
+	tr:hover .row-menu-btn { opacity: 1; }
+
+	.row-menu {
+		position: absolute;
+		top: calc(100% + 2px);
+		left: 0;
+		min-width: 110px;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: 10px;
+		box-shadow:
+			0 8px 24px rgba(0, 0, 0, 0.08),
+			0 1px 4px rgba(0, 0, 0, 0.04);
+		padding: 4px;
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		z-index: 20;
+	}
+
+	.row-menu-item {
+		display: block;
+		width: 100%;
+		padding: 7px 10px;
+		border: none;
+		border-radius: 7px;
+		background: transparent;
+		color: var(--color-text);
+		font-size: 0.8125rem;
+		text-align: left;
+		cursor: pointer;
+		transition: background 0.1s ease;
+
+		&:hover { background: var(--color-background); }
+		&:disabled { color: var(--color-text-muted); cursor: not-allowed; }
+		&.danger { color: var(--color-danger); }
+	}
 
 	.add-row {
 		display: flex;

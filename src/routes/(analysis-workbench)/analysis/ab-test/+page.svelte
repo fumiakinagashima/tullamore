@@ -125,12 +125,31 @@
 		<p class="page-sub">2つのグループ間で指標に統計的に有意な差があるかを検定します（平均はWelchのt検定、比率はz検定）</p>
 	</div>
 
+	<section class="config-panel">
+		<p class="config-title">設定</p>
+		<div class="config-row">
+			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="グループ列（値が2種類である列）" bind:value={groupColumn} options={groupOptions} disabled={!dataSourceId} />
+		</div>
+		<div class="config-row">
+			<Select label="指標列（数値）" bind:value={metricColumn} options={metricOptions} disabled={!dataSourceId} />
+			<Select label="検定方法" bind:value={testType} options={TEST_TYPE_OPTIONS} />
+		</div>
+		{#if testType === 'proportion'}
+			<p class="hint">比率のz検定を選ぶ場合、指標列の値は0または1である必要があります（例: コンバージョンの有無）</p>
+		{/if}
+
+		<div class="run-row">
+			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
+				{loading ? '検定中…' : '検定を実行'}
+			</button>
+			{#if error}<p class="error-text">{error}</p>{/if}
+		</div>
+	</section>
+
 	<section class="results-panel">
 		{#if result}
 			<div class="results-card">
-				{#if validity}
-					<ValidityCard {validity} />
-				{/if}
 				<p class="verdict" class:significant={result.significant}>
 					{result.significant
 						? `統計的に有意な差があります（p = ${fmt(result.pValue)} < ${AB_TEST_SIGNIFICANCE_ALPHA}）`
@@ -184,34 +203,16 @@
 						</span>
 					</div>
 				</div>
+
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>下の設定欄でデータソース・グループ列（2値）・指標列・検定方法を選び、「検定を実行」を押してください</p>
+				<p>上の設定欄でデータソース・グループ列（2値）・指標列・検定方法を選び、「検定を実行」を押してください</p>
 			</div>
 		{/if}
-	</section>
-
-	<section class="config-panel">
-		<p class="config-title">設定</p>
-		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="グループ列（値が2種類である列）" bind:value={groupColumn} options={groupOptions} disabled={!dataSourceId} />
-		</div>
-		<div class="config-row">
-			<Select label="指標列（数値）" bind:value={metricColumn} options={metricOptions} disabled={!dataSourceId} />
-			<Select label="検定方法" bind:value={testType} options={TEST_TYPE_OPTIONS} />
-		</div>
-		{#if testType === 'proportion'}
-			<p class="hint">比率のz検定を選ぶ場合、指標列の値は0または1である必要があります（例: コンバージョンの有無）</p>
-		{/if}
-
-		<div class="run-row">
-			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '検定中…' : '検定を実行'}
-			</button>
-			{#if error}<p class="error-text">{error}</p>{/if}
-		</div>
 	</section>
 </div>
 

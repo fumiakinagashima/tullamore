@@ -64,10 +64,10 @@
 		<!-- Grid -->
 		{#each yTicks as t, i (i)}
 			<line x1={PL} y1={t.y} x2={W - PR} y2={t.y} stroke="var(--color-border)" stroke-width="1" />
-			<text x={PL - 6} y={t.y + 4} text-anchor="end" fill="var(--color-text-muted)" font-size="11">{t.label}</text>
+			<text x={PL - 6} y={t.y + 4} text-anchor="end" fill="var(--color-text-muted)" font-size="8">{t.label}</text>
 		{/each}
 		{#each xTicks as t, i (i)}
-			<text x={t.x} y={PT + plotH + 16} text-anchor="middle" fill="var(--color-text-muted)" font-size="11">{t.label}</text>
+			<text x={t.x} y={PT + plotH + 16} text-anchor="middle" fill="var(--color-text-muted)" font-size="8">{t.label}</text>
 		{/each}
 
 		<!-- Points -->
@@ -84,10 +84,10 @@
 		<line x1={PL} y1={PT + plotH} x2={W - PR} y2={PT + plotH} stroke="var(--color-border)" stroke-width="1" />
 
 		{#if xLabel}
-			<text x={PL + plotW / 2} y={H - 4} text-anchor="middle" fill="var(--color-text-muted)" font-size="11">{xLabel}</text>
+			<text x={PL + plotW / 2} y={H - 4} text-anchor="middle" fill="var(--color-text-muted)" font-size="8">{xLabel}</text>
 		{/if}
 		{#if yLabel}
-			<text x={12} y={PT + plotH / 2} text-anchor="middle" fill="var(--color-text-muted)" font-size="11" transform="rotate(-90 12 {PT + plotH / 2})">{yLabel}</text>
+			<text x={12} y={PT + plotH / 2} text-anchor="middle" fill="var(--color-text-muted)" font-size="8" transform="rotate(-90 12 {PT + plotH / 2})">{yLabel}</text>
 		{/if}
 
 		<!-- Legend (multi-series only) -->
@@ -95,7 +95,7 @@
 			{@const itemW = W / allSeries.length}
 			{#each allSeries as s, si (s.name + si)}
 				<circle cx={si * itemW + (itemW - 60) / 2} cy={H - 7} r="4" fill={seriesColor(si)} />
-				<text x={si * itemW + (itemW - 60) / 2 + 10} y={H - 3} fill="var(--color-text-muted)" font-size="11">{s.name}</text>
+				<text x={si * itemW + (itemW - 60) / 2 + 10} y={H - 3} fill="var(--color-text-muted)" font-size="8">{s.name}</text>
 			{/each}
 		{/if}
 	</svg>

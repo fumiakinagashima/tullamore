@@ -294,51 +294,14 @@
 		<p class="page-sub">目的変数の目標値から、KPI候補（説明変数）の目標値を実測レンジ内に収まる形で逆算します</p>
 	</div>
 
-	<section class="results-panel">
-		{#if plan && validity}
-			<div class="results-card">
-				<ValidityCard {validity} />
-
-				{#if !plan.achievable}
-					<p class="warning-text">
-						選択したKPI候補の実測レンジ内だけでは目標に届きません（不足分: {fmt(plan.gap - plan.coveredGap)}）。
-						目標値を見直すか、KPI候補を追加してください。以下は実測レンジ内で最大限に近づけた場合の目標値です。
-					</p>
-				{/if}
-
-				<div class="metrics-row">
-					<div class="metric"><span class="metric-label">現状の予測値</span><span class="metric-value">{fmt(plan.baseline)}</span></div>
-					<div class="metric"><span class="metric-label">目標値</span><span class="metric-value highlight">{fmt(plan.targetValue)}</span></div>
-					<div class="metric"><span class="metric-label">差分</span><span class="metric-value">{plan.gap >= 0 ? '+' : ''}{fmt(plan.gap)}</span></div>
-				</div>
-
-				<Table columns={tableColumns} rows={tableRows} />
-
-				{#if needsPeriodRange && !periodRangeValid}
-					<p class="warning-text">保存するには、下の設定欄で達成率トラッキングの対象期間（日付列・期間FROM/TO）を指定してください。</p>
-				{/if}
-
-				<div class="save-row">
-					<Textbox label="このKPIプランの名前" bind:value={planName} placeholder="例: 2027年度 売上目標KPI" />
-					<button class="run-btn" onclick={savePlan} disabled={saving || !planName.trim() || !periodLabel.trim() || !periodRangeValid}>
-						{saving ? '保存中…' : mode === 'edit' ? '更新する' : '保存する'}
-					</button>
-				</div>
-				{#if saveError}<p class="error-text">{saveError}</p>{/if}
-			</div>
-		{:else}
-			<div class="empty-results">
-				<p>下の設定欄でデータソース・目的変数・KPI候補・目標値・期間を選び、「KPIを作成」を押してください</p>
-			</div>
-		{/if}
-	</section>
-
 	<section class="config-panel">
 		<p class="config-title">設定</p>
 		<div class="config-row">
 			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
 			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
-			<Textbox label="目的変数の目標値" type="number" bind:value={targetValueText} />
+			<div class="field-narrow">
+				<Textbox label="目的変数の目標値" type="number" bind:value={targetValueText} />
+			</div>
 		</div>
 
 		<div class="config-row">
@@ -350,8 +313,12 @@
 			{#if needsPeriodRange}
 				<div class="config-row">
 					<Select label="達成率トラッキングの対象の日時カラム" bind:value={dateColumn} options={dateOptions} />
-					<DatePicker label="期間FROM" bind:value={periodFrom} required max={periodTo || undefined} />
-					<DatePicker label="期間TO" bind:value={periodTo} required min={periodFrom || undefined} />
+					<div class="field-narrow">
+						<DatePicker label="期間FROM" bind:value={periodFrom} required max={periodTo || undefined} />
+					</div>
+					<div class="field-narrow">
+						<DatePicker label="期間TO" bind:value={periodTo} required min={periodFrom || undefined} />
+					</div>
 				</div>
 				<p class="hint">
 					達成率トラッキング（現在の実績・達成率のゲージ表示）は、この日時カラムがFROM〜TOの範囲に入っている行だけを対象に計算します。
@@ -396,6 +363,47 @@
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
+	</section>
+
+	<section class="results-panel">
+		{#if plan && validity}
+			<div class="results-card">
+				{#if !plan.achievable}
+					<p class="warning-text">
+						選択したKPI候補の実測レンジ内だけでは目標に届きません（不足分: {fmt(plan.gap - plan.coveredGap)}）。
+						目標値を見直すか、KPI候補を追加してください。以下は実測レンジ内で最大限に近づけた場合の目標値です。
+					</p>
+				{/if}
+
+				<div class="metrics-row">
+					<div class="metric"><span class="metric-label">現状の予測値</span><span class="metric-value">{fmt(plan.baseline)}</span></div>
+					<div class="metric"><span class="metric-label">目標値</span><span class="metric-value highlight">{fmt(plan.targetValue)}</span></div>
+					<div class="metric"><span class="metric-label">差分</span><span class="metric-value">{plan.gap >= 0 ? '+' : ''}{fmt(plan.gap)}</span></div>
+				</div>
+
+				<Table columns={tableColumns} rows={tableRows} />
+
+				<ValidityCard {validity} />
+
+				{#if needsPeriodRange && !periodRangeValid}
+					<p class="warning-text">保存するには、上の設定欄で達成率トラッキングの対象期間（日付列・期間FROM/TO）を指定してください。</p>
+				{/if}
+
+				<div class="save-row">
+					<div class="name-field">
+						<Textbox label="このKPIプランの名前" bind:value={planName} placeholder="例: 2027年度 売上目標KPI" />
+					</div>
+					<button class="run-btn" onclick={savePlan} disabled={saving || !planName.trim() || !periodLabel.trim() || !periodRangeValid}>
+						{saving ? '保存中…' : mode === 'edit' ? '更新する' : '保存する'}
+					</button>
+				</div>
+				{#if saveError}<p class="error-text">{saveError}</p>{/if}
+			</div>
+		{:else}
+			<div class="empty-results">
+				<p>上の設定欄でデータソース・目的変数・KPI候補・目標値・期間を選び、「KPIを作成」を押してください</p>
+			</div>
+		{/if}
 	</section>
 </div>
 
@@ -476,6 +484,10 @@
 		border-top: 1px solid var(--color-border);
 	}
 
+	.name-field {
+		flex: 1;
+	}
+
 	.config-panel {
 		display: flex;
 		flex-direction: column;
@@ -496,9 +508,12 @@
 	}
 
 	.config-row {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 320px));
+		display: flex;
+		flex-wrap: wrap;
 		gap: 12px;
+
+		> :global(*) { flex: 1 1 240px; min-width: 0; }
+		> .field-narrow { flex: 0 0 170px; }
 	}
 
 	.feature-picker {

@@ -151,28 +151,6 @@
 		<p class="page-sub">説明変数の組み合わせを複数パターン用意し、目的変数の予測値を横並びで比較します</p>
 	</div>
 
-	<section class="results-panel">
-		{#if model && chartData.length > 0}
-			{#if validity}
-				<div class="validity-row">
-					<ValidityCard {validity} />
-				</div>
-			{/if}
-			<BarChart data={chartData} title="シナリオ別の{labelOf(targetColumn)}予測値" />
-		{:else}
-			<div class="empty-results">
-				<p>下の設定欄でデータソース・目的変数・説明変数を選び、「分析を実行」を押してください</p>
-			</div>
-		{/if}
-	</section>
-
-	{#if model}
-		<section class="grid-panel">
-			<p class="config-title">シナリオ（値を編集すると即グラフに反映されます）</p>
-			<DataGrid columns={gridColumns} bind:rows />
-		</section>
-	{/if}
-
 	<section class="config-panel">
 		<p class="config-title">設定</p>
 		<div class="config-row">
@@ -209,6 +187,28 @@
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
 	</section>
+
+	<section class="results-panel">
+		{#if model && chartData.length > 0}
+			<BarChart data={chartData} title="シナリオ別の{labelOf(targetColumn)}予測値" />
+			{#if validity}
+				<div class="validity-row">
+					<ValidityCard {validity} />
+				</div>
+			{/if}
+		{:else}
+			<div class="empty-results">
+				<p>上の設定欄でデータソース・目的変数・説明変数を選び、「分析を実行」を押してください</p>
+			</div>
+		{/if}
+	</section>
+
+	{#if model}
+		<section class="grid-panel">
+			<p class="config-title">シナリオ（値を編集すると即グラフに反映されます）</p>
+			<DataGrid columns={gridColumns} bind:rows />
+		</section>
+	{/if}
 </div>
 
 <style lang="scss">
@@ -251,7 +251,7 @@
 	}
 
 	.validity-row {
-		margin-bottom: 16px;
+		margin-top: 16px;
 	}
 
 	.config-panel {

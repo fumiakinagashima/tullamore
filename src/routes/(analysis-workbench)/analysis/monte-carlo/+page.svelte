@@ -200,47 +200,6 @@
 		<p class="page-sub">説明変数に幅（分布）を持たせて何度もサンプリングし、目的変数がとりうる値のばらつきをシミュレーションします</p>
 	</div>
 
-	<section class="results-panel">
-		{#if result}
-			<div class="results-card">
-				{#if validity}
-					<ValidityCard {validity} />
-				{/if}
-				<div class="metrics-row">
-					<div class="metric">
-						<span class="metric-label">平均</span>
-						<span class="metric-value highlight">{fmt(result.summary.mean)}</span>
-					</div>
-					<div class="metric">
-						<span class="metric-label">標準偏差</span>
-						<span class="metric-value">{fmt(result.summary.stddev)}</span>
-					</div>
-					{#each result.summary.percentiles as p (p.p)}
-						<div class="metric">
-							<span class="metric-label">p{p.p}</span>
-							<span class="metric-value">{fmt(p.value)}</span>
-						</div>
-					{/each}
-					{#if result.summary.probabilityAboveThreshold !== undefined}
-						<div class="metric">
-							<span class="metric-label">{fmt(threshold)}を上回る確率</span>
-							<span class="metric-value highlight">{fmt(result.summary.probabilityAboveThreshold * 100)}%</span>
-						</div>
-					{/if}
-				</div>
-
-				<BarChart
-					data={histogramBars}
-					title="{labelOf(targetColumn)}の分布（N={result.summary.draws.toLocaleString()}）"
-				/>
-			</div>
-		{:else}
-			<div class="empty-results">
-				<p>下の設定欄でデータソース・目的変数・説明変数を選んでモデルを作成し、各変数の分布を設定してから「シミュレーションを実行」を押してください</p>
-			</div>
-		{/if}
-	</section>
-
 	<section class="config-panel">
 		<p class="config-title">設定</p>
 		<div class="config-row">
@@ -316,6 +275,48 @@
 
 			<div class="run-row">
 				<button class="run-btn" onclick={runSimulation}>シミュレーションを実行</button>
+			</div>
+		{/if}
+	</section>
+
+	<section class="results-panel">
+		{#if result}
+			<div class="results-card">
+				<div class="metrics-row">
+					<div class="metric">
+						<span class="metric-label">平均</span>
+						<span class="metric-value highlight">{fmt(result.summary.mean)}</span>
+					</div>
+					<div class="metric">
+						<span class="metric-label">標準偏差</span>
+						<span class="metric-value">{fmt(result.summary.stddev)}</span>
+					</div>
+					{#each result.summary.percentiles as p (p.p)}
+						<div class="metric">
+							<span class="metric-label">p{p.p}</span>
+							<span class="metric-value">{fmt(p.value)}</span>
+						</div>
+					{/each}
+					{#if result.summary.probabilityAboveThreshold !== undefined}
+						<div class="metric">
+							<span class="metric-label">{fmt(threshold)}を上回る確率</span>
+							<span class="metric-value highlight">{fmt(result.summary.probabilityAboveThreshold * 100)}%</span>
+						</div>
+					{/if}
+				</div>
+
+				<BarChart
+					data={histogramBars}
+					title="{labelOf(targetColumn)}の分布（N={result.summary.draws.toLocaleString()}）"
+				/>
+
+				{#if validity}
+					<ValidityCard {validity} />
+				{/if}
+			</div>
+		{:else}
+			<div class="empty-results">
+				<p>上の設定欄でデータソース・目的変数・説明変数を選んでモデルを作成し、各変数の分布を設定してから「シミュレーションを実行」を押してください</p>
 			</div>
 		{/if}
 	</section>

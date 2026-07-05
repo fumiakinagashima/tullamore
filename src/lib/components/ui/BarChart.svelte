@@ -102,7 +102,7 @@
 			<line x1={PL} y1={t.y} x2={W - PR} y2={t.y}
 				stroke="var(--color-border)" stroke-width="1" />
 			<text x={PL - 6} y={t.y + 4} text-anchor="end"
-				fill="var(--color-text-muted)" font-size="11">{t.label}</text>
+				fill="var(--color-text-muted)" font-size="8">{t.label}</text>
 		{/each}
 
 		<!-- Bars -->
@@ -140,7 +140,7 @@
 				x={lx} y={ly}
 				text-anchor={rotateLabs ? 'end' : 'middle'}
 				fill="var(--color-text-muted)"
-				font-size="11"
+				font-size="8"
 				transform={rotateLabs ? `rotate(-45 ${lx} ${ly})` : undefined}
 			>{label}</text>
 		{/each}
@@ -158,7 +158,7 @@
 				<rect x={si * itemW + (itemW - 60) / 2} y={legendY - 9} width="10" height="10"
 					fill={barColor(si)} rx="2" />
 				<text x={si * itemW + (itemW - 60) / 2 + 14} y={legendY}
-					fill="var(--color-text-muted)" font-size="11">{s.name}</text>
+					fill="var(--color-text-muted)" font-size="8">{s.name}</text>
 			{/each}
 		{/if}
 	</svg>
