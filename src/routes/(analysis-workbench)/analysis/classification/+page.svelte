@@ -277,7 +277,7 @@
 	.page-title { font-size: 1.125rem; font-weight: 600; color: var(--color-text); margin: 0 0 4px; }
 	.page-sub { font-size: 0.8125rem; color: var(--color-text-muted); margin: 0; }
 
-	.results-panel { margin-bottom: 24px; }
+	.results-panel { margin: 24px 0; }
 
 	.empty-results {
 		display: flex;

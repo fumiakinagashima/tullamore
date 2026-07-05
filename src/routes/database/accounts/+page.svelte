@@ -161,7 +161,9 @@
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
-		max-width: 700px;
+		width: 100%;
+		max-width: var(--body-width-md);
+		margin: 0 auto;
 	}
 
 	.page-header { display: flex; align-items: center; justify-content: space-between; }

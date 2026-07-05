@@ -209,7 +209,7 @@
 
 	/* Simulator has an internal max-width; override it here to fill the page */
 	.results-panel {
-		margin-bottom: 24px;
+		margin: 24px 0;
 
 		:global(.simulator) {
 			max-width: none;

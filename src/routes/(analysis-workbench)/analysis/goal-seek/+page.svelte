@@ -261,7 +261,7 @@
 	.page-sub { font-size: 0.8125rem; color: var(--color-text-muted); margin: 0; }
 
 	.results-panel {
-		margin-bottom: 24px;
+		margin: 24px 0;
 		padding: 18px;
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);

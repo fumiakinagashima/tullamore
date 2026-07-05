@@ -314,7 +314,8 @@
 <style lang="scss">
 	.page {
 		padding: 28px 32px;
-		max-width: 780px;
+		width: 100%;
+		max-width: var(--body-width-md);
 		margin: 0 auto;
 	}
 

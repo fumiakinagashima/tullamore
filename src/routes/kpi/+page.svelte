@@ -55,7 +55,8 @@
 <style lang="scss">
 	.page {
 		padding: 32px;
-		max-width: 900px;
+		width: 100%;
+		max-width: var(--body-width-md);
 		margin: 0 auto;
 	}
 
