@@ -95,6 +95,10 @@
 		</div>
 	</div>
 
+	{#if s.hasStarted}
+		<div class="input-fade" aria-hidden="true"></div>
+	{/if}
+
 	<div class="input-wrap" bind:this={s.inputWrapEl} style:opacity={s.inputReady ? 1 : 0}>
 		<div class="input-card">
 			<textarea
@@ -241,6 +245,17 @@
 		:global(h1), :global(h2), :global(h3) { font-weight: 600; margin: 0.75em 0 0.5em; }
 		:global(strong) { font-weight: 600; }
 		:global(a) { color: var(--color-primary); text-decoration: underline; }
+	}
+
+	.input-fade {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 140px;
+		background: linear-gradient(to bottom, transparent, var(--color-background) 65%);
+		pointer-events: none;
+		z-index: 4;
 	}
 
 	.input-wrap {
