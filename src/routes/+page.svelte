@@ -1,14 +1,9 @@
 <script lang="ts">
-	import { toast } from '$lib/stores/toast.svelte';
-	import { createChatState, renderMarkdown, dashboard } from './index.svelte';
+	import { dashboard } from './index.svelte';
 	import type { PageData } from './$types';
 	import GaugeChart from '$lib/components/ui/GaugeChart.svelte';
 
 	let { data }: { data: PageData } = $props();
-	const s = createChatState(() => data);
-
-	// suppress unused import warning
-	void toast;
 </script>
 
 <div class="main">

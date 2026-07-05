@@ -27,7 +27,7 @@
 	async function selectNotification(item: NotificationItem) {
 		onclose();
 		await notificationCenter.markRead(item.id);
-		await goto(`/?notification=${item.id}`);
+		await goto(`/chat?notification=${item.id}`);
 	}
 </script>
 

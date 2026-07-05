@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages.js';
 	import { notificationCenter } from '$lib/stores/notifications.svelte';
 	import { chatSession } from '$lib/stores/chat-session.svelte';
+	import { chatHistory, type ChatSummary } from '$lib/stores/chat-history.svelte';
 	import NotificationDrawer from '$lib/components/ui/NotificationDrawer.svelte';
 	import Dashboard from '$lib/components/icon/Dashboard.svelte';
 	import Bell from '$lib/components/icon/Bell.svelte';
 	import Database from '$lib/components/icon/Database.svelte';
 	import Plug from '$lib/components/icon/Plug.svelte';
+	import Plus from '$lib/components/icon/Plus.svelte';
+	import MoreVertical from '$lib/components/icon/MoreVertical.svelte';
 	import Scatter from '$lib/components/icon/Scatter.svelte';
 	import TrendingUp from '$lib/components/icon/TrendingUp.svelte';
 	import Tornado from '$lib/components/icon/Tornado.svelte';
@@ -71,6 +75,100 @@
 		await fetch('/api/auth/signout', { method: 'POST' });
 		window.location.href = '/signin';
 	}
+
+	const historyGroups = $derived.by(() => {
+		const startOfToday = new Date();
+		startOfToday.setHours(0, 0, 0, 0);
+		const startOfYesterday = new Date(startOfToday);
+		startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+		const startOfLast7Days = new Date(startOfToday);
+		startOfLast7Days.setDate(startOfLast7Days.getDate() - 7);
+
+		const groups = [
+			{ label: m.history_today(), items: [] as typeof chatHistory.items },
+			{ label: m.history_yesterday(), items: [] as typeof chatHistory.items },
+			{ label: m.history_last_7_days(), items: [] as typeof chatHistory.items },
+			{ label: m.history_older(), items: [] as typeof chatHistory.items }
+		];
+
+		for (const chat of chatHistory.items) {
+			const updatedAt = new Date(chat.updatedAt);
+			if (updatedAt >= startOfToday) groups[0].items.push(chat);
+			else if (updatedAt >= startOfYesterday) groups[1].items.push(chat);
+			else if (updatedAt >= startOfLast7Days) groups[2].items.push(chat);
+			else groups[3].items.push(chat);
+		}
+
+		return groups.filter((g) => g.items.length > 0);
+	});
+
+	let openMenuId = $state<string | null>(null);
+	let renamingId = $state<string | null>(null);
+	let renameValue = $state('');
+
+	function toggleHistoryMenu(id: string) {
+		openMenuId = openMenuId === id ? null : id;
+	}
+
+	function startRename(item: ChatSummary) {
+		renamingId = item.id;
+		renameValue = item.title;
+		openMenuId = null;
+	}
+
+	async function commitRename(id: string) {
+		if (renamingId !== id) return;
+		renamingId = null;
+		const title = renameValue.trim();
+		const current = chatHistory.items.find((c) => c.id === id);
+		if (!title || !current || title === current.title) return;
+		chatHistory.updateTitle(id, title);
+		try {
+			await fetch(`/api/chats/${id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ title })
+			});
+		} catch {
+			// 失敗時もUI上は変更後のタイトルを維持する
+		}
+	}
+
+	function handleRenameKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && !e.isComposing) {
+			e.preventDefault();
+			(e.currentTarget as HTMLInputElement).blur();
+		} else if (e.key === 'Escape') {
+			renamingId = null;
+		}
+	}
+
+	async function deleteChatItem(item: ChatSummary) {
+		openMenuId = null;
+		if (!confirm(m.history_delete_confirm())) return;
+		chatHistory.remove(item.id);
+		if (page.url.searchParams.get('id') === item.id) goto('/chat');
+		try {
+			await fetch(`/api/chats/${item.id}`, { method: 'DELETE' });
+		} catch {
+			// ローカル一覧からは削除済み。失敗時はリロードで復活する
+		}
+	}
+
+	function focusOnMount(node: HTMLInputElement) {
+		node.focus();
+		node.select();
+	}
+
+	$effect(() => {
+		if (!openMenuId) return;
+		const close = () => (openMenuId = null);
+		const id = setTimeout(() => document.addEventListener('click', close), 0);
+		return () => {
+			clearTimeout(id);
+			document.removeEventListener('click', close);
+		};
+	});
 </script>
 
 <aside class="sidebar">
@@ -106,6 +204,57 @@
 				<mod.icon size={14} />
 				{mod.label}
 			</a>
+		{/each}
+
+		<p class="group-label">チャット</p>
+		<a href="/chat" class="new-chat-row" onclick={() => chatSession.startNew()}>
+			<Plus size={14} />
+			{m.new_chat()}
+		</a>
+
+		{#each historyGroups as group}
+			<p class="group-label">{group.label}</p>
+			{#each group.items as item}
+				<div class="history-item-row" class:active={page.url.searchParams.get('id') === item.id}>
+					{#if renamingId === item.id}
+						<input
+							class="history-rename-input"
+							bind:value={renameValue}
+							onkeydown={handleRenameKeydown}
+							onblur={() => commitRename(item.id)}
+							use:focusOnMount
+						/>
+					{:else}
+						<a href="/chat?id={item.id}" class="history-item">
+							{item.title || m.new_chat()}
+						</a>
+					{/if}
+					<div class="history-menu-wrap">
+						<button
+							class="history-menu-btn"
+							aria-label={m.history_menu()}
+							aria-expanded={openMenuId === item.id}
+							onclick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								toggleHistoryMenu(item.id);
+							}}
+						>
+							<MoreVertical size={14} />
+						</button>
+						{#if openMenuId === item.id}
+							<div class="history-menu">
+								<button class="history-menu-item" onclick={() => startRename(item)}>
+									{m.history_rename()}
+								</button>
+								<button class="history-menu-item danger" onclick={() => deleteChatItem(item)}>
+									{m.history_delete()}
+								</button>
+							</div>
+						{/if}
+					</div>
+				</div>
+			{/each}
 		{/each}
 	</nav>
 
@@ -172,7 +321,7 @@
 		margin: 0 8px 4px;
 		padding: 8px 10px;
 		border-radius: 8px;
-		font-size: 0.875rem;
+		font-size: var(--font-size-xs);
 		color: var(--sidebar-text);
 		text-decoration: none;
 		transition: background 0.15s;
@@ -219,6 +368,122 @@
 			color: var(--color-primary);
 			font-weight: 500;
 		}
+	}
+
+	.new-chat-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 7px 10px;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		color: var(--sidebar-text);
+		text-decoration: none;
+		transition: background 0.15s;
+
+		&:hover { background: var(--sidebar-hover); }
+	}
+
+	.history-item-row {
+		position: relative;
+		display: flex;
+		align-items: center;
+		border-radius: 8px;
+		transition: background 0.15s;
+
+		&:hover,
+		&.active { background: var(--sidebar-hover); }
+
+		&.active .history-item { color: var(--color-text); }
+	}
+
+	.history-item {
+		flex: 1;
+		min-width: 0;
+		display: block;
+		padding: 7px 10px;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		color: var(--sidebar-text);
+		text-decoration: none;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.history-rename-input {
+		flex: 1;
+		min-width: 0;
+		padding: 6px 9px;
+		margin: 1px 0;
+		border: 1px solid var(--color-primary);
+		border-radius: 8px;
+		background: var(--color-surface);
+		color: var(--color-text);
+		font-size: 0.875rem;
+		font-family: inherit;
+		outline: none;
+	}
+
+	.history-menu-wrap {
+		position: relative;
+		flex-shrink: 0;
+	}
+
+	.history-menu-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 26px;
+		height: 26px;
+		margin-right: 4px;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--sidebar-text-muted);
+		cursor: pointer;
+		transition: background 0.1s ease, color 0.1s ease;
+
+		&:hover,
+		&[aria-expanded='true'] {
+			background: var(--color-border);
+			color: var(--sidebar-text);
+		}
+	}
+
+	.history-menu {
+		position: absolute;
+		top: calc(100% + 2px);
+		right: 0;
+		min-width: 140px;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: 10px;
+		box-shadow:
+			0 8px 24px rgba(0, 0, 0, 0.08),
+			0 1px 4px rgba(0, 0, 0, 0.04);
+		padding: 4px;
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		z-index: 20;
+	}
+
+	.history-menu-item {
+		display: block;
+		width: 100%;
+		padding: 7px 10px;
+		border: none;
+		border-radius: 7px;
+		background: transparent;
+		color: var(--color-text);
+		font-size: 0.8125rem;
+		text-align: left;
+		cursor: pointer;
+		transition: background 0.1s ease;
+
+		&:hover { background: var(--color-background); }
+		&.danger { color: var(--color-danger); }
 	}
 
 	.sidebar-footer {
