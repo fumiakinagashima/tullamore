@@ -101,15 +101,14 @@
 	}
 	.list {
 		margin-top: 16px;
-		display: flex;
-		flex-wrap: wrap;
+		display: grid;
+		grid-template-columns: repeat(calc(round(down, 100vw - 240px, 420px) / 420px), 1fr);
 		gap: 16px;
 		& .item {
 			display: block;
 			background-color: var(--color-surface);
 			padding: 16px 24px;
 			text-decoration: none;
-			max-width: 340px;
 			border: 1px solid var(--color-border);
 			border-radius: 2px;
 			&:hover {
