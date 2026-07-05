@@ -28,6 +28,7 @@
 	import Users from '$lib/components/icon/Users.svelte';
 	import Settings from '$lib/components/icon/Settings.svelte';
 	import LogOut from '$lib/components/icon/LogOut.svelte';
+	import ChevronDown from '$lib/components/icon/ChevronDown.svelte';
 	import type { AccountRow } from '$lib/server/db/account-service';
 
 	type Props = { account: AccountRow };
@@ -76,31 +77,26 @@
 		window.location.href = '/signin';
 	}
 
-	const historyGroups = $derived.by(() => {
-		const startOfToday = new Date();
-		startOfToday.setHours(0, 0, 0, 0);
-		const startOfYesterday = new Date(startOfToday);
-		startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-		const startOfLast7Days = new Date(startOfToday);
-		startOfLast7Days.setDate(startOfLast7Days.getDate() - 7);
+	type GroupKey = 'works' | 'analysis' | 'data-source' | 'chat';
+	const COLLAPSE_STORAGE_KEY = 'tullamore_sidebar_collapsed';
 
-		const groups = [
-			{ label: m.history_today(), items: [] as typeof chatHistory.items },
-			{ label: m.history_yesterday(), items: [] as typeof chatHistory.items },
-			{ label: m.history_last_7_days(), items: [] as typeof chatHistory.items },
-			{ label: m.history_older(), items: [] as typeof chatHistory.items }
-		];
-
-		for (const chat of chatHistory.items) {
-			const updatedAt = new Date(chat.updatedAt);
-			if (updatedAt >= startOfToday) groups[0].items.push(chat);
-			else if (updatedAt >= startOfYesterday) groups[1].items.push(chat);
-			else if (updatedAt >= startOfLast7Days) groups[2].items.push(chat);
-			else groups[3].items.push(chat);
+	function loadCollapsedGroups(): Record<string, boolean> {
+		if (typeof localStorage === 'undefined') return {};
+		try {
+			return JSON.parse(localStorage.getItem(COLLAPSE_STORAGE_KEY) ?? '{}');
+		} catch {
+			return {};
 		}
+	}
 
-		return groups.filter((g) => g.items.length > 0);
-	});
+	let collapsedGroups = $state<Record<string, boolean>>(loadCollapsedGroups());
+
+	function toggleGroup(key: GroupKey) {
+		collapsedGroups = { ...collapsedGroups, [key]: !collapsedGroups[key] };
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(collapsedGroups));
+		}
+	}
 
 	let openMenuId = $state<string | null>(null);
 	let renamingId = $state<string | null>(null);
@@ -182,39 +178,56 @@
 	</a>
 
 	<nav class="history">
-		<p class="group-label">業務</p>
-		{#each workModules as mod (mod.href)}
-			<a href={mod.href} class="analysis-link" class:active={page.url.pathname === mod.href}>
-				<mod.icon size={14} />
-				{mod.label}
-			</a>
-		{/each}
-		
-		<p class="group-label">分析</p>
-		{#each analysisModules as mod (mod.href)}
-			<a href={mod.href} class="analysis-link" class:active={page.url.pathname === mod.href}>
-				<mod.icon size={14} />
-				{mod.label}
-			</a>
-		{/each}
+		<button class="group-label" onclick={() => toggleGroup('works')} aria-expanded={!collapsedGroups.works}>
+			<ChevronDown size={12} class="group-chevron {collapsedGroups.works ? 'collapsed' : ''}" />
+			業務
+		</button>
+		{#if !collapsedGroups.works}
+			{#each workModules as mod (mod.href)}
+				<a href={mod.href} class="analysis-link" class:active={page.url.pathname === mod.href}>
+					<mod.icon size={14} />
+					{mod.label}
+				</a>
+			{/each}
+		{/if}
 
-		<p class="group-label">データソース</p>
-		{#each dataSourceModules as mod (mod.href)}
-			<a href={mod.href} class="analysis-link" class:active={page.url.pathname.startsWith(mod.href)}>
-				<mod.icon size={14} />
-				{mod.label}
+		<button class="group-label" onclick={() => toggleGroup('analysis')} aria-expanded={!collapsedGroups.analysis}>
+			<ChevronDown size={12} class="group-chevron {collapsedGroups.analysis ? 'collapsed' : ''}" />
+			分析
+		</button>
+		{#if !collapsedGroups.analysis}
+			{#each analysisModules as mod (mod.href)}
+				<a href={mod.href} class="analysis-link" class:active={page.url.pathname === mod.href}>
+					<mod.icon size={14} />
+					{mod.label}
+				</a>
+			{/each}
+		{/if}
+
+		<button class="group-label" onclick={() => toggleGroup('data-source')} aria-expanded={!collapsedGroups['data-source']}>
+			<ChevronDown size={12} class="group-chevron {collapsedGroups['data-source'] ? 'collapsed' : ''}" />
+			データソース
+		</button>
+		{#if !collapsedGroups['data-source']}
+			{#each dataSourceModules as mod (mod.href)}
+				<a href={mod.href} class="analysis-link" class:active={page.url.pathname.startsWith(mod.href)}>
+					<mod.icon size={14} />
+					{mod.label}
+				</a>
+			{/each}
+		{/if}
+
+		<button class="group-label" onclick={() => toggleGroup('chat')} aria-expanded={!collapsedGroups.chat}>
+			<ChevronDown size={12} class="group-chevron {collapsedGroups.chat ? 'collapsed' : ''}" />
+			チャット
+		</button>
+		{#if !collapsedGroups.chat}
+			<a href="/chat" class="new-chat-row" onclick={() => chatSession.startNew()}>
+				<Plus size={14} />
+				{m.new_chat()}
 			</a>
-		{/each}
 
-		<p class="group-label">チャット</p>
-		<a href="/chat" class="new-chat-row" onclick={() => chatSession.startNew()}>
-			<Plus size={14} />
-			{m.new_chat()}
-		</a>
-
-		{#each historyGroups as group}
-			<p class="group-label">{group.label}</p>
-			{#each group.items as item}
+			{#each chatHistory.items as item (item.id)}
 				<div class="history-item-row" class:active={page.url.searchParams.get('id') === item.id}>
 					{#if renamingId === item.id}
 						<input
@@ -255,7 +268,7 @@
 					</div>
 				</div>
 			{/each}
-		{/each}
+		{/if}
 	</nav>
 
 	<div class="sidebar-footer">
@@ -344,10 +357,26 @@
 	}
 
 	.group-label {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		width: 100%;
+		border: none;
+		background: transparent;
+		font: inherit;
 		font-size: 0.75rem;
 		color: var(--sidebar-text-muted);
 		padding: 8px 10px 4px;
 		font-weight: 500;
+		cursor: pointer;
+		text-align: left;
+	}
+
+	.group-chevron {
+		flex-shrink: 0;
+		transition: transform 0.15s ease;
+
+		&.collapsed { transform: rotate(-90deg); }
 	}
 
 	.analysis-link {
