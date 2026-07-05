@@ -86,6 +86,14 @@
 		featureColumns = checked ? [...featureColumns, key] : featureColumns.filter((k) => k !== key);
 	}
 
+	// 目的変数を切り替えた時、それまで説明変数として選んでいた列が新しい目的変数と重複していたら除外する
+	// （featureCandidates からは自動的に消えるが、チェック状態自体は featureColumns に残ってしまうため）
+	$effect(() => {
+		if (featureColumns.includes(targetColumn)) {
+			featureColumns = featureColumns.filter((k) => k !== targetColumn);
+		}
+	});
+
 	const canRun = $derived(!!dataSourceId && !!targetColumn && featureColumns.length > 0);
 
 	// 右側のAIアシスタントに現在の設定・結果を渡す（分布設定・サンプル数は画面側でのみ調整する）
