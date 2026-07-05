@@ -370,6 +370,7 @@
 		font-weight: 500;
 		cursor: pointer;
 		text-align: left;
+		margin-top: 8px;
 	}
 
 	.group-chevron {
