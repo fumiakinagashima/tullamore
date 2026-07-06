@@ -25,18 +25,13 @@ bucket_name = "tullamore"
 # `wrangler hyperdrive create <name> --connection-string="postgres://..."`（またはmysql://）を実行してIDを発行し、
 # ここにバインディングを追加してデプロイし直す必要がある（docs/DATA_CONNECTIONS.md 参照）。
 # バインディング名は必ず `HYPERDRIVE_` で始めること（実行時にこのプレフィックスでスキャンして一覧化している）。
-# ローカル開発用に、docker-compose.yml のPostgres/MySQLへ向けたサンプル接続を用意している。
-# localConnectionString がある間は id は実際には参照されないため、本番のHyperdrive configを作るまでは
-# プレースホルダーのままでよい。
-[[hyperdrive]]
-binding = "HYPERDRIVE_LOCAL_SAMPLE"
-id = "local-sample-placeholder"
-localConnectionString = "postgres://tullamore:tullamore@localhost:55432/tullamore_sample"
-
-[[hyperdrive]]
-binding = "HYPERDRIVE_LOCAL_SAMPLE_MYSQL"
-id = "local-sample-mysql-placeholder"
-localConnectionString = "mysql://tullamore:tullamore@localhost:3306/tullamore_sample"
+#
+# ローカル開発用（docker-compose.yml のPostgres/MySQLサンプル接続）の [[hyperdrive]] ブロックはここには置かない。
+# `id` にプレースホルダー文字列を使うと `wrangler dev`/`bun dev`（localConnectionString経由）は動くが、
+# `wrangler deploy` は `id` を実在のHyperdrive Config UUIDとして検証するため
+# "Invalid hyperdrive database ID '...'. It must be a valid UUID. [code: 10156]" で本番デプロイが失敗する
+# （2026-07-06に実際にこれで初回デプロイが失敗した）。ローカルで docker-compose のサンプルDBを試す場合は
+# `docs/DATA_CONNECTIONS.md`「ローカル開発」記載のブロックを一時的にこのファイルに追加し、コミットしない。
 
 # 外部DB接続（データ連携）の大規模テーブル継続取り込み用Queue。SYNC_ROW_BUDGET（ingest.ts）を超えた分を
 # バックグラウンドで処理する（src/lib/server/db-connections/queue-consumer.ts、docs/DATA_CONNECTIONS.md 参照）。
