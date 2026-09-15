@@ -1,6 +1,6 @@
 // ── Polling ────────────────────────────────────────────────────────────────
 export const NOTIFICATION_POLL_INTERVAL_MS = 15000;
-// /database/[id] でexternal_table_syncsがQueue継続取り込み中（syncing）の間、進捗確認のため再読み込みする間隔
+// Reload interval used on /database/[id] to check progress while external_table_syncs is still being ingested via Queue (syncing)
 export const INGEST_SYNC_POLL_INTERVAL_MS = 5000;
 
 // ── Chat ───────────────────────────────────────────────────────────────────
@@ -8,7 +8,7 @@ export const CHAT_TITLE_MAX_LENGTH = 24;
 export const CHAT_TEXTAREA_MAX_HEIGHT_PX = 192;
 
 // ── Lists ──────────────────────────────────────────────────────────────────
-// 一覧表示の1ページあたり件数（チャットの Table・/database 一覧で共通）
+// Items per page for list views (shared by the chat Table and the /database list)
 export const LIST_PAGE_SIZE = 20;
 
 // ── Session / KV ──────────────────────────────────────────────────────────
@@ -32,9 +32,9 @@ export const MONTE_CARLO_PERCENTILES = [10, 25, 50, 75, 90];
 export const BUDGET_ALLOCATION_COEF_EPSILON = 1e-9;
 
 // ── Analysis: Descriptive statistics ─────────────────────────────────────
-// n/mean/stddev/min/maxはSQL集計で正確に計算するが、中央値・四分位数・ヒストグラムは
-// 生データが必要なため、このサンプル件数を上限にフェッチする（超える場合は非復元抽出的な
-// 先頭N件のサンプルとして扱う。詳細はsrc/lib/server/analysis/descriptive-stats.tsを参照）
+// n/mean/stddev/min/max are computed exactly via SQL aggregation, but the median, quartiles,
+// and histogram need the raw data, so fetching is capped at this sample size (rows beyond that
+// are treated as a non-resampled sample of the first N rows; see src/lib/server/analysis/descriptive-stats.ts)
 export const DESCRIPTIVE_STATS_SAMPLE_MAX_ROWS = 50000;
 export const DESCRIPTIVE_STATS_HISTOGRAM_BINS = 20;
 
@@ -42,8 +42,8 @@ export const DESCRIPTIVE_STATS_HISTOGRAM_BINS = 20;
 export const AB_TEST_SIGNIFICANCE_ALPHA = 0.05;
 
 // ── Analysis: Classification (logistic regression) ───────────────────────
-// ロジスティック回帰はOLSと異なりサマリー統計量に還元できず（IRLSの反復ごとに重みが変わるため）、
-// 生の行データが必要。Workers CPU時間を守るためフェッチする行数の上限
+// Unlike OLS, logistic regression cannot be reduced to summary statistics (weights change on
+// every IRLS iteration), so it needs raw row data. Cap on rows fetched to protect Workers CPU time
 export const LOGISTIC_REGRESSION_MAX_ROWS = 20000;
 export const LOGISTIC_REGRESSION_MAX_ITERATIONS = 50;
 export const LOGISTIC_REGRESSION_CONVERGENCE_TOLERANCE = 1e-6;

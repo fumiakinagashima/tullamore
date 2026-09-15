@@ -6,7 +6,7 @@ type MethodImpl = {
 	predict: (model: Model, vars: Record<string, number>) => number;
 };
 
-// 分析手法を追加する際はここに実装を登録する（線形結合以外の手法は現状スコープ外）
+// Register implementations here when adding new analysis methods (methods other than linear combination are currently out of scope)
 export const analysisMethodRegistry: Record<AnalysisMethod, MethodImpl> = {
 	linear_regression: {
 		fit: fitLinearRegression,
@@ -23,7 +23,7 @@ export function fitModel(
 	return analysisMethodRegistry[method].fit(stats, targetColumn, featureColumns);
 }
 
-/** 保存済みモデルから予測値を計算する。D1等への依存を持たないためクライアントサイドでも使える純粋関数。 */
+/** Computes a predicted value from a saved model. A pure function with no dependency on D1 etc., so it can also be used client-side. */
 export function predict(model: Model, vars: Record<string, number>): number {
 	return analysisMethodRegistry[model.method].predict(model, vars);
 }

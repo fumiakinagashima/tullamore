@@ -8,7 +8,7 @@ function makeModel(): LinearRegressionModel {
 		targetColumn: 'sales',
 		featureColumns: ['ad_spend', 'store_visits', 'price'],
 		intercept: 100,
-		// ad_spend: 影響大（係数10, レンジ広い）、store_visits: 影響中、price: 影響小（レンジが狭い）
+		// ad_spend: large impact (coefficient 10, wide range), store_visits: medium impact, price: small impact (narrow range)
 		coefficients: [10, 2, -1],
 		metrics: { sampleSize: 20, r2: 0.9, adjustedR2: 0.88, residualStdError: 5 },
 		featureRanges: {

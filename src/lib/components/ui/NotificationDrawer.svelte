@@ -16,7 +16,7 @@
 	}
 
 	function formatDate(iso: string): string {
-		return new Intl.DateTimeFormat('ja-JP', {
+		return new Intl.DateTimeFormat('en-US', {
 			month: 'numeric',
 			day: 'numeric',
 			hour: '2-digit',
@@ -35,7 +35,7 @@
 <aside class="drawer" class:open aria-hidden={!open}>
 	<div class="drawer-header">
 		<h2>{m.notifications()}</h2>
-		<button class="close-btn" onclick={onclose} aria-label="閉じる">
+		<button class="close-btn" onclick={onclose} aria-label="Close">
 			<X size={16} />
 		</button>
 	</div>

@@ -5,31 +5,31 @@ import { predict } from './registry';
 export type KpiItemPlan = {
 	key: string;
 	coefficient: number;
-	/** 実測平均（現状値） */
+	/** Observed average (current value) */
 	current: number;
-	/** 逆算した目標値（常に実測レンジ[min, max]の範囲内に収まる） */
+	/** Back-calculated target value (always stays within the observed range [min, max]) */
 	target: number;
 	min: number;
 	max: number;
-	/** この項目が目標達成にどれだけ寄与するか（目的変数の単位で、coefficient*(target-current)） */
+	/** How much this item contributes to reaching the target (in units of the outcome variable, coefficient*(target-current)) */
 	contribution: number;
 };
 
 export type KpiPlanResult = {
 	targetColumn: string;
 	targetValue: number;
-	/** 全KPI候補を現状の平均値に据え置いた場合の予測値 */
+	/** Predicted value if all KPI candidates are left at their current average */
 	baseline: number;
 	/** targetValue - baseline */
 	gap: number;
-	/** 選択したKPI候補の実測レンジ内だけで目標との差を完全に埋められるか */
+	/** Whether the gap to the target can be fully closed within the observed ranges of the selected KPI candidates */
 	achievable: boolean;
-	/** 実際にKPI候補で埋められる差分（achievableならgapと一致） */
+	/** The portion of the gap actually closeable by the KPI candidates (matches gap if achievable) */
 	coveredGap: number;
 	items: KpiItemPlan[];
 };
 
-/** 永続化するKPIプランのスナップショット（学習済みモデル・妥当性チェック・逆算結果を丸ごと保持する） */
+/** Snapshot of a persisted KPI plan (holds the trained model, validity check, and back-calculation results in full) */
 export type KpiPlanSnapshot = {
 	dataSourceId: string;
 	targetColumn: string;
@@ -41,18 +41,22 @@ export type KpiPlanSnapshot = {
 };
 
 /**
- * 目的変数の目標値から、選択したKPI候補（説明変数）それぞれの目標値を逆算する。
+ * From the target value of the outcome variable, back-calculate a target value for each selected
+ * KPI candidate (explanatory variable).
  *
- * 単一の目的変数に対して複数の説明変数があるため、この逆算問題は本質的に不定（解が1通りに決まらない）。
- * ここでは「各KPI候補が、自分の実測レンジ内で使える伸びしろ（ヘッドルーム）のうち同じ割合だけを使う」という
- * 比例配分ルールを採用する（budget-allocation.tsの貪欲法とは意図的に異なる設計選択）。
- * 貪欲法（最も効果の大きい1変数に配分を集中させる）だと、「客単価だけを実測レンジを大きく超えて
- * 引き上げる」ような非現実的なKPIが生成されやすい。比例配分なら、どのKPI候補も自分の実測レンジを
- * 超えることがなく、複数のKPIに無理なく目標が分散される。
+ * Because a single outcome variable has multiple explanatory variables, this back-calculation
+ * problem is inherently underdetermined (there is no single unique solution). Here we adopt a
+ * proportional-allocation rule where "each KPI candidate uses the same fraction of its available
+ * headroom within its own observed range" (a deliberately different design choice from the greedy
+ * approach used in budget-allocation.ts). A greedy approach (concentrating the whole adjustment on
+ * the single most effective variable) tends to produce unrealistic KPIs, such as "raise average
+ * order value alone far beyond its observed range." With proportional allocation, no KPI candidate
+ * ever exceeds its own observed range, and the target is spread naturally across multiple KPIs.
  *
- * 目標に届かない場合（gapが選択したKPI候補全体のヘッドルームの合計を超える場合）は、
- * 実測レンジ外まで外挿した非現実的な数値を出す代わりに、レンジ内で最大限使い切った値を示し
- * achievable=false として不足分を明示する。
+ * If the target cannot be reached (the gap exceeds the combined headroom of all selected KPI
+ * candidates), instead of producing an unrealistic value extrapolated beyond the observed range,
+ * this returns the value obtained by using up the full range and sets achievable=false to make the
+ * shortfall explicit.
  */
 export function planKpis(model: LinearRegressionModel, targetValue: number): KpiPlanResult {
 	const means = Object.fromEntries(model.featureColumns.map((k) => [k, model.featureRanges[k].mean]));
@@ -73,7 +77,7 @@ export function planKpis(model: LinearRegressionModel, targetValue: number): Kpi
 		return { targetColumn: model.targetColumn, targetValue, baseline, gap: 0, achievable: true, coveredGap: 0, items };
 	}
 
-	// signedHeadroom: 目標方向に動かした時に助けになる方向の実測レンジ内の伸びしろ（符号付き）
+	// signedHeadroom: the (signed) headroom within the observed range, in the direction that helps move toward the target
 	const signedHeadroomOf = (key: string): number => {
 		const c = coefficientOf(key);
 		if (c === 0) return 0;

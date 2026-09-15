@@ -1,7 +1,7 @@
 import { percentile, buildHistogram, type HistogramBin } from './stats-utils';
 import { combineOverall, type ValidityAssessment, type ValidityCheckItem } from './validity';
 
-/** SQL集計から得られる、1列分の正確なサマリー統計量（生データ不要） */
+/** Exact summary statistics for a single column, derived from SQL aggregates (no raw data needed) */
 export type ColumnAggregates = { n: number; sum: number; sumSq: number; min: number; max: number };
 
 export type DescriptiveStatsSummary = {
@@ -15,19 +15,19 @@ export type DescriptiveStatsSummary = {
 	q3: number;
 	iqr: number;
 	histogram: HistogramBin[];
-	/** 中央値・四分位数・ヒストグラムの算出に使ったサンプル件数（n以下） */
+	/** Number of samples used to compute the median, quartiles, and histogram (at most n) */
 	sampleSize: number;
-	/** サンプル件数が母集団件数(n)未満で打ち切られた場合true。中央値等はこの場合近似値 */
+	/** True if the sample count was capped below the population count (n). Median etc. are then approximate */
 	sampled: boolean;
-	/** IQR方式（[Q1-1.5×IQR, Q3+1.5×IQR]の外）で数えた外れ値候補の件数（サンプル内） */
+	/** Count of outlier candidates (within the sample) found using the IQR method (outside [Q1-1.5*IQR, Q3+1.5*IQR]) */
 	outlierCount: number;
 	validity: ValidityAssessment;
 };
 
 /**
- * n/mean/stddev/min/maxはSQL集計値（aggregates）から正確に計算する
- * （Σ(x-mean)² = Σx² - n*mean² の恒等式を使い、生データを読まずに分散が求まる）。
- * 中央値・四分位数・ヒストグラムは生データのサンプル（sample、上限付き）からのみ計算できるため近似値になりうる。
+ * n/mean/stddev/min/max are computed exactly from the SQL aggregates (aggregates)
+ * (using the identity Sigma(x-mean)^2 = Sigma(x^2) - n*mean^2, variance can be derived without reading the raw data).
+ * The median, quartiles, and histogram can only be computed from a sample of the raw data (sample, capped), so they may be approximate.
  */
 export function computeDescriptiveStats(
 	aggregates: ColumnAggregates,
@@ -53,20 +53,20 @@ export function computeDescriptiveStats(
 	const sampled = sample.length < n;
 	const checks: ValidityCheckItem[] = [];
 	if (n >= 30) {
-		checks.push({ label: 'サンプル数', level: 'good', comment: `件数${n}件は分布の把握に十分です` });
+		checks.push({ label: 'Sample count', level: 'good', comment: `${n} records is enough to understand the distribution` });
 	} else if (n >= 10) {
-		checks.push({ label: 'サンプル数', level: 'caution', comment: `件数${n}件はやや少なく、分布の解釈には注意が必要です（目安: 30件以上）` });
+		checks.push({ label: 'Sample count', level: 'caution', comment: `${n} records is a bit low; interpret the distribution with caution (recommended: 30+)` });
 	} else {
-		checks.push({ label: 'サンプル数', level: 'poor', comment: `件数${n}件は不足しており、統計量の信頼性が低い可能性があります（目安: 30件以上）` });
+		checks.push({ label: 'Sample count', level: 'poor', comment: `${n} records is insufficient; the reliability of these statistics may be low (recommended: 30+)` });
 	}
 	if (sampled) {
 		checks.push({
-			label: '中央値・四分位数の精度',
+			label: 'Median/quartile precision',
 			level: 'caution',
-			comment: `全${n.toLocaleString()}件のうち先頭${sample.length.toLocaleString()}件のサンプルに基づく近似値です`
+			comment: `Approximate values based on a sample of the first ${sample.length.toLocaleString()} of ${n.toLocaleString()} total records`
 		});
 	}
-	const { overallLevel, overallComment } = combineOverall(checks, 'この統計量は妥当性チェックの主要な観点で問題は見つかりませんでした');
+	const { overallLevel, overallComment } = combineOverall(checks, 'No issues were found on the main validity-check criteria for these statistics');
 
 	return {
 		n,

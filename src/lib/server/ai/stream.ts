@@ -175,7 +175,7 @@ export async function streamChat(
 					return {
 						type: 'tool_result' as const,
 						tool_use_id: b.id,
-						content: `エラー: ${e instanceof Error ? e.message : String(e)}`,
+						content: `Error: ${e instanceof Error ? e.message : String(e)}`,
 						is_error: true
 					};
 				}

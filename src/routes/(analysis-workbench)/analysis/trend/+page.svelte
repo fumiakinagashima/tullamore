@@ -16,22 +16,22 @@
 	const bridge = getContext<AnalysisBridge>(ANALYSIS_BRIDGE_KEY);
 
 	const HORIZON_OPTIONS = [
-		{ value: '6', label: '半年後まで' },
-		{ value: '12', label: '1年後まで' },
-		{ value: '60', label: '5年後まで' }
+		{ value: '6', label: 'Up to 6 months ahead' },
+		{ value: '12', label: 'Up to 1 year ahead' },
+		{ value: '60', label: 'Up to 5 years ahead' }
 	];
 
 	const GRANULARITY_OPTIONS = [
-		{ value: 'day', label: '日次' },
-		{ value: 'week', label: '週次' },
-		{ value: 'month', label: '月次' }
+		{ value: 'day', label: 'Daily' },
+		{ value: 'week', label: 'Weekly' },
+		{ value: 'month', label: 'Monthly' }
 	];
 
 	let dataSourceId = $state('');
 	let dateColumn = $state('');
 	let targetColumn = $state('');
 	let horizonMonths = $state('12');
-	// Select は string を bindable として扱うため string で持ち、使用時に TrendGranularity へ絞る（値はGRANULARITY_OPTIONSの3種のみ）
+	// Select treats its value as a bindable string, so we hold it as a string and narrow it to TrendGranularity when used (the value is always one of GRANULARITY_OPTIONS' three options)
 	let granularityValue = $state('month');
 	const granularity = $derived(granularityValue as TrendGranularity);
 	let note = $state('');
@@ -64,11 +64,11 @@
 	const canRun = $derived(!!dataSourceId && !!dateColumn && !!targetColumn);
 
 	const gridColumns = $derived([
-		{ key: 'date', label: labelOf(dateColumn) || '日付', type: 'date' as const },
-		{ key: 'value', label: labelOf(targetColumn) || '数値', type: 'number' as const }
+		{ key: 'date', label: labelOf(dateColumn) || 'Date', type: 'date' as const },
+		{ key: 'value', label: labelOf(targetColumn) || 'Value', type: 'number' as const }
 	]);
 
-	// グリッドの数値を編集すると、サーバー往復なしでその場で再学習・再計算する（回帰分析シミュレーターのスライダーと同じ考え方）
+	// Editing a value in the grid re-trains and recomputes on the spot without a server round trip (same idea as the regression simulator's sliders)
 	const liveModel = $derived.by(() => {
 		if (rows.length === 0) return null;
 		try {
@@ -87,32 +87,32 @@
 		}
 	});
 
-	// トレンド予測は説明変数が「時間」の1個のみ（TREND_TIME_FEATURE）なので多重共線性チェックは対象外。
-	// D1に問い合わせる必要が無いためクライアント側で完結する（サーバー往復なし、他の計算と同じ考え方）
+	// Trend forecasting has only one feature variable ("time", TREND_TIME_FEATURE), so multicollinearity checks are out of scope.
+	// No D1 query is needed, so this is done entirely client-side (no server round trip, same idea as the other calculations)
 	const validity = $derived.by<ValidityAssessment | null>(() => {
 		const m = liveModel;
 		if (!m) return null;
 		const checks = [assessFitQuality(m.metrics.r2), assessSampleSizeAdequacy(m.metrics.sampleSize, m.featureColumns.length)];
-		const { overallLevel, overallComment } = combineOverall(checks, 'このトレンド予測は妥当性チェックの主要な観点で問題は見つかりませんでした');
+		const { overallLevel, overallComment } = combineOverall(checks, 'This trend forecast found no issues on the main validity check criteria');
 		return { overallLevel, overallComment, checks };
 	});
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
 
-	// coefficient は「1日あたり」の変化量。選択中の集計粒度に合わせた変化量に換算する（30.44は平均月日数=365.25/12）
+	// The coefficient is the change "per day". Convert it to a change matching the currently selected aggregation granularity (30.44 is the average number of days per month = 365.25/12)
 	const PERIOD_DAYS: Record<TrendGranularity, number> = { day: 1, week: 7, month: 30.44 };
-	const PERIOD_LABEL: Record<TrendGranularity, string> = { day: '日あたりの変化', week: '週あたりの変化', month: '月あたりの変化' };
-	const PERIOD_AVG_LABEL: Record<TrendGranularity, string> = { day: '日次', week: '週次', month: '月次' };
+	const PERIOD_LABEL: Record<TrendGranularity, string> = { day: 'Change per day', week: 'Change per week', month: 'Change per month' };
+	const PERIOD_AVG_LABEL: Record<TrendGranularity, string> = { day: 'Daily', week: 'Weekly', month: 'Monthly' };
 	const periodChange = $derived(liveModel ? liveModel.coefficients[0] * PERIOD_DAYS[granularity] : 0);
 	const direction = $derived(periodChange > 0 ? 'up' : periodChange < 0 ? 'down' : 'flat');
 	const forecastEnd = $derived(liveSeries ? liveSeries.trend[liveSeries.trend.length - 1] : null);
-	// 実績と予測の境界（＝現在）に縦線を引く。2点の間ぴったりに置きたいので -0.5 した小数インデックスを使う
+	// Draw a vertical line at the boundary between actuals and the forecast (i.e., "now"). Use a fractional index of -0.5 to place it exactly between the two points
 	const markerIndex = $derived(liveSeries ? liveSeries.historicalCount - 0.5 : undefined);
 
-	// 右側のAIアシスタントに現在の設定・結果を渡す（妥当性について聞かれた時の材料にもなる）
+	// Pass the current settings and results to the AI assistant on the right (also used as material when asked about validity)
 	$effect(() => {
 		bridge.analysisType = 'trend';
 		bridge.config = {
@@ -136,9 +136,9 @@
 			: null;
 	});
 
-	// AIアシスタントの set_config ツールから呼ばれる。dataSourceId を変えると
-	// 上の $effect が dateColumn/targetColumn をリセットしてしまうため、
-	// リセットが先に走るのを tick() で待ってから値をセットする
+	// Called from the AI assistant's set_config tool. Changing dataSourceId causes
+	// the $effect above to reset dateColumn/targetColumn, so we wait for that
+	// reset to run first via tick() before setting the values
 	async function applyConfig(patch: Record<string, unknown>) {
 		if (typeof patch.data_source_id === 'string' && patch.data_source_id !== dataSourceId) {
 			dataSourceId = patch.data_source_id;
@@ -168,7 +168,7 @@
 		try {
 			const res = await fetch(`/api/data-sources/${dataSourceId}/rows?limit=1000`);
 			const body = (await res.json()) as { rows?: Record<string, unknown>[]; total?: number; error?: string };
-			if (!res.ok) throw new Error(body.error ?? 'データの取得に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Failed to fetch data');
 
 			const fetched = body.rows ?? [];
 			const cleaned = fetched
@@ -176,7 +176,7 @@
 				.filter((r) => r.date && Number.isFinite(r.value))
 				.sort((a, b) => a.date.localeCompare(b.date));
 
-			if (cleaned.length === 0) throw new Error('日付・数値がどちらも入っている行が見つかりませんでした');
+			if (cleaned.length === 0) throw new Error('No rows found with both a date and a numeric value');
 
 			truncated = (body.total ?? fetched.length) > fetched.length;
 			rows = cleaned;
@@ -191,28 +191,28 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">トレンド予測</h1>
-		<p class="page-sub">実績データから将来の推移を線で予測します（日次・週次・月次で集計粒度を切り替えられます）</p>
+		<h1 class="page-title">Trend Forecast</h1>
+		<p class="page-sub">Forecasts future trajectories from historical data as a line (switch the aggregation granularity between daily, weekly, and monthly)</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="日付列" bind:value={dateColumn} options={dateOptions} disabled={!dataSourceId} />
-			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+			<Select label="Data Source" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Date Column" bind:value={dateColumn} options={dateOptions} disabled={!dataSourceId} />
+			<Select label="Target Variable" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 		</div>
 
 		<div class="config-row">
-			<Select label="集計粒度" bind:value={granularityValue} options={GRANULARITY_OPTIONS} />
-			<Select label="予測期間" bind:value={horizonMonths} options={HORIZON_OPTIONS} />
+			<Select label="Aggregation Granularity" bind:value={granularityValue} options={GRANULARITY_OPTIONS} />
+			<Select label="Forecast Period" bind:value={horizonMonths} options={HORIZON_OPTIONS} />
 		</div>
 
-		<Textbox label="分析メモ（任意）" bind:value={note} placeholder="例: 今後1年の会員数推移を見たい" />
+		<Textbox label="Analysis Notes (optional)" bind:value={note} placeholder="e.g., I want to see membership trends over the next year" />
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '予測中…' : '予測を実行'}
+				{loading ? 'Forecasting…' : 'Run Forecast'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
@@ -229,16 +229,16 @@
 						</span>
 					</div>
 					<div class="metric">
-						<span class="metric-label">決定係数 R²</span>
+						<span class="metric-label">R² (coefficient of determination)</span>
 						<span class="metric-value">{fmt(liveModel.metrics.r2)}</span>
 					</div>
 					<div class="metric">
-						<span class="metric-label">サンプル数</span>
-						<span class="metric-value">{liveModel.metrics.sampleSize}件</span>
+						<span class="metric-label">Sample Size</span>
+						<span class="metric-value">{liveModel.metrics.sampleSize}</span>
 					</div>
 					{#if forecastEnd}
 						<div class="metric">
-							<span class="metric-label">{forecastEnd.label} 時点の予測値</span>
+							<span class="metric-label">Forecast at {forecastEnd.label}</span>
 							<span class="metric-value highlight">{fmt(forecastEnd.value)}</span>
 						</div>
 					{/if}
@@ -247,10 +247,10 @@
 				<LineChart
 					height={180}
 					{markerIndex}
-					markerLabel="現在"
+					markerLabel="Now"
 					series={[
-						{ name: `実績（${PERIOD_AVG_LABEL[granularity]}平均）`, data: liveSeries.historical },
-						{ name: 'トレンド予測', data: liveSeries.trend }
+						{ name: `Actual (${PERIOD_AVG_LABEL[granularity]} average)`, data: liveSeries.historical },
+						{ name: 'Trend Forecast', data: liveSeries.trend }
 					]}
 				/>
 
@@ -260,16 +260,16 @@
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソース・日付列・目的変数を選び、「予測を実行」を押してください</p>
+				<p>Select a data source, date column, and target variable in the settings panel above, then click "Run Forecast"</p>
 			</div>
 		{/if}
 	</section>
 
 	{#if rows.length > 0}
 		<section class="grid-panel">
-			<p class="config-title">元データ（数値を編集すると即グラフに反映されます）</p>
+			<p class="config-title">Source Data (editing a value updates the chart immediately)</p>
 			{#if truncated}
-				<p class="hint">データ件数が多いため、先頭{rows.length}件のみ表示・分析しています</p>
+				<p class="hint">Showing and analyzing only the first {rows.length} rows because there are too many rows</p>
 			{/if}
 			<DataGrid columns={gridColumns} bind:rows maxHeight={320} />
 		</section>

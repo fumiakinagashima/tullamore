@@ -11,27 +11,27 @@ export type FeatureCandidate = ColumnCandidate & { correlation: number };
 export type VariableDesignResult = {
 	targetCandidates: ColumnCandidate[];
 	excludedColumns: ExcludedColumn[];
-	/** target_column を指定した場合のみ、相関係数の絶対値が大きい順に説明変数候補を返す */
+	/** Only returned when target_column is specified: feature-variable candidates ranked by descending absolute correlation coefficient */
 	featureCandidates?: FeatureCandidate[];
 };
 
 function exclusionReason(type: AnalysisColumnType): string {
 	switch (type) {
 		case 'id':
-			return 'ID・連番列のため分析対象から除外';
+			return 'Excluded from analysis because it is an ID/sequence column';
 		case 'date':
-			return '日付列のため（現時点では回帰の説明変数として直接は使えません）';
+			return 'Excluded because it is a date column (cannot currently be used directly as a regression feature variable)';
 		case 'categorical':
-			return '数値でないため（カテゴリ変数の直接対応は未実装）';
+			return 'Excluded because it is not numeric (direct support for categorical variables is not implemented yet)';
 		default:
 			return '';
 	}
 }
 
 /**
- * データソースの列を分析し、目的変数・説明変数の候補をAIに提案させるための材料を返す。
- * target_column を指定すると、それとの相関係数（サマリー統計量ベース、生データ非依存）で
- * 説明変数候補をランキングする。
+ * Analyzes a data source's columns and returns the material the AI uses to suggest target/feature variable candidates.
+ * When target_column is specified, ranks feature-variable candidates by their correlation coefficient with it
+ * (based on summary statistics, independent of raw data).
  */
 export async function designVariables(
 	db: D1Database,
@@ -51,7 +51,7 @@ export async function designVariables(
 
 	const target = continuous.find((c) => c.key === targetColumn);
 	if (!target) {
-		throw new Error(`目的変数 "${targetColumn}" は数値列ではないか、データソースに存在しません`);
+		throw new Error(`Target variable "${targetColumn}" is not a numeric column, or does not exist in the data source`);
 	}
 
 	const otherContinuous = continuous.filter((c) => c.key !== targetColumn);

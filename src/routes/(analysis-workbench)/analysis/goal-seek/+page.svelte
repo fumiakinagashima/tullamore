@@ -15,7 +15,7 @@
 
 	const bridge = getContext<AnalysisBridge>(ANALYSIS_BRIDGE_KEY);
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
@@ -62,7 +62,7 @@
 		error = '';
 	});
 
-	// モデルを学習し直したら、逆算対象・固定値をリセットする
+	// After retraining the model, reset the solve target and fixed values
 	$effect(() => {
 		const m = model;
 		if (!m) {
@@ -73,7 +73,7 @@
 		}
 		solveFeature = m.featureColumns[0] ?? '';
 		fixedValues = Object.fromEntries(m.featureColumns.map((k) => [k, m.featureRanges[k].mean]));
-		// 目標値の初期値は「全説明変数が平均値の時の予測値」（＝現状維持のベースライン）にしておく
+		// Set the initial target value to "the predicted value when all features are at their mean" (i.e. the status-quo baseline)
 		const means = Object.fromEntries(m.featureColumns.map((k) => [k, m.featureRanges[k].mean]));
 		try {
 			targetValueText = String(Math.round(predict(m, means)));
@@ -86,8 +86,9 @@
 		featureColumns = checked ? [...featureColumns, key] : featureColumns.filter((k) => k !== key);
 	}
 
-	// 目的変数を切り替えた時、それまで説明変数として選んでいた列が新しい目的変数と重複していたら除外する
-	// （featureCandidates からは自動的に消えるが、チェック状態自体は featureColumns に残ってしまうため）
+	// When the target variable changes, exclude any previously-selected feature column that now
+	// duplicates the new target variable (it disappears from featureCandidates automatically, but
+	// the checked state itself would otherwise remain in featureColumns)
 	$effect(() => {
 		if (featureColumns.includes(targetColumn)) {
 			featureColumns = featureColumns.filter((k) => k !== targetColumn);
@@ -148,7 +149,7 @@
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
 			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
-			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Analysis failed');
 			model = body.model ?? null;
 			validity = body.validity ?? null;
 		} catch (e) {
@@ -161,23 +162,23 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">ゴールシーク</h1>
-		<p class="page-sub">目的変数を目標値にするために、説明変数がいくつであるべきかを逆算します</p>
+		<h1 class="page-title">Goal Seek</h1>
+		<p class="page-sub">Works backward to find what a feature variable needs to be for the target variable to reach a target value</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+			<Select label="Data source" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Target variable" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 		</div>
 
 		<div class="feature-picker">
-			<span class="field-label">説明変数（複数選択可）</span>
+			<span class="field-label">Feature variables (multiple selection allowed)</span>
 			{#if !targetColumn}
-				<p class="hint">先に目的変数を選択してください</p>
+				<p class="hint">Please select a target variable first</p>
 			{:else if featureCandidates.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
+				<p class="hint">No numeric columns are available to select</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each featureCandidates as col (col.key)}
@@ -196,7 +197,7 @@
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '分析中…' : '分析を実行'}
+				{loading ? 'Analyzing…' : 'Run analysis'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
@@ -206,13 +207,13 @@
 		{#if model}
 			<div class="goal-form">
 				<div class="goal-row">
-					<Select label="逆算する変数" bind:value={solveFeature} options={solveFeatureOptions} />
-					<Textbox label="{labelOf(targetColumn)}の目標値" type="number" bind:value={targetValueText} />
+					<Select label="Variable to solve for" bind:value={solveFeature} options={solveFeatureOptions} />
+					<Textbox label="Target value for {labelOf(targetColumn)}" type="number" bind:value={targetValueText} />
 				</div>
 
 				{#if otherFeatures.length > 0}
 					<div class="fixed-values">
-						<span class="field-label">他の説明変数（固定する値）</span>
+						<span class="field-label">Other feature variables (fixed values)</span>
 						{#each otherFeatures as key (key)}
 							{@const range = model.featureRanges[key]}
 							<div class="fixed-row">
@@ -235,15 +236,15 @@
 
 				{#if result}
 					<div class="result-card">
-						<span class="result-label">{labelOf(solveFeature)}の必要値</span>
+						<span class="result-label">Required value for {labelOf(solveFeature)}</span>
 						<span class="result-value">{fmt(result.value)}</span>
 						{#if result.isOutOfRange}
-							<p class="warn-text">実測データの範囲外です（外挿）。この結果の信頼性は低くなります</p>
+							<p class="warn-text">This is outside the range of the observed data (extrapolation). The reliability of this result is lower</p>
 						{/if}
 					</div>
 				{:else if solveFeature && targetValue !== null}
 					<p class="hint">
-						「{labelOf(solveFeature)}」は{labelOf(targetColumn)}にほぼ影響しないため逆算できません。別の変数を選んでください
+						"{labelOf(solveFeature)}" has almost no effect on {labelOf(targetColumn)}, so it cannot be solved for. Please choose a different variable
 					</p>
 				{/if}
 
@@ -253,7 +254,7 @@
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソース・目的変数・説明変数を選び、「分析を実行」を押してください</p>
+				<p>Select a data source, target variable, and feature variables in the settings above, then click "Run analysis"</p>
 			</div>
 		{/if}
 	</section>

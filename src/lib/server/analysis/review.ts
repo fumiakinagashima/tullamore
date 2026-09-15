@@ -13,10 +13,10 @@ export type SimulatorReview = {
 	overallComment: string;
 };
 
-// $lib/analysis/validity.ts の ValidityLevel（good/caution/poor）を、この関数の既存の
-// 語彙（excellent/good/moderate/weak, sufficient/marginal/insufficient）にマッピングする。
-// SimulatorReview は review_simulator MCPツール・/simulators/[id] が既に消費している型のため、
-// 判定ロジックは共通化しつつ外部から見える形は変えない
+// Maps $lib/analysis/validity.ts's ValidityLevel (good/caution/poor) onto this function's existing
+// vocabulary (excellent/good/moderate/weak, sufficient/marginal/insufficient).
+// Since SimulatorReview is a type already consumed by the review_simulator MCP tool and /simulators/[id],
+// we share the underlying assessment logic while keeping its externally visible shape unchanged
 function assessFit(r2: number): { fitQuality: SimulatorReview['fitQuality']; fitComment: string } {
 	const { level, comment } = assessFitQuality(r2);
 	const fitQuality = level === 'poor' ? 'weak' : r2 >= 0.8 ? 'excellent' : level === 'good' ? 'good' : 'moderate';
@@ -33,9 +33,10 @@ function assessSampleSize(
 }
 
 /**
- * シミュレーターの妥当性をチェックする。当てはまり（R²）・サンプル数の十分性・
- * 説明変数どうしの多重共線性を評価する。多重共線性の判定に必要な相関係数は
- * サマリー統計量（Σx, Σxᵢxⱼ）から算出し、生データは読み込まない。
+ * Checks the validity of a simulator. Evaluates goodness of fit (R²), sample size
+ * adequacy, and multicollinearity among the feature variables. The correlation
+ * coefficients needed to assess multicollinearity are computed from summary
+ * statistics (Σx, Σxᵢxⱼ); the raw data is never read.
  */
 export async function reviewSimulator(
 	db: D1Database,
@@ -54,18 +55,18 @@ export async function reviewSimulator(
 		const stats = await computeSufficientStats(db, tableName, model.targetColumn, model.featureColumns);
 		multicollinearity = maxFeaturePairCorrelation(stats, model.featureColumns);
 		if (multicollinearity && Math.abs(multicollinearity.correlation) >= 0.9) {
-			multicollinearityComment = `説明変数「${multicollinearity.columnA}」と「${multicollinearity.columnB}」の相関が非常に強く（r=${multicollinearity.correlation.toFixed(3)}）、多重共線性の疑いがあります。どちらか一方を除外するか、係数の解釈には注意してください`;
+			multicollinearityComment = `Feature variables "${multicollinearity.columnA}" and "${multicollinearity.columnB}" are very strongly correlated (r=${multicollinearity.correlation.toFixed(3)}), suggesting multicollinearity. Consider excluding one of them, or interpret the coefficients with caution`;
 		} else if (multicollinearity && Math.abs(multicollinearity.correlation) >= 0.7) {
-			multicollinearityComment = `説明変数「${multicollinearity.columnA}」と「${multicollinearity.columnB}」の相関がやや強めです（r=${multicollinearity.correlation.toFixed(3)}）。多重共線性に注意してください`;
+			multicollinearityComment = `Feature variables "${multicollinearity.columnA}" and "${multicollinearity.columnB}" are somewhat strongly correlated (r=${multicollinearity.correlation.toFixed(3)}). Watch out for multicollinearity`;
 		}
 	}
 
 	const overallComment =
 		fitQuality === 'weak' || sampleSizeAdequacy === 'insufficient'
-			? 'このシミュレーターの予測は参考程度に留め、重要な意思決定には別の裏付けも確認することを推奨します'
+			? 'Treat this simulator\'s predictions as a reference only, and confirm important decisions with other supporting evidence'
 			: multicollinearityComment
-				? '基本的な精度は確保されていますが、説明変数の相関には注意してください'
-				: 'このシミュレーターは妥当性チェックの主要な観点で問題は見つかりませんでした';
+				? 'Basic accuracy is adequate, but be mindful of the correlation among the feature variables'
+				: 'This simulator found no issues on the main validity check criteria';
 
 	return { fitQuality, fitComment, sampleSizeAdequacy, sampleSizeComment, multicollinearity, multicollinearityComment, overallComment };
 }

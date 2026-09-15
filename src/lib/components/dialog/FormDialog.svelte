@@ -12,17 +12,17 @@
 
 	let { form, onsubmit, oncancel }: Props = $props();
 
-	// フォーム state
+	// Form state
 	let fields = $state<FormField[]>(form.fields);
-	let formTitle = $state(form.title ?? '入力');
+	let formTitle = $state(form.title ?? 'Input');
 	let formLoading = $state(true);
 	let formKey = $state(0);
 
-	// フォーム外部送信用
+	// For submitting the form from outside it
 	let formRef = $state<HTMLFormElement | null>(null);
-	let submitLabel = $derived(form.submitLabel ?? '登録');
+	let submitLabel = $derived(form.submitLabel ?? 'Submit');
 
-	// サーバー定義フォームを取得し、AIプリフィル値を適用
+	// Fetch the server-defined form and apply the AI prefill values
 	$effect(() => {
 		const tool = form.tool;
 		const prefill: Record<string, string> = {};
@@ -41,7 +41,7 @@
 					if (data.title) formTitle = data.title;
 				} else {
 					fields = form.fields;
-					formTitle = form.title ?? '入力';
+					formTitle = form.title ?? 'Input';
 				}
 				formKey += 1;
 			})
@@ -61,14 +61,14 @@
 	});
 </script>
 
-<!-- モーダルオーバーレイ（クリックしても閉じない） -->
+<!-- Modal overlay (does not close on click) -->
 <div class="overlay" role="presentation"></div>
 
-<!-- ダイアログ本体 -->
+<!-- Dialog body -->
 <div class="dialog" role="dialog" aria-modal="true" aria-label={formTitle}>
 	<div class="dialog-header">
 		<span class="dialog-title">{formTitle}</span>
-		<button class="close-btn" onclick={oncancel} aria-label="閉じる">
+		<button class="close-btn" onclick={oncancel} aria-label="Close">
 			<X size={16} />
 		</button>
 	</div>
@@ -76,7 +76,7 @@
 	<div class="dialog-body">
 		<DialogChatSide contextTitle={formTitle} contextFields={fields.map((f) => ({ key: f.key, label: f.label }))} />
 
-		<!-- フォーム側（右） -->
+		<!-- Form side (right) -->
 		<div class="form-side">
 			{#if formLoading}
 				<div class="form-loading"><span class="spinner"></span></div>
@@ -95,7 +95,7 @@
 	</div>
 
 	<div class="dialog-footer">
-		<button class="footer-cancel" onclick={oncancel}>キャンセル</button>
+		<button class="footer-cancel" onclick={oncancel}>Cancel</button>
 		<button class="footer-submit" onclick={() => formRef?.requestSubmit()}>{submitLabel}</button>
 	</div>
 </div>
@@ -127,7 +127,7 @@
 		animation: dialog-in 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
-	/* ---- ヘッダー ---- */
+	/* ---- Header ---- */
 	.dialog-header {
 		display: flex;
 		align-items: center;
@@ -162,7 +162,7 @@
 		}
 	}
 
-	/* ---- ボディ（フォーム + チャット） ---- */
+	/* ---- Body (form + chat) ---- */
 	.dialog-body {
 		flex: 1;
 		min-height: 0;
@@ -170,7 +170,7 @@
 		overflow: hidden;
 	}
 
-	/* フォーム側（右） */
+	/* Form side (right) */
 	.form-side {
 		flex: 1;
 		min-width: 0;
@@ -194,7 +194,7 @@
 		animation: spin 0.6s linear infinite;
 	}
 
-	/* ---- フッター ---- */
+	/* ---- Footer ---- */
 	.dialog-footer {
 		display: flex;
 		justify-content: flex-end;
@@ -235,7 +235,7 @@
 		&:active { opacity: 0.75; }
 	}
 
-	/* ---- アニメーション ---- */
+	/* ---- Animations ---- */
 	@keyframes fade-in {
 		from { opacity: 0; }
 		to { opacity: 1; }

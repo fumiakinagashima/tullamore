@@ -96,7 +96,7 @@
 				body: JSON.stringify({ dataSourceId, columns: selectedColumns })
 			});
 			const body = (await res.json()) as { stats?: Record<string, DescriptiveStatsSummary>; error?: string };
-			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Analysis failed');
 			result = body.stats ?? null;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -105,34 +105,34 @@
 		}
 	}
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
 
 	function histogramBars(s: DescriptiveStatsSummary) {
-		return s.histogram.map((b) => ({ label: `${fmt(b.binStart)}〜${fmt(b.binEnd)}`, value: b.count }));
+		return s.histogram.map((b) => ({ label: `${fmt(b.binStart)} - ${fmt(b.binEnd)}`, value: b.count }));
 	}
 </script>
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">記述統計</h1>
-		<p class="page-sub">選択した列の基本統計量（平均・中央値・標準偏差・四分位数）とヒストグラムを表示します</p>
+		<h1 class="page-title">Descriptive Statistics</h1>
+		<p class="page-sub">Displays basic statistics (mean, median, standard deviation, quartiles) and a histogram for the selected columns</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Data Source" bind:value={dataSourceId} options={sourceOptions} />
 		</div>
 
 		<div class="feature-picker">
-			<span class="field-label">統計を見る列（複数選択可）</span>
+			<span class="field-label">Columns to view statistics for (multiple selection allowed)</span>
 			{#if !dataSourceId}
-				<p class="hint">先にデータソースを選択してください</p>
+				<p class="hint">Please select a data source first</p>
 			{:else if numericColumns.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
+				<p class="hint">No numeric columns available to select</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each numericColumns as col (col.key)}
@@ -151,7 +151,7 @@
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '計算中…' : '統計を計算'}
+				{loading ? 'Calculating...' : 'Calculate Statistics'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
@@ -164,25 +164,25 @@
 					<div class="stats-card">
 						<p class="stats-card-title">{labelOf(key)}</p>
 						<div class="metrics-row">
-							<div class="metric"><span class="metric-label">件数</span><span class="metric-value">{s.n.toLocaleString()}</span></div>
-							<div class="metric"><span class="metric-label">平均</span><span class="metric-value highlight">{fmt(s.mean)}</span></div>
-							<div class="metric"><span class="metric-label">中央値</span><span class="metric-value">{fmt(s.median)}</span></div>
-							<div class="metric"><span class="metric-label">標準偏差</span><span class="metric-value">{fmt(s.stddev)}</span></div>
-							<div class="metric"><span class="metric-label">最小</span><span class="metric-value">{fmt(s.min)}</span></div>
-							<div class="metric"><span class="metric-label">最大</span><span class="metric-value">{fmt(s.max)}</span></div>
+							<div class="metric"><span class="metric-label">Count</span><span class="metric-value">{s.n.toLocaleString()}</span></div>
+							<div class="metric"><span class="metric-label">Mean</span><span class="metric-value highlight">{fmt(s.mean)}</span></div>
+							<div class="metric"><span class="metric-label">Median</span><span class="metric-value">{fmt(s.median)}</span></div>
+							<div class="metric"><span class="metric-label">Std Dev</span><span class="metric-value">{fmt(s.stddev)}</span></div>
+							<div class="metric"><span class="metric-label">Min</span><span class="metric-value">{fmt(s.min)}</span></div>
+							<div class="metric"><span class="metric-label">Max</span><span class="metric-value">{fmt(s.max)}</span></div>
 							<div class="metric"><span class="metric-label">Q1</span><span class="metric-value">{fmt(s.q1)}</span></div>
 							<div class="metric"><span class="metric-label">Q3</span><span class="metric-value">{fmt(s.q3)}</span></div>
 							<div class="metric"><span class="metric-label">IQR</span><span class="metric-value">{fmt(s.iqr)}</span></div>
-							<div class="metric"><span class="metric-label">外れ値候補</span><span class="metric-value">{s.outlierCount}件</span></div>
+							<div class="metric"><span class="metric-label">Outlier Candidates</span><span class="metric-value">{s.outlierCount}</span></div>
 						</div>
-						<BarChart data={histogramBars(s)} title="分布" />
+						<BarChart data={histogramBars(s)} title="Distribution" />
 						<ValidityCard validity={s.validity} />
 					</div>
 				{/each}
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソースと統計を見たい列を選び、「統計を計算」を押してください</p>
+				<p>Select a data source and columns to view statistics for in the settings panel above, then click "Calculate Statistics"</p>
 			</div>
 		{/if}
 	</section>

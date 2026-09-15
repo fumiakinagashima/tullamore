@@ -13,14 +13,14 @@ export type TcpSocketConfig = {
 };
 
 /**
- * `pg`/`mysql2`は内部でNode標準の `net`/`tls` を使うだけで、Hyperdrive固有のAPIには依存しない。
- * Cloudflare Workers（`nodejs_compat`）ではこの `net`/`tls` が `cloudflare:sockets` 経由で
- * 動作するため、Hyperdriveのような静的バインディングの事前登録なしに、フォームで入力した
- * 任意のPostgres/MySQL接続情報でそのまま接続できる。
+ * `pg`/`mysql2` only use Node's standard `net`/`tls` internally and don't depend on any
+ * Hyperdrive-specific API. On Cloudflare Workers (`nodejs_compat`), this `net`/`tls` works via
+ * `cloudflare:sockets`, which lets us connect directly using whatever Postgres/MySQL connection info
+ * was entered in the form, without pre-registering a static binding like Hyperdrive requires.
  *
- * `ssl: { rejectUnauthorized: false }` はRDS/Supabase等の管理DBが提示する証明書を
- * Node標準のCAバンドルで検証できないケースが多いための実用上の妥協。中間者攻撃に対する
- * 保証は弱まる（docs/DATA_CONNECTIONS.md 参照）。
+ * `ssl: { rejectUnauthorized: false }` is a practical compromise because Node's standard CA bundle
+ * often can't verify the certificates presented by managed databases like RDS/Supabase. This weakens
+ * protection against man-in-the-middle attacks (see docs/DATA_CONNECTIONS.md).
  */
 export function createTcpSocketDriver(config: TcpSocketConfig): DbConnectionDriver {
 	if (config.engine === 'mysql') {

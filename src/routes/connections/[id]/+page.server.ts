@@ -17,7 +17,7 @@ type ImportTable = { schema: string; name: string; columns: ImportColumn[] };
 export const load: PageServerLoad = async ({ params, platform, locals, fetch }) => {
 	const db = createDb(platform!.env.DB);
 	const connection = await getDbConnection(db, params.id);
-	if (!connection) throw error(404, 'データ連携が見つかりません');
+	if (!connection) throw error(404, 'Connection not found');
 
 	let tables: ImportTable[] = [];
 	let tablesError = '';
@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ params, platform, locals, fetch }) 
 		const res = await fetch(`/api/db-connections/${params.id}/tables`);
 		const body = (await res.json()) as { tables?: ImportTable[]; error?: string };
 		if (!res.ok) {
-			tablesError = body.error ?? 'テーブル一覧の取得に失敗しました';
+			tablesError = body.error ?? 'Failed to retrieve the table list';
 		} else {
 			tables = body.tables ?? [];
 		}

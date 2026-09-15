@@ -6,28 +6,28 @@
 	let { data }: { data: PageData } = $props();
 
 	const FIT_LABEL: Record<string, string> = {
-		excellent: '非常に良好',
-		good: '良好',
-		moderate: 'やや弱い',
-		weak: '弱い'
+		excellent: 'Excellent',
+		good: 'Good',
+		moderate: 'Somewhat weak',
+		weak: 'Weak'
 	};
 
 	const recordContext = $derived({
 		type: 'simulator',
-		typeLabel: 'シミュレーター',
+		typeLabel: 'Simulator',
 		id: data.content.simulatorId,
 		label: data.content.name,
 		data: {
-			目的変数: data.content.targetLabel,
-			切片: data.content.intercept,
-			説明変数: data.content.features.map((f) => ({ 変数名: f.label, 係数: f.coefficient, 実測範囲: `${f.min}〜${f.max}` })),
-			決定係数R2: data.content.metrics.r2,
-			サンプル数: data.content.metrics.sampleSize,
-			妥当性チェック: data.review
+			targetVariable: data.content.targetLabel,
+			intercept: data.content.intercept,
+			explanatoryVariables: data.content.features.map((f) => ({ variableName: f.label, coefficient: f.coefficient, observedRange: `${f.min}-${f.max}` })),
+			r2: data.content.metrics.r2,
+			sampleSize: data.content.metrics.sampleSize,
+			validityCheck: data.review
 		}
 	});
 
-	// AIアシスタント欄の幅（ドラッグでリサイズ可能。localStorageに記憶する）
+	// Width of the AI assistant panel (resizable by drag; remembered in localStorage)
 	const CHAT_WIDTH_STORAGE_KEY = 'tullamore_simulator_chat_width';
 	const CHAT_WIDTH_MIN = 260;
 	const CHAT_WIDTH_MAX = 560;
@@ -54,7 +54,7 @@
 		const startWidth = chatWidth;
 
 		function onMove(ev: PointerEvent) {
-			// パネルは右側なので、左にドラッグするほど幅が広がる
+			// The panel is on the right, so dragging left widens it
 			chatWidth = clampChatWidth(startWidth + (startX - ev.clientX));
 		}
 		function onUp() {
@@ -80,7 +80,7 @@
 	<div class="layout">
 		<div class="content-side">
 			<div class="page-header">
-				<a href="/simulators" class="back-link">← シミュレーター</a>
+				<a href="/simulators" class="back-link">← Simulators</a>
 			</div>
 			<div class="content-inner">
 				<Simulator
@@ -94,9 +94,9 @@
 				/>
 
 				<div class="review-card">
-					<p class="review-title">AIレビュー（妥当性チェック）</p>
+					<p class="review-title">AI Review (Validity Check)</p>
 					<div class="review-row">
-						<span class="review-label">当てはまり</span>
+						<span class="review-label">Fit</span>
 						<span class="review-badge {data.review.fitQuality}">{FIT_LABEL[data.review.fitQuality]}</span>
 					</div>
 					<p class="review-comment">{data.review.fitComment}</p>
@@ -107,11 +107,11 @@
 					<p class="review-overall">{data.review.overallComment}</p>
 				</div>
 
-				<a href="/database/{data.dataSourceId}" class="source-link">生成元データソース: {data.dataSourceName} →</a>
+				<a href="/database/{data.dataSourceId}" class="source-link">Source data source: {data.dataSourceName} →</a>
 			</div>
 		</div>
-		<!-- ARIA Window Splitter パターン（https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/）:
-		     role="separator" + tabindex + キー操作は非対話要素向けのa11y-lintでは検出できない正しい組み合わせ -->
+		<!-- ARIA Window Splitter pattern (https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/):
+		     role="separator" + tabindex + key handling is a correct combination that non-interactive-element a11y lints can't detect -->
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div
@@ -119,7 +119,7 @@
 			class:active={resizing}
 			role="separator"
 			aria-orientation="vertical"
-			aria-label="AIアシスタントの幅を調整"
+			aria-label="Adjust AI assistant width"
 			aria-valuenow={chatWidth}
 			aria-valuemin={CHAT_WIDTH_MIN}
 			aria-valuemax={CHAT_WIDTH_MAX}

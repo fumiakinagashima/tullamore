@@ -45,7 +45,7 @@ describe('fitLinearRegression', () => {
 	it('throws when sample size is not greater than the number of features', () => {
 		const rows = [{ x1: 1, x2: 2, y: 3 }, { x1: 2, x2: 3, y: 5 }];
 		const stats = statsFromRows(rows, 'y', ['x1', 'x2']);
-		expect(() => fitLinearRegression(stats, 'y', ['x1', 'x2'])).toThrow(/サンプル数/);
+		expect(() => fitLinearRegression(stats, 'y', ['x1', 'x2'])).toThrow(/sample size/);
 	});
 });
 
@@ -63,6 +63,6 @@ describe('predictLinearRegression', () => {
 		const stats = statsFromRows(rows, 'y', ['x']);
 		const model = fitLinearRegression(stats, 'y', ['x']);
 
-		expect(() => predictLinearRegression(model, {})).toThrow(/変数/);
+		expect(() => predictLinearRegression(model, {})).toThrow(/variable/);
 	});
 });

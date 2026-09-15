@@ -3,15 +3,15 @@
 
 	type Props = {
 		columns: Column[];
-		/** matrix[i][j] = columns[i] と columns[j] の相関係数（-1〜1） */
+		/** matrix[i][j] = correlation coefficient between columns[i] and columns[j] (-1 to 1) */
 		matrix: number[][];
 	};
 
 	let { columns, matrix }: Props = $props();
 
-	// 発散配色: 負の相関=青（--color-info）、正の相関=オレンジ（--chart-2）、0=ニュートラル。
-	// 色は薄い塗り（最大でも半透明）に留め、文字は常に --color-text で描く前提で
-	// テキストコントラストを確保する（4.5:1を下回らないことを事前に検証済み）。
+	// Diverging color scale: negative correlation = blue (--color-info), positive correlation = orange (--chart-2), 0 = neutral.
+	// Colors are kept as a light fill (at most semi-transparent), on the assumption that text is
+	// always drawn in --color-text, to ensure text contrast (pre-verified to not fall below 4.5:1).
 	const MAX_ALPHA = 0.45;
 	const NEGATIVE_RGB = '37, 99, 235'; // --color-info
 	const POSITIVE_RGB = '245, 158, 11'; // --chart-2

@@ -117,6 +117,6 @@ describe('assessAbTestValidity', () => {
 		const b: GroupProportionStats = { group: 'B', n: 50, successes: 2 };
 		const result = twoProportionZTest(a, b, ALPHA);
 		const validity = assessAbTestValidity(result);
-		expect(validity.checks.some((c) => c.label === '正規近似の妥当性' && c.level === 'caution')).toBe(true);
+		expect(validity.checks.some((c) => c.label === 'Validity of normal approximation' && c.level === 'caution')).toBe(true);
 	});
 });

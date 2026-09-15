@@ -1,8 +1,8 @@
 import type { SufficientStats } from './types';
 
 /**
- * SQLのSUM集計が返すはずの値を、生の行データからテスト用に計算するヘルパー
- * （本番コードは src/lib/server/analysis/sufficient-stats.ts が D1 に対して1クエリで行う）。
+ * Test helper that computes, from raw row data, the values that SQL SUM aggregation should return
+ * (in production, src/lib/server/analysis/sufficient-stats.ts does this against D1 in a single query).
  */
 export function statsFromRows(
 	rows: Record<string, number>[],

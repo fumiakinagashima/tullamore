@@ -6,9 +6,11 @@ export type GoalSeekResult = {
 };
 
 /**
- * 目的変数が targetValue になるために targetFeature がいくつであるべきかを逆算する。
- * 他の説明変数は fixedValues（省略時は平均値）に固定する。線形結合なので閉形式で解ける。
- * targetFeature の係数がほぼ0（目的変数に影響しない）の場合は解けないため null を返す。
+ * Solves backward for what targetFeature needs to be for the target variable to equal
+ * targetValue. Other feature variables are held fixed at fixedValues (or their mean if omitted).
+ * Since this is a linear combination, it can be solved in closed form.
+ * Returns null when it can't be solved because targetFeature's coefficient is nearly 0
+ * (i.e. it has no effect on the target variable).
  */
 export function solveForFeature(
 	model: LinearRegressionModel,

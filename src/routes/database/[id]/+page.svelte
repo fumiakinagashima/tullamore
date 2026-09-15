@@ -21,20 +21,20 @@
 		try {
 			const res = await fetch(`/api/data-sources/${source.id}/resync`, { method: 'POST' });
 			const body = (await res.json()) as { inserted?: number; truncated?: boolean; queued?: boolean; error?: string };
-			if (!res.ok) throw new Error(body.error ?? '再同期に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Resync failed');
 			resyncResult = body.queued
-				? `${body.inserted}件まで取り込み、続きはバックグラウンドで処理中です`
-				: `${body.inserted}件を再取り込みしました`;
+				? `Ingested ${body.inserted} rows so far; the rest is being processed in the background`
+				: `Re-ingested ${body.inserted} rows`;
 			await invalidateAll();
 		} catch (e) {
-			resyncResult = `エラー: ${e instanceof Error ? e.message : String(e)}`;
+			resyncResult = `Error: ${e instanceof Error ? e.message : String(e)}`;
 		} finally {
 			resyncing = false;
 		}
 	}
 
-	// Queueによる大規模テーブル継続取り込み中（lastSyncStatus === 'syncing'）は、完了・失敗するまで
-	// 一定間隔で再読み込みして進捗（lastSyncRowCount）を反映する
+	// While a large-table continuation ingest via Queue is in progress (lastSyncStatus === 'syncing'),
+	// reload at a fixed interval until it completes or fails, to reflect progress (lastSyncRowCount)
 	$effect(() => {
 		if (sync?.lastSyncStatus !== 'syncing') return;
 		const timer = setInterval(() => invalidateAll(), INGEST_SYNC_POLL_INTERVAL_MS);
@@ -53,7 +53,7 @@
 		}))
 	);
 
-	// CSVテンプレートダウンロード（1行目: カラムキー、2行目: サンプル値。そのまま上書きして使う想定）
+	// CSV template download (row 1: column keys, row 2: sample values, meant to be overwritten in place)
 	function csvEscape(v: string): string {
 		return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 	}
@@ -87,7 +87,7 @@
 	async function handleImport(files: File[]) {
 		const file = files[0];
 		if (!file) return;
-		if (replaceExisting && !confirm('既存データを全て削除してから登録します。よろしいですか？')) return;
+		if (replaceExisting && !confirm('This will delete all existing data before importing. Continue?')) return;
 		importing = true;
 		importResult = null;
 		const fd = new FormData();
@@ -96,13 +96,13 @@
 		try {
 			const res = await fetch(`/api/data-sources/${source.id}/import`, { method: 'POST', body: fd });
 			const json = (await res.json()) as { inserted?: number; error?: string };
-			if (!res.ok) throw new Error(json.error ?? 'インポートに失敗しました');
+			if (!res.ok) throw new Error(json.error ?? 'Import failed');
 			importResult = replaceExisting
-				? `既存データを削除し、${json.inserted}件を登録しました`
-				: `${json.inserted}件をインポートしました`;
+				? `Deleted existing data and registered ${json.inserted} rows`
+				: `Imported ${json.inserted} rows`;
 			await invalidateAll();
 		} catch (err) {
-			importResult = `エラー: ${err instanceof Error ? err.message : String(err)}`;
+			importResult = `Error: ${err instanceof Error ? err.message : String(err)}`;
 		} finally {
 			importing = false;
 		}
@@ -120,7 +120,7 @@
 		previewLoaded = true;
 	}
 
-	// データ品質チェック
+	// Data quality check
 	let qualityReport = $state<DataQualityReport | null>(null);
 	let qualityLoading = $state(false);
 
@@ -141,11 +141,11 @@
 		loadQuality();
 	});
 
-	// 削除
+	// Delete
 	let deleting = $state(false);
 
 	async function deleteSource() {
-		if (!confirm(`「${source.name}」を削除しますか？データもすべて削除されます。`)) return;
+		if (!confirm(`Delete "${source.name}"? All of its data will also be deleted.`)) return;
 		deleting = true;
 		try {
 			await fetch(`/api/data-sources/${source.id}`, { method: 'DELETE' });
@@ -164,44 +164,44 @@
 			{#if source.description}<p class="source-desc">{source.description}</p>{/if}
 		</div>
 		<div class="header-actions">
-			<a href="/database/{source.id}/build" class="btn-secondary">編集</a>
+			<a href="/database/{source.id}/build" class="btn-secondary">Edit</a>
 			<button class="btn-danger" onclick={deleteSource} disabled={deleting}>
-				{deleting ? '削除中...' : '削除'}
+				{deleting ? 'Deleting...' : 'Delete'}
 			</button>
 		</div>
 	</div>
 
 	<div class="meta-row">
-		<span class="meta-chip">{columns.length}カラム</span>
-		<span class="meta-chip">{source.rowCount.toLocaleString()}件</span>
-		<span class="meta-chip mono">テーブル名: {source.tableName}</span>
+		<span class="meta-chip">{columns.length} columns</span>
+		<span class="meta-chip">{source.rowCount.toLocaleString()} rows</span>
+		<span class="meta-chip mono">Table name: {source.tableName}</span>
 	</div>
 
 	{#if sync}
 		<div class="sync-banner">
 			<span class="sync-info">
-				取り込み元: {connectionName} / {sync.externalSchema}.{sync.externalTable}
+				Source: {connectionName} / {sync.externalSchema}.{sync.externalTable}
 				{#if sync.lastSyncStatus === 'syncing'}
-					<span class="sync-status-badge syncing">バックグラウンド取り込み中（{sync.lastSyncRowCount.toLocaleString()}件済み）</span>
+					<span class="sync-status-badge syncing">Ingesting in background ({sync.lastSyncRowCount.toLocaleString()} rows so far)</span>
 				{:else if sync.lastSyncStatus === 'failed'}
-					<span class="sync-status-badge failed">取り込み失敗{sync.lastSyncError ? `: ${sync.lastSyncError}` : ''}</span>
+					<span class="sync-status-badge failed">Ingestion failed{sync.lastSyncError ? `: ${sync.lastSyncError}` : ''}</span>
 				{:else if sync.lastSyncedAt}
-					（最終同期: {new Date(sync.lastSyncedAt).toLocaleString('ja-JP')}）
+					(Last synced: {new Date(sync.lastSyncedAt).toLocaleString('en-US')})
 				{/if}
 			</span>
 			<button class="btn-secondary" onclick={resync} disabled={resyncing || sync.lastSyncStatus === 'syncing'}>
-				{resyncing ? '同期中...' : '今すぐ再同期'}
+				{resyncing ? 'Syncing...' : 'Sync now'}
 			</button>
 		</div>
 		{#if resyncResult}
-			<p class="import-result" class:error={resyncResult.startsWith('エラー')}>{resyncResult}</p>
+			<p class="import-result" class:error={resyncResult.startsWith('Error')}>{resyncResult}</p>
 		{/if}
 	{/if}
 
 	<section class="section">
-		<h2 class="section-title">スキーマ</h2>
+		<h2 class="section-title">Schema</h2>
 		<table class="schema-table">
-			<thead><tr><th>フィールド名（物理名）</th><th>ラベル</th><th>型</th></tr></thead>
+			<thead><tr><th>Field name (physical)</th><th>Label</th><th>Type</th></tr></thead>
 			<tbody>
 				{#each columns as col (col.key)}
 					<tr><td class="mono">{col.key}</td><td>{col.label}</td><td class="type-badge">{col.type}</td></tr>
@@ -211,27 +211,27 @@
 	</section>
 
 	<section class="section">
-		<h2 class="section-title">データ品質チェック</h2>
+		<h2 class="section-title">Data quality check</h2>
 		{#if qualityLoading}
-			<p class="empty-text">確認中...</p>
+			<p class="empty-text">Checking...</p>
 		{:else if qualityReport}
 			{#if qualityReport.lowRowCountWarning}
 				<p class="import-result error">
-					データ件数（{qualityReport.rowCount.toLocaleString()}件）が少なく、分析の信頼性に影響する可能性があります（目安: 30件以上）
+					The row count ({qualityReport.rowCount.toLocaleString()}) is low, which may affect the reliability of analysis (rule of thumb: 30+ rows)
 				</p>
 			{/if}
 			{#if qualityReport.columns.length === 0}
-				<p class="empty-text">品質チェックの対象になる数値列がありません</p>
+				<p class="empty-text">No numeric columns to check for quality</p>
 			{:else}
 				<div class="quality-table-wrap">
 					<table class="quality-table">
 						<thead>
 							<tr>
-								<th>列</th>
-								<th>件数</th>
-								<th>欠損</th>
-								<th>外れ値候補</th>
-								<th>判定</th>
+								<th>Column</th>
+								<th>Count</th>
+								<th>Missing</th>
+								<th>Outlier candidates</th>
+								<th>Result</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -243,7 +243,7 @@
 									<td>{col.outlierCount.toLocaleString()}</td>
 									<td>
 										<span class="quality-badge level-{col.validity.overallLevel}">
-											{col.validity.overallLevel === 'good' ? '妥当' : col.validity.overallLevel === 'caution' ? '要注意' : '要検討'}
+											{col.validity.overallLevel === 'good' ? 'Valid' : col.validity.overallLevel === 'caution' ? 'Caution' : 'Review needed'}
 										</span>
 									</td>
 								</tr>
@@ -262,28 +262,28 @@
 	</section>
 
 	<section class="section">
-		<h2 class="section-title">CSVインポート</h2>
-		<p class="section-note">テンプレートをダウンロードし、2行目以降にデータを入力（サンプル行は上書き）してからアップロードしてください</p>
+		<h2 class="section-title">CSV import</h2>
+		<p class="section-note">Download the template, fill in data from row 2 onward (overwriting the sample row), then upload it</p>
 		<button class="file-label template-btn" onclick={downloadTemplate}>
 			<Download size={14} />
-			テンプレートをダウンロード
+			Download template
 		</button>
 		<div class="replace-row">
-			<Toggle bind:checked={replaceExisting} disabled={importing} label="既存データを全て削除してから登録する" />
+			<Toggle bind:checked={replaceExisting} disabled={importing} label="Delete all existing data before importing" />
 		</div>
 		<FileUpload accept=".csv,text/csv" disabled={importing} onchange={handleImport} />
-		{#if importing}<p class="import-result">インポート中...</p>{/if}
+		{#if importing}<p class="import-result">Importing...</p>{/if}
 		{#if importResult}
-			<p class="import-result" class:error={importResult.startsWith('エラー')}>{importResult}</p>
+			<p class="import-result" class:error={importResult.startsWith('Error')}>{importResult}</p>
 		{/if}
 	</section>
 
 	<section class="section">
-		<h2 class="section-title">データ（先頭30件）</h2>
+		<h2 class="section-title">Data (first 30 rows)</h2>
 		{#if !previewLoaded}
-			<p class="empty-text">読み込み中...</p>
+			<p class="empty-text">Loading...</p>
 		{:else if previewRows.length === 0}
-			<p class="empty-text">データがありません</p>
+			<p class="empty-text">No data</p>
 		{:else}
 			<DataGrid columns={gridColumns} rows={previewRows} addable={false} deletable={false} />
 		{/if}

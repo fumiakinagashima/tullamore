@@ -20,9 +20,9 @@
 	const isMulti = $derived(allSeries.length > 1);
 	const allPoints = $derived(allSeries.flatMap((s) => s.points));
 
-	// 0/1 のフォールバックは allPoints が空でMath.min/maxがInfinityになる場合だけに使う
-	// （常に0を含めてしまうと、0から離れた範囲のデータ（例: 広告費が6万〜16万等）が
-	// 右端に圧縮されて散布図が壊れて見える）
+	// The 0/1 fallback is only used when allPoints is empty and Math.min/max would be Infinity
+	// (always including 0 would compress data far from zero, e.g. ad spend ranging from 60k to 160k,
+	// into the right edge and make the scatter plot look broken)
 	const xMin = $derived(allPoints.length > 0 ? Math.min(...allPoints.map((p) => p.x)) : 0);
 	const xMax = $derived(allPoints.length > 0 ? Math.max(...allPoints.map((p) => p.x)) : 1);
 	const yMin = $derived(allPoints.length > 0 ? Math.min(...allPoints.map((p) => p.y)) : 0);

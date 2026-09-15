@@ -1,5 +1,5 @@
--- ローカル開発用のサンプルテーブル。/connections の取り込みフローを
--- 実際のMySQLに対してエンドツーエンドで確認するためのもの（本番データではない）。
+-- Sample table for local development. Used to verify the /connections ingestion flow
+-- end-to-end against a real MySQL instance (this is not production data).
 CREATE TABLE IF NOT EXISTS external_sales (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	sale_month DATE NOT NULL,

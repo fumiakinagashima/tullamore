@@ -1,5 +1,5 @@
-// 分析手法に依存しない共通型。サーバー・クライアント両方から参照できるよう
-// server-only な依存（D1 等）を持たない（src/lib/server/ 配下には置かない）。
+// Common types independent of any specific analysis method. Kept free of server-only
+// dependencies (D1, etc.) so both server and client can reference them (do not place under src/lib/server/).
 
 export type AnalysisMethod = 'linear_regression';
 
@@ -21,7 +21,7 @@ export type LinearRegressionModel = {
 	targetColumn: string;
 	featureColumns: string[];
 	intercept: number;
-	/** featureColumns と同じ順序の回帰係数 */
+	/** Regression coefficients, in the same order as featureColumns */
 	coefficients: number[];
 	metrics: RegressionMetrics;
 	featureRanges: Record<string, FeatureRange>;
@@ -36,8 +36,8 @@ export type ModelSpec = {
 };
 
 /**
- * SQLのSUM集計で算出するサマリー統計量。正規方程式（OLS）を解くのに必要な値だけを持ち、
- * 元データの行そのものは持たない（データ量に対してWorkersのCPU時間がスケールしないようにするため）。
+ * Summary statistics computed via SQL SUM aggregation. Holds only the values needed to solve
+ * the normal equations (OLS), never the raw data rows themselves (so Workers CPU time doesn't scale with data volume).
  */
 export type SufficientStats = {
 	n: number;
@@ -45,7 +45,7 @@ export type SufficientStats = {
 	targetSumSq: number;
 	featureSums: Record<string, number>;
 	featureTargetSums: Record<string, number>;
-	/** [a][b] = Σ(a*b)。a<=b（featureColumns内の並び順）の組のみ保持し、逆順の参照はヘルパーで解決する */
+	/** [a][b] = Sum(a*b). Only pairs with a<=b (in featureColumns order) are stored; reverse-order lookups are resolved by a helper */
 	featureCrossSums: Record<string, Record<string, number>>;
 	featureMin: Record<string, number>;
 	featureMax: Record<string, number>;

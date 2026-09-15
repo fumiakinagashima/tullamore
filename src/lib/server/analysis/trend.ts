@@ -12,9 +12,9 @@ function quoteIdent(name: string): string {
 }
 
 /**
- * トレンド予測用のサマリー統計量を1本のSQL集計クエリで取得する。
- * 日付列を julianday() で日数（実数）に変換し、時間を説明変数とする単回帰として
- * 既存の sufficient-stats 方式（Σx, Σy, Σxy 等）をそのまま流用する。
+ * Fetches summary statistics for trend forecasting with a single SQL aggregate query.
+ * Converts the date column into a day count (real number) via julianday() and reuses the existing
+ * sufficient-stats approach (Σx, Σy, Σxy, etc.) as-is, treating time as a single-variable regression feature.
  */
 export async function computeTrendStats(
 	db: D1Database,
@@ -25,9 +25,10 @@ export async function computeTrendStats(
 	const d = quoteIdent(dateColumn);
 	const t = quoteIdent(targetColumn);
 	const table = quoteIdent(tableName);
-	// julianday() の絶対値は約246万と非常に大きく、そのまま回帰にかけると正規方程式（XtX）の
-	// 条件数が悪化し数値的に不安定になる（切片と傾きがほぼ0に潰れる）。データ内の最小日付からの
-	// 経過日数（0起点の小さい値）に変換してから回帰にかける
+	// julianday()'s absolute value is roughly 2.46 million, which is very large; feeding it into the
+	// regression as-is worsens the condition number of the normal equations (XtX) and causes numerical
+	// instability (the intercept and slope collapse to nearly 0). Convert to elapsed days from the
+	// minimum date in the data (a small, 0-based value) before running the regression
 	const x = `(julianday(${d}) - (SELECT MIN(julianday(${d})) FROM ${table}))`;
 
 	const sql = `
@@ -46,7 +47,7 @@ export async function computeTrendStats(
 
 	const row = await db.prepare(sql).first<Record<string, number | null>>();
 	if (!row || !row.n) {
-		throw new Error('分析対象の欠損値のない行が見つかりませんでした');
+		throw new Error('No rows without missing values were found for analysis');
 	}
 
 	return {
@@ -71,11 +72,11 @@ export async function fitTrendFromDataSource(
 
 	const dateCol = columns.find((c) => c.key === dateColumn);
 	if (!dateCol || dateCol.type !== 'date') {
-		throw new Error(`日付列 "${dateColumn}" が見つからないか、日付型ではありません`);
+		throw new Error(`Date column "${dateColumn}" was not found or is not of date type`);
 	}
 	const usable = new Set(continuousColumns(columns).map((c) => c.key));
 	if (!usable.has(targetColumn)) {
-		throw new Error(`目的変数 "${targetColumn}" は数値列ではないか、データソースに存在しません`);
+		throw new Error(`Target variable "${targetColumn}" is not a numeric column or does not exist in the data source`);
 	}
 
 	const stats = await computeTrendStats(db, dataSource.tableName, dateColumn, targetColumn);
@@ -85,9 +86,11 @@ export async function fitTrendFromDataSource(
 export type TrendSeriesPoint = { label: string; value: number };
 
 /**
- * 月次集計した実績値と、学習済みモデルから計算した「実績期間〜予測期間」通しのトレンド線を返す。
- * 2系列を同じ月数（実績+予測）に揃えることで、折れ線グラフ上で横位置がずれないようにする
- * （LineChartは各系列の要素数を元に横位置を計算するため、系列間で長さが違うとズレる）。
+ * Returns monthly-aggregated actuals along with the trend line computed from the trained model, spanning
+ * continuously from the historical period through the forecast period. Aligning both series to the same
+ * number of months (historical + forecast) keeps their horizontal positions from drifting apart on the
+ * line chart (LineChart computes horizontal position from each series' element count, so series of
+ * different lengths would otherwise be misaligned).
  */
 export async function getTrendSeries(
 	db: D1Database,
@@ -100,7 +103,7 @@ export async function getTrendSeries(
 	const d = quoteIdent(dateColumn);
 	const t = quoteIdent(targetColumn);
 	const table = quoteIdent(tableName);
-	// computeTrendStats と同じ基準（データ内の最小日付）で経過日数を計算し、xのスケールを揃える
+	// Compute elapsed days on the same basis as computeTrendStats (the minimum date in the data) to keep the x scale consistent
 	const baseJulian = `(SELECT MIN(julianday(${d})) FROM ${table})`;
 
 	const histSql = `
@@ -113,7 +116,7 @@ export async function getTrendSeries(
 	const histResult = await db.prepare(histSql).all<{ ym: string; avg_target: number; avg_x: number }>();
 	const histRows = histResult.results ?? [];
 	if (histRows.length === 0) {
-		throw new Error('分析対象の欠損値のない行が見つかりませんでした');
+		throw new Error('No rows without missing values were found for analysis');
 	}
 
 	const futureSql = `

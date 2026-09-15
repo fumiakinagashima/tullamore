@@ -6,7 +6,7 @@ const TOPICS = ['overview', 'data_sources', 'analysis', 'simulator', 'report_cre
 describe('handleGetHelp', () => {
 	it('returns the overview when no topic is given', () => {
 		const result = handleGetHelp(undefined) as { title: string };
-		expect(result.title).toBe('TULLAMORE 使い方ガイド');
+		expect(result.title).toBe('TULLAMORE User Guide');
 	});
 
 	it.each(TOPICS)('returns content for topic "%s"', (topic) => {

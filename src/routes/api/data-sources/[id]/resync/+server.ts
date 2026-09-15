@@ -8,8 +8,9 @@ import { ingestExternalTable, type SyncColumn } from '$lib/server/db-connections
 import type { IngestQueueMessage } from '$lib/server/db-connections/queue-consumer';
 import { errors } from '$lib/server/errors';
 
-// /database/[id] の「今すぐ再同期」ボタン用。列選択をやり直さず、前回の設定（external_table_syncs）を
-// そのまま使って再取り込みする（列構成を変えたい場合は /connections の取り込みフローからやり直す）
+// Used by the "Sync now" button on /database/[id]. Re-ingests using the previous configuration
+// (external_table_syncs) as-is, without redoing column selection (if you want to change the
+// column layout, start over from the ingestion flow on /connections)
 export const POST: RequestHandler = async ({ params, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const db = createDb(platform.env.DB);
@@ -18,10 +19,10 @@ export const POST: RequestHandler = async ({ params, platform }) => {
 	if (!source) return errors.notFound();
 
 	const sync = await getExternalTableSyncByDataSource(db, params.id);
-	if (!sync) return errors.badRequest('この データソースは外部DB連携で取り込まれたものではありません');
+	if (!sync) return errors.badRequest('This data source was not ingested via an external DB connection');
 
 	const connection = await getDbConnection(db, sync.dbConnectionId);
-	if (!connection) return errors.notFound('接続設定が見つかりません');
+	if (!connection) return errors.notFound('Connection settings not found');
 
 	const config = JSON.parse(connection.config) as { bindingName?: string };
 	const driver = getDriver(connection.provider as DbConnectionProvider, config, platform.env as Record<string, unknown>);
@@ -60,7 +61,7 @@ export const POST: RequestHandler = async ({ params, platform }) => {
 			} else {
 				await updateExternalTableSync(db, sync.id, {
 					lastSyncStatus: 'failed',
-					lastSyncError: 'INGEST_QUEUE バインディングが設定されていないため継続取り込みできません'
+					lastSyncError: 'Cannot continue ingestion because the INGEST_QUEUE binding is not configured'
 				});
 			}
 		}
@@ -69,7 +70,7 @@ export const POST: RequestHandler = async ({ params, platform }) => {
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
 		await updateExternalTableSync(db, sync.id, { lastSyncStatus: 'failed', lastSyncError: message });
-		return errors.badRequest(`再同期に失敗しました: ${message}`);
+		return errors.badRequest(`Resync failed: ${message}`);
 	} finally {
 		await driver.close();
 	}

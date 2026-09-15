@@ -41,10 +41,10 @@
 
 {#if open}
 	<div class="overlay" onclick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="presentation">
-		<div class="modal report-print-area" role="dialog" aria-modal="true" aria-label="分析レポート">
+		<div class="modal report-print-area" role="dialog" aria-modal="true" aria-label="Analysis report">
 			<div class="modal-header">
-				<h2>分析レポート</h2>
-				<button class="icon-btn" onclick={onClose} aria-label="閉じる">
+				<h2>Analysis Report</h2>
+				<button class="icon-btn" onclick={onClose} aria-label="Close">
 					<X size={16} />
 				</button>
 			</div>
@@ -53,7 +53,7 @@
 				{#if loading}
 					<div class="loading-state">
 						<div class="spinner"></div>
-						<p>レポートを作成しています…</p>
+						<p>Generating report…</p>
 					</div>
 				{:else if error}
 					<p class="error-text">{error}</p>
@@ -66,11 +66,11 @@
 				<div class="modal-footer">
 					<button class="action-btn" onclick={copyReport}>
 						<Copy size={14} />
-						{copied ? 'コピーしました' : 'コピー'}
+						{copied ? 'Copied' : 'Copy'}
 					</button>
 					<button class="action-btn" onclick={printReport}>
 						<Download size={14} />
-						印刷 / PDF保存
+						Print / Save as PDF
 					</button>
 				</div>
 			{/if}

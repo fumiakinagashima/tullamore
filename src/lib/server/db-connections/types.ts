@@ -1,5 +1,6 @@
-// 外部DB接続の抽象化。provider（hyperdrive/tcp_socket）× engine（postgres/mysql）の組み合わせを
-// 同じインターフェースで扱う。将来 http_api（Supabase REST等）を追加する際もこれに合わせる想定。
+// Abstraction for external DB connections. Handles combinations of provider (hyperdrive/tcp_socket)
+// x engine (postgres/mysql) through the same interface. Any future http_api (Supabase REST, etc.)
+// addition is expected to follow this same shape.
 
 export type ExternalTableRef = {
 	schema: string;
@@ -8,12 +9,12 @@ export type ExternalTableRef = {
 
 export type ExternalColumn = {
 	name: string;
-	/** ドライバ側の生の型名（例: Postgres/MySQLの information_schema.columns.data_type） */
+	/** The raw type name from the driver (e.g. information_schema.columns.data_type in Postgres/MySQL) */
 	dataType: string;
 };
 
 export interface DbConnectionDriver {
-	/** 列の型マッピング（column-mapping.ts）をPostgres/MySQLどちらの方言で行うか呼び出し側が判断するための情報 */
+	/** Tells the caller which dialect (Postgres/MySQL) to use for column type mapping (column-mapping.ts) */
 	engine: 'postgres' | 'mysql';
 	listTables(): Promise<ExternalTableRef[]>;
 	listColumns(table: ExternalTableRef): Promise<ExternalColumn[]>;
@@ -23,6 +24,6 @@ export interface DbConnectionDriver {
 		offset: number,
 		limit: number
 	): Promise<Record<string, unknown>[]>;
-	/** 接続を明示的に閉じる。呼び出し側は必ず finally で呼ぶこと */
+	/** Explicitly closes the connection. Callers must always invoke this in a finally block */
 	close(): Promise<void>;
 }

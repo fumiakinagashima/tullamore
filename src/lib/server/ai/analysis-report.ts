@@ -7,43 +7,43 @@ export type AnalysisReportInput = {
 };
 
 const ANALYSIS_TYPE_LABELS: Record<string, string> = {
-	regression: '回帰分析',
-	sensitivity: '感度分析',
-	scenario: 'シナリオ比較',
-	'goal-seek': 'ゴールシーク',
-	trend: 'トレンド予測',
-	'monte-carlo': 'モンテカルロ・シミュレーション',
-	'budget-allocation': '予算配分最適化',
-	correlation: '相関分析',
-	'descriptive-stats': '記述統計',
-	'ab-test': 'A/Bテスト・有意差検定',
-	classification: 'ロジスティック回帰・分類',
-	'kpi-planning': 'KPI設定'
+	regression: 'Regression analysis',
+	sensitivity: 'Sensitivity analysis',
+	scenario: 'Scenario comparison',
+	'goal-seek': 'Goal seek',
+	trend: 'Trend forecast',
+	'monte-carlo': 'Monte Carlo simulation',
+	'budget-allocation': 'Budget allocation optimization',
+	correlation: 'Correlation analysis',
+	'descriptive-stats': 'Descriptive statistics',
+	'ab-test': 'A/B test / significance test',
+	classification: 'Logistic regression / classification',
+	'kpi-planning': 'KPI planning'
 };
 
-const SYSTEM_PROMPT = `あなたはデータ分析の結果をビジネス向けのレポートにまとめるアシスタントです。
-渡された分析設定（config）と分析結果（resultSummary。妥当性チェックの結果を含む）だけを根拠にレポートを作成してください。
-resultSummaryに含まれていない数値を創作してはいけません。
+const SYSTEM_PROMPT = `You are an assistant that summarizes data analysis results into a business-facing report.
+Base the report only on the given analysis config and result summary (resultSummary, which includes validity check results).
+Do not invent any numbers that are not present in resultSummary.
 
-出力はMarkdown形式で、必ず以下の構成に従ってください:
+Output must be in Markdown format, and must follow this structure exactly:
 
-# （分析内容が一目でわかる具体的なレポートタイトル）
+# (A specific report title that makes the analysis content clear at a glance)
 
-## 概要
-1〜2文で何を分析したかを説明する
+## Overview
+Explain in 1-2 sentences what was analyzed
 
-## 主な発見
-箇条書きで、結果から読み取れる具体的な事実を述べる（resultSummaryの数値を引用すること）
+## Key findings
+Bullet points describing specific facts drawn from the results (cite numbers from resultSummary)
 
-## 統計的な妥当性
-resultSummaryのvalidity（overall・comment）やR²・p値・サンプル数などの指標を具体的に引用しながら、
-「この分析結果は◯◯の値が◯◯になっていることから妥当と判断できます」のように妥当性を説明する。
-懸念点がある場合（validityがcaution/poorの場合等）は必ず明確に指摘する。
+## Statistical validity
+Cite specific figures from resultSummary's validity (overall/comment), R², p-value, sample size, etc.,
+and explain the validity in the style of "This result can be considered valid because XX is YY."
+If there are concerns (e.g. validity is caution/poor), be sure to point them out clearly.
 
-## 推奨される次のアクション
-分析結果を踏まえて次に何をすべきかを1〜3個、簡潔に提案する
+## Recommended next actions
+Based on the results, briefly suggest 1-3 next steps
 
-日本語で、簡潔かつビジネス文書として自然な文体で書くこと。見出し以外の余計な前置き・後書きは書かないこと。`;
+Write in English, in a concise and natural business-document style. Do not include any preamble or closing remarks beyond the headings.`;
 
 async function callClaude(apiKey: string, systemPrompt: string, userMessage: string, model: string): Promise<string> {
 	const anthropic = new Anthropic({ apiKey, timeout: 30000 });
@@ -54,7 +54,7 @@ async function callClaude(apiKey: string, systemPrompt: string, userMessage: str
 		messages: [{ role: 'user', content: userMessage }]
 	});
 	const text = response.content[0]?.type === 'text' ? response.content[0].text.trim() : '';
-	if (!text) throw new Error('レポートの生成に失敗しました。');
+	if (!text) throw new Error('Failed to generate the report.');
 	return text;
 }
 
@@ -65,44 +65,44 @@ export async function generateAnalysisReport(
 ): Promise<string> {
 	const label = ANALYSIS_TYPE_LABELS[input.analysisType] ?? input.analysisType;
 	const userMessage = [
-		`分析手法: ${label}`,
+		`Analysis method: ${label}`,
 		'',
-		'設定:',
+		'Config:',
 		JSON.stringify(input.config, null, 2),
 		'',
-		'結果:',
+		'Results:',
 		JSON.stringify(input.resultSummary, null, 2)
 	].join('\n');
 
 	return callClaude(apiKey, SYSTEM_PROMPT, userMessage, model);
 }
 
-const COMPOSITE_SYSTEM_PROMPT = `あなたはデータ分析の結果をビジネス向けのレポートにまとめるアシスタントです。
-今回は複数の異なる分析手法を同じデータに対して実行した結果を統合したレポートを作成します。
-渡された各分析（analysisType・config・resultSummary。妥当性チェックの結果を含む）だけを根拠にしてください。含まれていない数値を創作してはいけません。
+const COMPOSITE_SYSTEM_PROMPT = `You are an assistant that summarizes data analysis results into a business-facing report.
+This time you are creating a report that integrates the results of running several different analysis methods on the same data.
+Base it only on the given analyses (analysisType/config/resultSummary, which include validity check results). Do not invent any numbers that are not present.
 
-**重要な注意点**:
-- 複数の分析結果を単一の「合成スコア」や「統合された確信度」にまとめてはいけません（p値の単純な平均・合成は統計的に不正です）。各分析の結果はそれぞれ独立したものとして扱ってください。
-- 手法をまたいで結論が一致しているか、矛盾していないかを解釈し、一致していれば結論の信頼性が高まることを、矛盾していればどちらか一方を鵜呑みにせず追加の確認が必要であることを説明してください。
-- 複数の検定・分析を同時に行うと、偶然どれかが有意な結果を示す確率が上がる「多重比較問題」があることに触れ、過度に断定的な結論にしないよう注意すること。
+**Important notes**:
+- Do not combine the results of multiple analyses into a single "composite score" or "combined confidence level" (a simple average or combination of p-values is statistically invalid). Treat each analysis's results as independent.
+- Interpret whether the conclusions agree or conflict across methods: if they agree, explain that this increases confidence in the conclusion; if they conflict, explain that neither should be taken at face value and further verification is needed.
+- Mention the "multiple comparisons problem" — running several tests/analyses at once increases the chance that one of them shows a significant result purely by chance — and avoid overly conclusive statements as a result.
 
-出力はMarkdown形式で、必ず以下の構成に従ってください:
+Output must be in Markdown format, and must follow this structure exactly:
 
-# （分析内容が一目でわかる具体的なレポートタイトル）
+# (A specific report title that makes the analysis content clear at a glance)
 
-## 概要
-1〜2文でどのデータに対してどんな分析を組み合わせたかを説明する
+## Overview
+Explain in 1-2 sentences what data was analyzed and which methods were combined
 
-## 各分析の結果
-分析ごとに小見出しを立て、それぞれの主な発見と妥当性チェックの結果を具体的な数値とともに述べる
+## Results by analysis
+Use a subheading for each analysis, and describe its key findings and validity check results with specific figures
 
-## 総合的な解釈
-手法間で結論が一致しているか矛盾しているかを解釈する。多重比較問題への言及を含めること。単一の合成スコアは出さないこと。
+## Overall interpretation
+Interpret whether the conclusions agree or conflict across methods. Include a mention of the multiple comparisons problem. Do not produce a single composite score.
 
-## 推奨される次のアクション
-分析結果を踏まえて次に何をすべきかを1〜3個、簡潔に提案する
+## Recommended next actions
+Based on the results, briefly suggest 1-3 next steps
 
-日本語で、簡潔かつビジネス文書として自然な文体で書くこと。見出し以外の余計な前置き・後書きは書かないこと。`;
+Write in English, in a concise and natural business-document style. Do not include any preamble or closing remarks beyond the headings.`;
 
 export async function generateCompositeAnalysisReport(
 	apiKey: string,
@@ -113,10 +113,10 @@ export async function generateCompositeAnalysisReport(
 		.map((a, i) => {
 			const label = ANALYSIS_TYPE_LABELS[a.analysisType] ?? a.analysisType;
 			return [
-				`--- 分析${i + 1}: ${label} ---`,
-				'設定:',
+				`--- Analysis ${i + 1}: ${label} ---`,
+				'Config:',
 				JSON.stringify(a.config, null, 2),
-				'結果:',
+				'Results:',
 				JSON.stringify(a.resultSummary, null, 2)
 			].join('\n');
 		})
@@ -126,8 +126,9 @@ export async function generateCompositeAnalysisReport(
 }
 
 /**
- * 「レポート作成」画面向けの入口。選択された分析が1件なら単一分析用（多重比較の注意書きが不要）、
- * 複数件なら複合分析用のプロンプトを使う。
+ * Entry point for the "report creation" screen. If exactly one analysis is selected, uses the
+ * single-analysis prompt (no need for the multiple-comparisons caveat); if more than one is
+ * selected, uses the composite-analysis prompt.
  */
 export async function generateReport(
 	apiKey: string,

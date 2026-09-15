@@ -3,7 +3,7 @@ import { parseModel } from '../db/simulator-service';
 import { parseSchema } from '../db/data-source-service';
 import type { SimulatorContent } from '$lib/types/chat';
 
-/** シミュレーターDB行 + データソースのスキーマから、UI表示に必要なラベル付きの形に変換する */
+/** Converts a simulator DB row plus the data source's schema into the labeled shape needed for UI display */
 export function toSimulatorContent(simulator: Simulator, dataSource: DataSource): SimulatorContent {
 	const model = parseModel(simulator.modelJson);
 	const columns = parseSchema(dataSource.schemaJson);

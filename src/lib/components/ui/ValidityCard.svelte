@@ -6,7 +6,7 @@
 	type Props = { validity: ValidityAssessment };
 	let { validity }: Props = $props();
 
-	const LEVEL_LABEL: Record<ValidityLevel, string> = { good: '妥当', caution: '要注意', poor: '要検討' };
+	const LEVEL_LABEL: Record<ValidityLevel, string> = { good: 'Valid', caution: 'Caution', poor: 'Review needed' };
 </script>
 
 <div class="validity-card level-{validity.overallLevel}">

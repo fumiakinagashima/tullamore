@@ -10,7 +10,7 @@ export type FeatureDistribution =
 
 export type MonteCarloOptions = {
 	sampleCount: number;
-	/** trueの場合、predict()の結果に残差標準誤差（model.metrics.residualStdError）由来のノイズを加える */
+	/** When true, adds noise derived from the residual standard error (model.metrics.residualStdError) to the predict() result */
 	includeResidualNoise: boolean;
 	rng?: () => number;
 };
@@ -31,13 +31,13 @@ export type MonteCarloSummary = {
 
 export type MonteCarloResult = { values: number[]; summary: MonteCarloSummary };
 
-/** 説明変数のレンジ（featureRanges）から、既定の一様分布を組み立てる */
+/** Builds a default uniform distribution from the feature variable range (featureRanges) */
 export function defaultDistribution(range: FeatureRange): FeatureDistribution {
 	if (range.max <= range.min) return { kind: 'fixed', value: range.mean };
 	return { kind: 'uniform', min: range.min, max: range.max };
 }
 
-/** mulberry32。決定的なテスト用の擬似乱数生成器（本番はMath.randomを使う） */
+/** mulberry32. A deterministic pseudo-random number generator for tests (production uses Math.random) */
 export function createSeededRng(seed: number): () => number {
 	let a = seed >>> 0;
 	return () => {
@@ -53,7 +53,7 @@ export function sampleUniform(rng: () => number, min: number, max: number): numb
 	return min + rng() * (max - min);
 }
 
-/** Box-Muller法。rng()が0を返した場合はlog(0)を避けるためリトライする */
+/** Box-Muller method. Retries if rng() returns 0, to avoid log(0) */
 export function sampleNormal(rng: () => number, mean: number, stddev: number): number {
 	let u = 0;
 	let v = 0;
@@ -63,7 +63,7 @@ export function sampleNormal(rng: () => number, mean: number, stddev: number): n
 	return mean + z * stddev;
 }
 
-/** 逆変換法による三角分布サンプリング */
+/** Triangular distribution sampling via inverse transform sampling */
 export function sampleTriangular(rng: () => number, min: number, max: number, mode: number): number {
 	const u = rng();
 	const c = (mode - min) / (max - min);
@@ -85,8 +85,9 @@ export function sampleDistribution(dist: FeatureDistribution, rng: () => number)
 }
 
 /**
- * 説明変数ごとの分布からN回サンプリングし、predict()を繰り返して目的変数の実現値の配列を返す。
- * distributionsに指定のない説明変数は、featureRangesの平均値で固定する。
+ * Draws N samples from the distribution of each feature variable, repeatedly calling predict()
+ * and returning an array of realized target variable values.
+ * Feature variables not specified in `distributions` are held fixed at the mean value from featureRanges.
  */
 export function drawMonteCarloSamples(
 	model: LinearRegressionModel,

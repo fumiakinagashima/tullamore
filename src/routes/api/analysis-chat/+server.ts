@@ -18,51 +18,51 @@ type SourceInfo = { id: string; name: string; columns: { key: string; label: str
 const SET_CONFIG_TOOL: Tool = {
 	name: 'set_config',
 	description:
-		'分析画面の設定（データソース・列・予測期間）をセットし、画面に反映する。' +
-		'ユーザーが分析したい内容を伝えてきたら、渡されているデータソース一覧から適切なデータソース・列を選んで呼び出す。' +
-		'目的変数として使えるのは数値列のみ、日付列として使えるのは日付型の列のみ。' +
-		'候補が複数あり判断に迷う場合や、該当しそうな列が無い場合は、ツールを呼ばずに質問で確認すること。',
+		'Sets the analysis screen configuration (data source, columns, forecast horizon) and reflects it in the UI. ' +
+		'When the user describes what they want to analyze, choose the appropriate data source and columns from the provided data source list and call this tool. ' +
+		'Only numeric columns can be used as the target variable; only date-typed columns can be used as the date column. ' +
+		'If there are multiple candidates and it is hard to decide, or no column seems to match, ask a clarifying question instead of calling the tool.',
 	input_schema: {
 		type: 'object',
 		properties: {
-			data_source_id: { type: 'string', description: 'データソースID' },
-			target_column: { type: 'string', description: '目的変数の列キー' },
+			data_source_id: { type: 'string', description: 'Data source ID' },
+			target_column: { type: 'string', description: 'Column key of the target variable' },
 			feature_columns: {
 				type: 'array',
 				items: { type: 'string' },
-				description: '説明変数の列キーの配列（回帰分析のみ）'
+				description: 'Array of feature variable column keys (regression only)'
 			},
-			date_column: { type: 'string', description: '日付列のキー（トレンド予測のみ）' },
+			date_column: { type: 'string', description: 'Key of the date column (trend forecasting only)' },
 			horizon_months: {
 				type: 'number',
 				enum: [6, 12, 60],
-				description: '予測期間（月数）。6=半年後まで、12=1年後まで、60=5年後まで（トレンド予測のみ）'
+				description: 'Forecast horizon (in months). 6=up to 6 months ahead, 12=up to 1 year ahead, 60=up to 5 years ahead (trend forecasting only)'
 			},
 			granularity: {
 				type: 'string',
 				enum: ['day', 'week', 'month'],
-				description: '集計粒度（トレンド予測のみ）。day=日次、week=週次、month=月次。指定がなければmonthのまま変更しない'
+				description: 'Aggregation granularity (trend forecasting only). day=daily, week=weekly, month=monthly. If not specified, keep it unchanged at month'
 			},
 			total_budget: {
 				type: 'number',
-				description: '配分する予算の総額（予算配分最適化のみ）'
+				description: 'Total budget to allocate (budget allocation optimization only)'
 			},
 			group_column: {
 				type: 'string',
-				description: '2グループに分ける列のキー（A/Bテストのみ。値が2種類の列を選ぶこと）'
+				description: 'Key of the column that splits records into 2 groups (A/B testing only. Choose a column with exactly two distinct values)'
 			},
 			test_type: {
 				type: 'string',
 				enum: ['mean', 'proportion'],
-				description: '検定方法（A/Bテストのみ）。mean=平均の差のt検定（連続値の指標）、proportion=比率の差のz検定（0/1の指標）'
+				description: 'Test method (A/B testing only). mean=t-test for a difference in means (continuous metric), proportion=z-test for a difference in proportions (0/1 metric)'
 			},
 			methods: {
 				type: 'array',
 				items: { type: 'string', enum: ['correlation', 'regression', 'descriptive-stats', 'classification', 'ab-test'] },
 				description:
-					'レポート作成画面で実行する分析手法（複数選択可、レポート作成のみ）。' +
-					'correlation=相関分析、regression=回帰分析、descriptive-stats=記述統計、classification=ロジスティック回帰（分類）、ab-test=A/Bテスト。' +
-					'classification・ab-testは他の3つと目的変数が異なってよい（例: 回帰分析は売上、分類は解約有無）。'
+					'Analysis methods to run on the report creation screen (multiple selection allowed, report creation only). ' +
+					'correlation=correlation analysis, regression=regression analysis, descriptive-stats=descriptive statistics, classification=logistic regression (classification), ab-test=A/B testing. ' +
+					'classification and ab-test may use a different target variable than the other three (e.g. regression targets revenue, classification targets churn).'
 			}
 		}
 	}
@@ -90,127 +90,127 @@ function buildSystemPrompt(
 	config: Record<string, unknown>,
 	resultSummary: Record<string, unknown> | null
 ): string {
-	const sections: string[] = ['あなたは分析画面の右側に表示されるAIアシスタントです。'];
+	const sections: string[] = ['You are the AI assistant shown on the right side of the analysis screen.'];
 
 	if (analysisType === 'regression') {
 		sections.push(
-			'現在の画面は「回帰分析」です。説明変数を動かすと目的変数がどう変化するかをシミュレーションする画面で、' +
-				'データソース・目的変数（数値列）・説明変数（数値列、複数可）を設定すると結果が表示されます。'
+			'The current screen is "Regression Analysis". It simulates how the target variable changes as feature variables are adjusted. ' +
+				'Setting the data source, target variable (numeric column), and feature variables (numeric columns, multiple allowed) will display the results.'
 		);
 	} else if (analysisType === 'trend') {
 		sections.push(
-			'現在の画面は「トレンド予測」です。時系列データから将来の推移を線で予測する画面で、' +
-				'データソース・日付列・目的変数（数値列）・予測期間（半年/1年/5年）・集計粒度（日次/週次/月次、指定なければ月次）を' +
-				'設定すると結果が表示されます。結果表示後は元データのグリッドが編集可能になり、数値や日付を変更すると即座に再計算されます。'
+			'The current screen is "Trend Forecasting". It forecasts a future trend line from time series data. ' +
+				'Setting the data source, date column, target variable (numeric column), forecast horizon (6 months/1 year/5 years), and aggregation granularity (daily/weekly/monthly, defaults to monthly) ' +
+				'will display the results. After the results are shown, the underlying data grid becomes editable, and changing a number or date immediately recomputes the forecast.'
 		);
 	} else if (analysisType === 'sensitivity') {
 		sections.push(
-			'現在の画面は「感度分析」です。回帰モデルを学習した上で、各説明変数を実測レンジいっぱいに動かした時に' +
-				'目的変数がどれだけ振れるかをトルネードチャートで見る画面です。データソース・目的変数（数値列）・説明変数（数値列、複数可）を' +
-				'設定すると結果が表示されます。「どの変数が一番効いているか」はチャートの振れ幅が最も大きい変数です。'
+			'The current screen is "Sensitivity Analysis". After training a regression model, it shows in a tornado chart how much the target variable swings ' +
+				'when each feature variable is moved across its full observed range. Setting the data source, target variable (numeric column), and feature variables (numeric columns, multiple allowed) ' +
+				'will display the results. "Which variable matters most" is the one with the largest swing in the chart.'
 		);
 	} else if (analysisType === 'scenario') {
 		sections.push(
-			'現在の画面は「シナリオ比較」です。回帰モデルを学習した上で、説明変数の値の組み合わせ（シナリオ）を複数用意し、' +
-				'目的変数の予測値を横並びの棒グラフで比較する画面です。データソース・目的変数（数値列）・説明変数（数値列、複数可）を' +
-				'設定すると結果が表示されます。シナリオごとの具体的な数値は画面下のグリッドで編集してください（このアシスタントはシナリオの値までは設定できません）。'
+			'The current screen is "Scenario Comparison". After training a regression model, it prepares several combinations of feature variable values (scenarios) and ' +
+				'compares the predicted target variable values in a side-by-side bar chart. Setting the data source, target variable (numeric column), and feature variables (numeric columns, multiple allowed) ' +
+				'will display the results. Please edit the specific values for each scenario in the grid at the bottom of the screen (this assistant cannot set the scenario values themselves).'
 		);
 	} else if (analysisType === 'goal-seek') {
 		sections.push(
-			'現在の画面は「ゴールシーク」です。回帰モデルを学習した上で、目的変数を目標値にするために' +
-				'ある説明変数がいくつであるべきかを逆算する画面です。データソース・目的変数（数値列）・説明変数（数値列、複数可）を' +
-				'設定すると結果が表示されます。逆算する変数・目標値・他の変数の固定値は画面上で選択・入力してください。'
+			'The current screen is "Goal Seek". After training a regression model, it works backward to find what a given feature variable ' +
+				'should be in order for the target variable to reach a target value. Setting the data source, target variable (numeric column), and feature variables (numeric columns, multiple allowed) ' +
+				'will display the results. Please select and enter the variable to solve for, the target value, and the fixed values of the other variables on screen.'
 		);
 	} else if (analysisType === 'monte-carlo') {
 		sections.push(
-			'現在の画面は「モンテカルロ・シミュレーション」です。回帰モデルを学習した上で、各説明変数に分布（一様/正規/三角/固定値）を' +
-				'与えて大量にサンプリングし、目的変数がとりうる値のばらつき（平均・標準偏差・パーセンタイル・ヒストグラム）を見る画面です。' +
-				'データソース・目的変数（数値列）・説明変数（数値列、複数可）を設定すると結果が表示されます。' +
-				'各変数の分布の種類・パラメータ、サンプル数、閾値はこのアシスタントでは設定できないため画面上で入力するよう案内してください。'
+			'The current screen is "Monte Carlo Simulation". After training a regression model, it assigns a distribution (uniform/normal/triangular/fixed value) to each feature variable, ' +
+				'draws a large number of samples, and shows the resulting spread of the target variable (mean, standard deviation, percentiles, histogram). ' +
+				'Setting the data source, target variable (numeric column), and feature variables (numeric columns, multiple allowed) will display the results. ' +
+				'The distribution type and parameters for each variable, the sample count, and the threshold cannot be set by this assistant, so please direct the user to enter them on screen.'
 		);
 	} else if (analysisType === 'budget-allocation') {
 		sections.push(
-			'現在の画面は「予算配分最適化（マーケティングミックス）」です。回帰モデルを学習した上で、' +
-				'説明変数を予算配分するチャネル（広告費等）とみなし、指定した予算総額を各チャネルの上下限（既定は実測レンジ）内で' +
-				'目的変数（例: 売上）が最大になるよう配分する画面です。データソース・目的変数（数値列）・チャネル（説明変数、数値列、複数可）を' +
-				'設定すると結果が表示されます。予算総額（total_budget）が伝えられればそれも設定すること。チャネルごとの上下限は画面上で調整してください。'
+			'The current screen is "Budget Allocation Optimization (Marketing Mix)". After training a regression model, it treats the feature variables ' +
+				'as budget-allocated channels (e.g. ad spend) and allocates a specified total budget across the upper/lower bounds of each channel (default: observed range) ' +
+				'to maximize the target variable (e.g. revenue). Setting the data source, target variable (numeric column), and channels (feature variables, numeric columns, multiple allowed) ' +
+				'will display the results. If a total budget (total_budget) is mentioned, set that as well. Please adjust the upper/lower bounds for each channel on screen.'
 		);
 	} else if (analysisType === 'correlation') {
 		sections.push(
-			'現在の画面は「相関分析」です。選択した列どうしのピアソン相関係数を計算し、ヒートマップで表示する画面です。' +
-				'データソースと相関を見たい列（数値列、feature_columnsに2つ以上）を設定すると結果が表示されます。' +
-				'目的変数の概念はなく、選んだ列どうしの全ペアの相関を対称行列で見る点が回帰分析等と異なります。'
+			'The current screen is "Correlation Analysis". It computes the Pearson correlation coefficient between the selected columns and displays it as a heatmap. ' +
+				'Setting the data source and the columns to see correlations for (numeric columns, 2 or more in feature_columns) will display the results. ' +
+				'There is no concept of a target variable here; unlike regression analysis, it shows the correlation of every pair among the chosen columns as a symmetric matrix.'
 		);
 	} else if (analysisType === 'descriptive-stats') {
 		sections.push(
-			'現在の画面は「記述統計」です。選択した列それぞれについて件数・平均・中央値・標準偏差・最小/最大・四分位数と' +
-				'ヒストグラムを表示する画面です。データソースと統計を見たい列（数値列、feature_columnsに1つ以上）を設定すると結果が表示されます。' +
-				'目的変数の概念はなく、選んだ列それぞれを独立に要約する点が回帰分析等と異なります。'
+			'The current screen is "Descriptive Statistics". It shows the count, mean, median, standard deviation, min/max, quartiles, and ' +
+				'a histogram for each selected column. Setting the data source and the columns to see statistics for (numeric columns, 1 or more in feature_columns) will display the results. ' +
+				'There is no concept of a target variable here; unlike regression analysis, each selected column is summarized independently.'
 		);
 	} else if (analysisType === 'ab-test') {
 		sections.push(
-			'現在の画面は「A/Bテスト・有意差検定」です。2つのグループ間で指標に統計的な有意差があるかを検定する画面です。' +
-				'データソース・グループ列（group_column、値が2種類である列。例: 施策A/施策B）・指標列（target_column、数値列）・' +
-				'検定方法（test_type。連続値の指標=mean=t検定、0/1の指標=proportion=z検定）を設定すると結果が表示されます。' +
-				'p値が0.05未満なら統計的に有意な差があると判断します。'
+			'The current screen is "A/B Testing / Significance Testing". It tests whether there is a statistically significant difference in a metric between two groups. ' +
+				'Setting the data source, group column (group_column, a column with exactly two distinct values, e.g. Treatment A/Treatment B), metric column (target_column, numeric column), and ' +
+				'test method (test_type. mean=t-test for continuous metrics, proportion=z-test for 0/1 metrics) will display the results. ' +
+				'A p-value below 0.05 is treated as a statistically significant difference.'
 		);
 	} else if (analysisType === 'classification') {
 		sections.push(
-			'現在の画面は「ロジスティック回帰・分類」です。目的変数が2値（購入した/しない、解約した/しない等）の場合に、' +
-				'説明変数からその確率を予測するモデルを作る画面です。データソース・目的変数（2値の列、target_column）・' +
-				'説明変数（数値列、複数可、feature_columns）を設定すると結果が表示されます。' +
-				'正解率・適合率・再現率・混同行列・オッズ比が表示されます。回帰分析（連続値の予測）との違いは目的変数が2値である点です。'
+			'The current screen is "Logistic Regression / Classification". When the target variable is binary (e.g. purchased/not purchased, churned/not churned), ' +
+				'this screen builds a model that predicts that probability from feature variables. Setting the data source, target variable (a binary column, target_column), and ' +
+				'feature variables (numeric columns, multiple allowed, feature_columns) will display the results. ' +
+				'Accuracy, precision, recall, the confusion matrix, and odds ratios are shown. The difference from regression analysis (predicting a continuous value) is that the target variable is binary.'
 		);
 	} else if (analysisType === 'report-create') {
 		sections.push(
-			'現在の画面は「レポート作成」です。相関分析・回帰分析・記述統計・ロジスティック回帰（分類）・A/Bテストの中から' +
-				'ユーザーが選んだ手法をまとめて実行し、その結果を踏まえたレポートを作成する画面です（1手法だけでも複数の組み合わせでも使えます）。' +
-				'ユーザーがやりたいことを伝えてきたら、まず methods でどの手法を含めるかを設定すること。' +
-				'相関分析・回帰分析・記述統計は target_column（目的変数）・feature_columns（説明変数）を共有します。' +
-				'classification（分類）は目的変数が2値である必要があり、他の手法と異なる目的変数を使いたい場合はこのアシスタントでは設定できないため' +
-				'画面上の専用の入力欄で選ぶよう案内すること。ab-test（A/Bテスト）は group_column・test_type を使う。' +
-				'レポート自体の生成は画面上の専用ボタン（AIアシスタントの「レポート作成」ボタンではない）から行ってください。'
+			'The current screen is "Report Creation". It runs a combination of methods chosen by the user — correlation analysis, regression analysis, descriptive statistics, ' +
+				'logistic regression (classification), and A/B testing — together, and produces a report based on the results (works with just one method or a combination of several). ' +
+				'When the user describes what they want to do, first set which methods to include via methods. ' +
+				'Correlation analysis, regression analysis, and descriptive statistics share target_column (target variable) and feature_columns (feature variables). ' +
+				'classification requires a binary target variable; if the user wants to use a different target variable than the other methods, this assistant cannot set that, so ' +
+				'direct them to the dedicated input field on screen. ab-test (A/B testing) uses group_column and test_type. ' +
+				'The report itself must be generated from the dedicated button on screen (not the AI assistant\'s "Create Report" button).'
 		);
 	} else if (analysisType === 'kpi-planning') {
 		sections.push(
-			'現在の画面は「KPI設定」です。目的変数（例: 売上）の目標値を指定すると、回帰モデルを学習した上で、' +
-				'選択したKPI候補（説明変数）の目標値を実測レンジ内に収まる形で逆算する画面です。' +
-				'データソース・目的変数（target_column）・KPI候補（feature_columns）を設定すると結果が表示されます。' +
-				'目標値・期間は画面上で入力・調整してください。'
+			'The current screen is "KPI Planning". After the user specifies a target value for the target variable (e.g. revenue), it trains a regression model and ' +
+				'works backward to find target values for the selected KPI candidates (feature variables) that stay within their observed ranges. ' +
+				'Setting the data source, target variable (target_column), and KPI candidates (feature_columns) will display the results. ' +
+				'Please enter and adjust the target value and period on screen.'
 		);
 	} else {
 		sections.push(
-			'ユーザーはまだ分析画面（回帰分析・感度分析・シナリオ比較・ゴールシーク・トレンド予測・モンテカルロ・シミュレーション・' +
-				'予算配分最適化・相関分析・記述統計・A/Bテスト・ロジスティック回帰・レポート作成・KPI設定のいずれか）を開いていません。' +
-				'何を分析したいか聞き、適した画面をサイドバーから開くよう案内してください（このアシスタントは開いた画面の設定を手伝えます）。'
+			'The user has not yet opened an analysis screen (regression analysis, sensitivity analysis, scenario comparison, goal seek, trend forecasting, Monte Carlo simulation, ' +
+				'budget allocation optimization, correlation analysis, descriptive statistics, A/B testing, logistic regression, report creation, or KPI planning). ' +
+				'Ask what they want to analyze and direct them to open the appropriate screen from the sidebar (this assistant can help configure a screen once it is open).'
 		);
 	}
 
 	if (sources.length > 0) {
 		const sourceList = sources
 			.map((s) => {
-				const cols = s.columns.map((c) => `${c.label}（key: ${c.key}, type: ${c.type}）`).join(', ');
-				return `- 「${s.name}」（id: ${s.id}）: ${cols}`;
+				const cols = s.columns.map((c) => `${c.label} (key: ${c.key}, type: ${c.type})`).join(', ');
+				return `- "${s.name}" (id: ${s.id}): ${cols}`;
 			})
 			.join('\n');
-		sections.push(`利用可能なデータソース:\n${sourceList}`);
+		sections.push(`Available data sources:\n${sourceList}`);
 	} else {
-		sections.push('現在、利用可能なデータソースがありません。先に /database でデータソースを作成するよう案内してください。');
+		sections.push('There are currently no available data sources. Please direct the user to first create one at /database.');
 	}
 
 	if (Object.keys(config).length > 0) {
-		sections.push(`現在の設定値:\n${JSON.stringify(config, null, 2)}`);
+		sections.push(`Current configuration:\n${JSON.stringify(config, null, 2)}`);
 	}
 
 	if (resultSummary) {
 		sections.push(
-			`現在の分析結果（妥当性について聞かれたらこれを元に答える。決定係数R²は1に近いほど当てはまりが良い）:\n${JSON.stringify(resultSummary, null, 2)}`
+			`Current analysis result (use this to answer if asked about validity; an R² closer to 1 indicates a better fit):\n${JSON.stringify(resultSummary, null, 2)}`
 		);
 	}
 
 	sections.push(
-		'ユーザーが分析したい内容を伝えてきたら set_config ツールで設定を反映すること。' +
-			'使い方の質問には簡潔に答えること。回答は簡潔にすること。'
+		'When the user describes what they want to analyze, reflect the configuration using the set_config tool. ' +
+			'Answer usage questions concisely. Keep responses brief.'
 	);
 
 	return sections.join('\n\n');
@@ -233,7 +233,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 			async start(controller) {
 				const enqueue = (e: AnalysisChatEvent) => controller.enqueue(new TextEncoder().encode(sse(e)));
 				await new Promise((r) => setTimeout(r, 300));
-				for (const char of 'ご質問ありがとうございます。') {
+				for (const char of 'Thank you for your question.') {
 					enqueue({ type: 'delta', text: char });
 					await new Promise((r) => setTimeout(r, 20));
 				}
@@ -297,7 +297,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 						const config = JSON.parse(tool.inputJson || '{}');
 						enqueue({ type: 'config', config });
 					} catch {
-						// malformed tool input JSON。無視してテキスト応答のみ届ける
+						// Malformed tool input JSON; ignore it and deliver only the text response
 					}
 				}
 

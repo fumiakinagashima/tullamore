@@ -7,7 +7,7 @@ import { errors } from '$lib/server/errors';
 const PUBLIC_PATHS = new Set(['/signin', '/signin/forgot-password', '/signin/reset-password']);
 const PUBLIC_API_PREFIXES = ['/api/auth/'];
 
-// 認証情報・権限変更を含むページ・APIはadmin権限のみアクセス可能
+// Pages/APIs involving authentication info or permission changes are accessible to admin permission only
 const ADMIN_ONLY_PREFIXES = [
 	'/database/accounts',
 	'/connections',
@@ -48,7 +48,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	if (!event.locals.account && !isPublicPath(url.pathname)) {
 		if (url.pathname.startsWith('/api/')) {
-			return new Response(JSON.stringify({ error: '認証が必要です', code: 'UNAUTHORIZED' }), {
+			return new Response(JSON.stringify({ error: 'Authentication required', code: 'UNAUTHORIZED' }), {
 				status: 401,
 				headers: { 'Content-Type': 'application/json' }
 			});

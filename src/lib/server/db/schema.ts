@@ -23,39 +23,41 @@ export const integrations = sqliteTable('integrations', {
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
 });
 
-// integrations（Slack/Teams等の通知連携）とは別の、データ取り込み用の外部DB接続。
-// Hyperdriveはバインディングが静的（wrangler.tomlに事前登録・再デプロイが必要）なため、
-// このテーブルは「どのHyperdriveバインディング（env.HYPERDRIVE_*）を使うか」を指すだけで、
-// 実際の接続文字列・パスワードはTullamore側には一切保存しない。
+// An external DB connection for data ingestion, separate from `integrations` (notification integrations
+// like Slack/Teams). Since Hyperdrive bindings are static (must be pre-registered in wrangler.toml and
+// require a redeploy), this table only records "which Hyperdrive binding (env.HYPERDRIVE_*) to use" —
+// the actual connection string and password are never stored on Tullamore's side at all.
 export const dbConnections = sqliteTable('db_connections', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
 	description: text('description'),
-	// provider は将来 'http_api' を追加できるよう enum にしておく
+	// provider is kept as an enum so 'http_api' can be added in the future
 	provider: text('provider', { enum: ['hyperdrive', 'tcp_socket'] }).notNull().default('hyperdrive'),
-	// provider ごとの設定。hyperdrive の場合は { bindingName }、tcp_socket の場合は
-	// { host, port, database, username, password, ssl }（password はマスクして扱う。integration-service.ts参照）
+	// Settings per provider. For hyperdrive: { bindingName }; for tcp_socket:
+	// { host, port, database, username, password, ssl } (password is masked; see integration-service.ts)
 	config: text('config').notNull().default('{}'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
 });
 
-// db_connections の特定テーブルを data_sources へ取り込んだ記録。
-// TODO: Cronによる自動再同期を実装する際、このテーブルを走査して lastSyncedAt が古い順に再同期する想定
-// （現状は手動同期のみ。/connections の「今すぐ同期」ボタンから都度呼ばれる）
+// Record of ingesting a specific table from db_connections into data_sources.
+// TODO: when implementing automatic resync via Cron, the plan is to scan this table and resync in order
+// of oldest lastSyncedAt (currently manual sync only, triggered each time via the "Sync now" button on /connections)
 export const externalTableSyncs = sqliteTable('external_table_syncs', {
 	id: text('id').primaryKey(),
 	dbConnectionId: text('db_connection_id').notNull(),
 	dataSourceId: text('data_source_id').notNull(),
 	externalSchema: text('external_schema').notNull(),
 	externalTable: text('external_table').notNull(),
-	// { [dataSourcesの列key]: 外部DB側の実際の列名 } のJSON。再同期時に毎回列選択をやり直さずに済むよう保持する
+	// JSON of { [column key on data_sources]: actual column name on the external DB }. Kept so column selection
+	// doesn't need to be redone every time a resync happens
 	columnMapping: text('column_mapping').notNull().default('{}'),
-	// 'syncing' はQueue経由の大規模テーブル継続取り込みが進行中（MAX_ROWSを超えて打ち切った続きをバックグラウンドで処理中）
+	// 'syncing' means a large-table continuation ingest is in progress via Queue (the remainder cut off after
+	// exceeding MAX_ROWS is being processed in the background)
 	lastSyncStatus: text('last_sync_status', { enum: ['success', 'failed', 'syncing'] }),
 	lastSyncError: text('last_sync_error'),
 	lastSyncRowCount: integer('last_sync_row_count').notNull().default(0),
-	// Queue継続取り込みの再開位置（次にfetchRowsするoffset）。同期完了時はlastSyncRowCountと一致する
+	// Resume position for Queue continuation ingest (the offset for the next fetchRows call). Matches lastSyncRowCount once sync completes
 	lastSyncOffset: integer('last_sync_offset').notNull().default(0),
 	lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
@@ -111,7 +113,7 @@ export const kpiPlans = sqliteTable('kpi_plans', {
 	targetColumn: text('target_column').notNull(),
 	periodLabel: text('period_label').notNull(),
 	periodType: text('period_type').notNull().default('custom'),
-	/** 達成率トラッキングの対象期間を絞り込む日時カラム＋FROM/TO（"YYYY-MM-DD"）。未設定＝全期間が対象 */
+	/** Date column plus FROM/TO ("YYYY-MM-DD") that scope the period for achievement-rate tracking. Unset = all periods */
 	dateColumn: text('date_column'),
 	periodFrom: text('period_from'),
 	periodTo: text('period_to'),

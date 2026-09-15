@@ -7,12 +7,13 @@
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
-	// 各分析ページ（回帰分析・トレンド予測）が現在の設定値・結果・setterを登録し、
-	// 右側のAIアシスタントがそれを読んで「設定をセットする」「妥当性について答える」を行う
+	// Each analysis page (regression analysis, trend forecasting) registers its current config,
+	// results, and setter, and the AI assistant on the right reads them to "set the config" and
+	// "answer questions about validity"
 	const bridge = createAnalysisBridge();
 	setContext(ANALYSIS_BRIDGE_KEY, bridge);
 
-	// AIアシスタント欄の幅（ドラッグでリサイズ可能。localStorageに記憶する。/simulators/[id] と同じパターン）
+	// Width of the AI assistant panel (resizable by dragging, remembered in localStorage; same pattern as /simulators/[id])
 	const ASSISTANT_WIDTH_STORAGE_KEY = 'tullamore_analysis_assistant_width';
 	const ASSISTANT_WIDTH_MIN = 260;
 	const ASSISTANT_WIDTH_MAX = 560;
@@ -39,7 +40,7 @@
 		const startWidth = assistantWidth;
 
 		function onMove(ev: PointerEvent) {
-			// パネルは右側なので、左にドラッグするほど幅が広がる
+			// The panel is on the right, so dragging further left makes it wider
 			assistantWidth = clampAssistantWidth(startWidth + (startX - ev.clientX));
 		}
 		function onUp() {
@@ -65,8 +66,8 @@
 	<div class="analysis-main">
 		{@render children()}
 	</div>
-	<!-- ARIA Window Splitter パターン（https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/）:
-	     role="separator" + tabindex + キー操作は非対話要素向けのa11y-lintでは検出できない正しい組み合わせ -->
+	<!-- ARIA Window Splitter pattern (https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/):
+	     role="separator" + tabindex + key handling is a correct combination that the non-interactive-element a11y lint can't detect -->
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
@@ -74,7 +75,7 @@
 		class:active={resizing}
 		role="separator"
 		aria-orientation="vertical"
-		aria-label="AIアシスタントの幅を調整"
+		aria-label="Adjust AI assistant panel width"
 		aria-valuenow={assistantWidth}
 		aria-valuemin={ASSISTANT_WIDTH_MIN}
 		aria-valuemax={ASSISTANT_WIDTH_MAX}

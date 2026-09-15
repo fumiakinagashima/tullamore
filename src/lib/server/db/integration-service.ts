@@ -2,11 +2,11 @@ import { MASKED_SECRET } from '$lib/types/integration';
 
 const SECRET_FIELDS = ['value', 'password'] as const;
 
-// integrations.authConfig（常にRecord<string,string>）だけでなく db_connections.config
-// （tcp_socketの場合 port:number/ssl:boolean 等も混在）でも共用するため、値の型は unknown で緩く受ける
+// Shared not only by integrations.authConfig (always Record<string,string>) but also by db_connections.config
+// (which for tcp_socket also mixes in port:number/ssl:boolean etc.), so the value type is loosely typed as unknown
 type AnyConfig = Record<string, unknown>;
 
-// 秘匿フィールド（トークン・パスワード）をクライアント向けにマスクする
+// Masks secret fields (tokens, passwords) before sending them to the client
 export function maskAuthConfig(authConfig: AnyConfig): AnyConfig {
 	const masked = { ...authConfig };
 	for (const key of SECRET_FIELDS) {
@@ -15,7 +15,7 @@ export function maskAuthConfig(authConfig: AnyConfig): AnyConfig {
 	return masked;
 }
 
-// PATCH時、秘匿フィールドがマスク値（未変更）のままなら既存値を保持する
+// On PATCH, keeps the existing value if a secret field is still the masked value (i.e. unchanged)
 export function mergeAuthConfig(existing: AnyConfig, incoming: AnyConfig): AnyConfig {
 	const merged = { ...incoming };
 	for (const key of SECRET_FIELDS) {

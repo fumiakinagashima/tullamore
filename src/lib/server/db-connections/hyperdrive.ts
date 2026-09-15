@@ -6,10 +6,11 @@ type HyperdriveConnectionStringBinding = { connectionString: string };
 type HyperdriveMysqlObjectBinding = { host: string; port: number; user: string; password: string; database: string };
 type HyperdriveBinding = HyperdriveConnectionStringBinding | HyperdriveMysqlObjectBinding;
 
-// 本番の実Hyperdriveバインディングは、PostgresならconnectionStringを、MySQLならconnectionStringを
-// 持たずhost/port/user/password/databaseを直接公開する（Cloudflare公式ドキュメントのHyperdrive型定義準拠）。
-// 一方 `wrangler dev` のローカル開発モード（localConnectionString）は、接続先がMySQLでも
-// 常にconnectionString形式で渡ってくるため、その場合はスキーム（postgres:// / mysql://）で判定する
+// A real Hyperdrive binding in production exposes connectionString for Postgres, but for MySQL
+// exposes host/port/user/password/database directly instead of connectionString (this follows
+// Cloudflare's official Hyperdrive type definitions). On the other hand, `wrangler dev`'s local
+// dev mode (localConnectionString) always passes things in connectionString form even when the
+// target is MySQL, so in that case we determine the engine from the scheme (postgres:// / mysql://)
 function isConnectionStringBinding(value: unknown): value is HyperdriveConnectionStringBinding {
 	return !!value && typeof value === 'object' && typeof (value as HyperdriveConnectionStringBinding).connectionString === 'string';
 }
@@ -25,10 +26,11 @@ function isHyperdriveBinding(value: unknown): value is HyperdriveBinding {
 }
 
 /**
- * `HYPERDRIVE_`で始まる名前のバインディングを実行時にスキャンして一覧化する。
- * Hyperdriveはバインディングが静的（wrangler.tomlに事前登録・再デプロイが必要）なため、
- * コード側にバインディング名のハードコードされた一覧は持たず、実際にデプロイされている構成を
- * そのまま反映する（wrangler.tomlに新しいバインディングを追加すればここに自動で現れる）。
+ * Scans bindings whose name starts with `HYPERDRIVE_` at runtime and lists them.
+ * Since Hyperdrive bindings are static (they must be pre-registered in wrangler.toml and require
+ * a redeploy), we don't keep a hardcoded list of binding names in the code and instead reflect
+ * whatever is actually deployed (adding a new binding to wrangler.toml makes it appear here
+ * automatically).
  */
 export function listAvailableHyperdriveBindings(env: Record<string, unknown>): string[] {
 	return Object.keys(env)
@@ -36,7 +38,7 @@ export function listAvailableHyperdriveBindings(env: Record<string, unknown>): s
 		.sort();
 }
 
-/** /connections の一覧にエンジンバッジを出すためのヘルパー */
+/** Helper for showing an engine badge in the /connections list */
 export function getHyperdriveBindingEngine(env: Record<string, unknown>, bindingName: string): 'postgres' | 'mysql' | null {
 	const binding = env[bindingName];
 	if (isConnectionStringBinding(binding)) {
@@ -46,7 +48,7 @@ export function getHyperdriveBindingEngine(env: Record<string, unknown>, binding
 	return null;
 }
 
-/** 指定したHyperdriveバインディングに対するドライバを作成する。クエリロジックはpg-driver.ts/mysql-driver.tsに共通化されている */
+/** Creates a driver for the given Hyperdrive binding. Query logic is shared in pg-driver.ts/mysql-driver.ts */
 export function createHyperdriveDriver(env: Record<string, unknown>, bindingName: string): DbConnectionDriver {
 	const binding = env[bindingName];
 	if (isConnectionStringBinding(binding)) {
@@ -63,5 +65,5 @@ export function createHyperdriveDriver(env: Record<string, unknown>, bindingName
 			database: binding.database
 		});
 	}
-	throw new Error(`Hyperdriveバインディング「${bindingName}」が見つかりません`);
+	throw new Error(`Hyperdrive binding "${bindingName}" was not found`);
 }

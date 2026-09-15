@@ -39,7 +39,7 @@
 		if (!m) return null;
 		return {
 			simulatorId: 'ad-hoc',
-			name: '回帰分析結果',
+			name: 'Regression analysis result',
 			description: note || undefined,
 			targetLabel: labelOf(m.targetColumn),
 			intercept: m.intercept,
@@ -68,8 +68,9 @@
 		featureColumns = checked ? [...featureColumns, key] : featureColumns.filter((k) => k !== key);
 	}
 
-	// 目的変数を切り替えた時、それまで説明変数として選んでいた列が新しい目的変数と重複していたら除外する
-	// （featureCandidates からは自動的に消えるが、チェック状態自体は featureColumns に残ってしまうため）
+	// When the target variable is switched, drop any previously selected explanatory-variable column
+	// that now duplicates the new target variable (it disappears from featureCandidates automatically,
+	// but the checked state itself would otherwise remain in featureColumns)
 	$effect(() => {
 		if (featureColumns.includes(targetColumn)) {
 			featureColumns = featureColumns.filter((k) => k !== targetColumn);
@@ -78,7 +79,7 @@
 
 	const canRun = $derived(!!dataSourceId && !!targetColumn && featureColumns.length > 0);
 
-	// 右側のAIアシスタントに現在の設定・結果を渡す（妥当性について聞かれた時の材料にもなる）
+	// Pass the current config/results to the AI assistant on the right (also used as material when asked about validity)
 	$effect(() => {
 		bridge.analysisType = 'regression';
 		bridge.config = {
@@ -100,9 +101,9 @@
 			: null;
 	});
 
-	// AIアシスタントの set_config ツールから呼ばれる。dataSourceId を変えると
-	// 下の $effect が targetColumn/featureColumns をリセットしてしまうため、
-	// リセットが先に走るのを tick() で待ってから値をセットする
+	// Called from the AI assistant's set_config tool. Changing dataSourceId causes the $effect below
+	// to reset targetColumn/featureColumns, so we wait for that reset to run first via tick()
+	// before setting the new values
 	async function applyConfig(patch: Record<string, unknown>) {
 		if (typeof patch.data_source_id === 'string' && patch.data_source_id !== dataSourceId) {
 			dataSourceId = patch.data_source_id;
@@ -134,7 +135,7 @@
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
 			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
-			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Analysis failed');
 			model = body.model ?? null;
 			validity = body.validity ?? null;
 		} catch (e) {
@@ -147,23 +148,23 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">回帰分析</h1>
-		<p class="page-sub">説明変数を動かすと目的変数がどう変化するかをシミュレーションします</p>
+		<h1 class="page-title">Regression Analysis</h1>
+		<p class="page-sub">Simulates how the target variable changes as you move the explanatory variables</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+			<Select label="Data source" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Target variable" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 		</div>
 
 		<div class="feature-picker">
-			<span class="field-label">説明変数（複数選択可）</span>
+			<span class="field-label">Explanatory variables (multiple selection allowed)</span>
 			{#if !targetColumn}
-				<p class="hint">先に目的変数を選択してください</p>
+				<p class="hint">Select a target variable first</p>
 			{:else if featureCandidates.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
+				<p class="hint">No numeric columns available to select</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each featureCandidates as col (col.key)}
@@ -180,11 +181,11 @@
 			{/if}
 		</div>
 
-		<Textbox label="分析メモ（任意）" bind:value={note} placeholder="例: 広告費と来店数が売上に与える影響を見たい" />
+		<Textbox label="Analysis notes (optional)" bind:value={note} placeholder="e.g. Look at how ad spend and store visits affect revenue" />
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '分析中…' : '分析を実行'}
+				{loading ? 'Analyzing…' : 'Run analysis'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
@@ -200,7 +201,7 @@
 			{/if}
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソース・目的変数・説明変数を選び、「分析を実行」を押してください</p>
+				<p>Choose a data source, target variable, and explanatory variables in the settings above, then click "Run analysis"</p>
 			</div>
 		{/if}
 	</section>

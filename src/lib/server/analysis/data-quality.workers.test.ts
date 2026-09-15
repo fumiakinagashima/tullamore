@@ -12,8 +12,8 @@ describe('computeDataQuality (real D1)', () => {
 		await env.DB.exec(
 			`CREATE TABLE ${tableName} (id INTEGER PRIMARY KEY, revenue REAL, all_null REAL)`
 		);
-		// revenue は11件の非NULL値（サンプル数「良好」の目安=10件以上）+ 1件の欠損。
-		// all_null は全件NULLで計算不能 -> 独立してpoor判定になり、revenue側を巻き込まないことを確認する
+		// revenue has 11 non-NULL values (the "good" sample-size threshold is 10+) plus 1 missing value.
+		// all_null is entirely NULL and thus uncomputable -> verify it independently rates "poor" without dragging down the revenue column
 		const rows: [number, number | null, null][] = [
 			[1, 100, null],
 			[2, 110, null],
@@ -39,8 +39,8 @@ describe('computeDataQuality (real D1)', () => {
 			name: 'Quality test source',
 			tableName,
 			schemaJson: JSON.stringify([
-				{ key: 'revenue', label: '売上', type: 'number' },
-				{ key: 'all_null', label: '全欠損列', type: 'number' }
+				{ key: 'revenue', label: 'Revenue', type: 'number' },
+				{ key: 'all_null', label: 'All-missing column', type: 'number' }
 			]),
 			rowCount: rows.length
 		});
@@ -52,7 +52,7 @@ describe('computeDataQuality (real D1)', () => {
 		expect(revenueCol?.missingCount).toBe(1);
 		expect(revenueCol?.n).toBe(11);
 
-		// 全件NULLの列は計算不能として poor 判定になり、他の列の結果を巻き込まない
+		// A column that is entirely NULL is uncomputable and rates "poor" without affecting other columns' results
 		const allNullCol = report.columns.find((c) => c.key === 'all_null');
 		expect(allNullCol?.validity.overallLevel).toBe('poor');
 		expect(revenueCol?.validity.overallLevel).not.toBe('poor');

@@ -1,30 +1,33 @@
 import { Client, types } from 'pg';
 import type { DbConnectionDriver, ExternalColumn, ExternalTableRef } from './types';
 
-// pgはデフォルトでdate/timestamp列をプロセスのローカルタイムゾーンで解釈した上でDateオブジェクトに変換するため、
-// `bun dev`実行時（マシンのローカルタイムゾーン、例: JST）と`wrangler dev`/本番（常にUTC）で
-// 同じ日付が異なる値にパースされてしまう（例: JST環境ではDATE '2024-01-01' が9時間ズレて
-// 2023-12-31T15:00:00.000Zになる）。生の文字列のまま受け取ることでタイムゾーン依存を排除する
-// （date=1082, timestamp without tz=1114, timestamptz=1184）
+// By default, pg interprets date/timestamp columns in the process's local timezone before converting
+// them to Date objects, which means the same date parses to a different value under `bun dev` (the
+// machine's local timezone, e.g. JST) versus `wrangler dev`/production (always UTC) — e.g. in a JST
+// environment, DATE '2024-01-01' shifts by 9 hours to 2023-12-31T15:00:00.000Z. Receiving the raw
+// string instead eliminates the timezone dependency
+// (date=1082, timestamp without tz=1114, timestamptz=1184)
 types.setTypeParser(1082, (val) => val);
 types.setTypeParser(1114, (val) => val);
 types.setTypeParser(1184, (val) => val);
 
-// 識別子（スキーマ名・テーブル名・列名）は必ず information_schema から取得した値のみを渡す想定。
-// SQL文字列に直接埋め込む前に、想定外の文字が混ざっていないか防御的に検証する
+// Identifiers (schema name, table name, column name) are expected to only ever come from values
+// fetched from information_schema. Defensively verify no unexpected characters have crept in before
+// embedding them directly into a SQL string.
 function assertSafeIdentifier(id: string): void {
 	if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(id)) {
-		throw new Error(`不正な識別子です: ${id}`);
+		throw new Error(`Invalid identifier: ${id}`);
 	}
 }
 
 /**
- * `pg.Client`ベースのPostgresドライバ共通実装。接続方法（Hyperdriveバインディング経由か、
- * 直接TCP接続か）に依存しないクエリロジックをここに集約する。hyperdrive.ts / tcp-socket.ts の
- * どちらも、`pg.Client`のコンストラクタ引数だけを渡してこの関数を呼ぶ。
+ * Shared `pg.Client`-based Postgres driver implementation. Query logic that doesn't depend on the
+ * connection method (via a Hyperdrive binding or a direct TCP connection) lives here. Both
+ * hyperdrive.ts and tcp-socket.ts call this function, passing only the `pg.Client` constructor args.
  *
- * 接続は最初のクエリ時に一度だけ張り、以降の呼び出しで使い回す（テーブル一覧取得→カラム取得→
- * 行取得のような一連の操作をまとめて1接続で行うのが効率的）。呼び出し側は必ず finally で close() を呼ぶこと。
+ * The connection is established once, on the first query, and reused across subsequent calls (it's
+ * more efficient to run a sequence of operations — list tables → fetch columns → fetch rows — over a
+ * single connection). Callers must always call close() in a finally block.
  */
 export function createPgDriver(clientConfig: ConstructorParameters<typeof Client>[0]): DbConnectionDriver {
 	const client = new Client(clientConfig);

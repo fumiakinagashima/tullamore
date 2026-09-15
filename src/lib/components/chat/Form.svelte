@@ -12,7 +12,7 @@
 		oncancel?: () => void;
 		hideActions?: boolean;
 		formRef?: HTMLFormElement | null;
-		// ダイアログ内など、横幅いっぱいに広げたい場合に true（max-width を外す）
+		// True when the form should stretch to the full width, e.g. inside a dialog (removes max-width)
 		fullWidth?: boolean;
 	};
 

@@ -20,11 +20,11 @@
 				})
 			});
 			const json = (await res.json()) as { id?: string; error?: string };
-			if (!res.ok) throw new Error(json.error ?? '作成に失敗しました');
+			if (!res.ok) throw new Error(json.error ?? 'Failed to create');
 			await invalidateAll();
 			await goto(`/database/${json.id}`);
 		} catch (e) {
-			error = e instanceof Error ? e.message : '作成に失敗しました';
+			error = e instanceof Error ? e.message : 'Failed to create';
 		} finally {
 			creating = false;
 		}
@@ -33,8 +33,8 @@
 
 <DataSourceForm
 	mode="create"
-	title="新しいテーブル"
-	submitLabel="作成"
+	title="New Table"
+	submitLabel="Create"
 	submitting={creating}
 	{error}
 	cancelHref="/database"

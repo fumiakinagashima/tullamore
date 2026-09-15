@@ -8,7 +8,7 @@ export type LogisticRegressionMetrics = {
 	precision: number;
 	recall: number;
 	f1: number;
-	/** McFadden's pseudo-R²（切片のみのモデルと比べたあてはまりの改善度、0〜1に近いほど良い） */
+	/** McFadden's pseudo-R² (improvement in fit compared to an intercept-only model; closer to 0–1 is better) */
 	pseudoR2: number;
 	iterations: number;
 	converged: boolean;
@@ -25,10 +25,10 @@ export type LogisticRegressionModel = {
 	method: 'logistic_regression';
 	targetColumn: string;
 	featureColumns: string[];
-	/** 目的変数のうち「1」として扱った値の元のラベル（例: "購入あり"） */
+	/** The original label of the value treated as "1" in the target variable (e.g. "Purchased") */
 	positiveClassLabel: string;
 	intercept: number;
-	/** featureColumns と同じ順序の係数（対数オッズへの影響） */
+	/** Coefficients in the same order as featureColumns (effect on log-odds) */
 	coefficients: number[];
 	metrics: LogisticRegressionMetrics;
 	confusionMatrix: ConfusionMatrix;
@@ -40,9 +40,10 @@ export type LogisticRegressionRow = { features: number[]; target: 0 | 1 };
 const sigmoid = (z: number): number => 1 / (1 + Math.exp(-z));
 
 /**
- * IRLS（Iteratively Reweighted Least Squares / Newton-Raphson法）でロジスティック回帰を解く。
- * OLSと異なり反復ごとに重みが変わるため正規方程式のサマリー統計量に還元できず、生の行データが必要
- * （呼び出し側でLOGISTIC_REGRESSION_MAX_ROWSまでに制限した行を渡すこと）。
+ * Solves logistic regression using IRLS (Iteratively Reweighted Least Squares / Newton-Raphson method).
+ * Unlike OLS, the weights change on every iteration, so the problem can't be reduced to summary statistics
+ * for the normal equations — raw row data is required (the caller must pass rows already limited to
+ * LOGISTIC_REGRESSION_MAX_ROWS).
  */
 export function fitLogisticRegression(
 	rows: LogisticRegressionRow[],
@@ -53,14 +54,14 @@ export function fitLogisticRegression(
 ): LogisticRegressionModel {
 	const k = featureColumns.length;
 	const n = rows.length;
-	if (k === 0) throw new Error('説明変数が指定されていません');
+	if (k === 0) throw new Error('No feature columns specified');
 	if (n <= k + 1) {
-		throw new Error(`サンプル数（${n}件）が説明変数の数（${k}個）に対して不足しています`);
+		throw new Error(`The sample size (${n}) is insufficient for the number of features (${k})`);
 	}
 
 	const positiveCount = rows.reduce((sum, r) => sum + r.target, 0);
 	if (positiveCount === 0 || positiveCount === n) {
-		throw new Error('目的変数が全て同じ値のため学習できません（正例・負例の両方のデータが必要です）');
+		throw new Error('Cannot train because the target variable has only one value (both positive and negative examples are required)');
 	}
 
 	const size = k + 1;
@@ -78,12 +79,12 @@ export function fitLogisticRegression(
 			p[i] = sigmoid(e);
 		}
 
-		// 重み付き正規方程式 (XᵀWX)β = XᵀWz を構築する（W=diag(p(1-p))、z=working response）
+		// Build the weighted normal equations (XᵀWX)β = XᵀWz (W=diag(p(1-p)), z=working response)
 		const xtwx = Matrix.zeros(size, size);
 		const xtwz = Matrix.zeros(size, 1);
 
 		for (let i = 0; i < n; i++) {
-			// p(1-p)が0に近い（予測が0/1に飽和）場合の0除算を避ける下限
+			// Lower bound to avoid division by zero when p(1-p) approaches 0 (prediction saturating at 0/1)
 			const w = Math.max(p[i] * (1 - p[i]), 1e-8);
 			const z = eta[i] + (rows[i].target - p[i]) / w;
 			const xi = [1, ...rows[i].features];
@@ -102,7 +103,7 @@ export function fitLogisticRegression(
 		try {
 			betaNew = solve(xtwx, xtwz, true).to1DArray();
 		} catch {
-			throw new Error('モデルの学習に失敗しました（説明変数間の相関が強すぎるか、データが完全に分離している可能性があります）');
+			throw new Error('Failed to train the model (features may be too strongly correlated, or the data may be perfectly separable)');
 		}
 
 		let maxDelta = 0;
@@ -110,7 +111,7 @@ export function fitLogisticRegression(
 		beta = betaNew;
 
 		if (!beta.every(Number.isFinite)) {
-			throw new Error('モデルの学習に失敗しました（数値計算が発散しました）');
+			throw new Error('Failed to train the model (the numerical computation diverged)');
 		}
 		if (maxDelta < opts.tolerance) {
 			converged = true;
@@ -122,7 +123,7 @@ export function fitLogisticRegression(
 	const intercept = beta[0];
 	const coefficients = beta.slice(1);
 
-	// 予測確率・混同行列・尤度ベースの指標を計算する
+	// Compute predicted probabilities, the confusion matrix, and likelihood-based metrics
 	let logLikelihood = 0;
 	let truePositive = 0;
 	let falsePositive = 0;
@@ -175,26 +176,26 @@ export function fitLogisticRegression(
 }
 
 /**
- * McFadden's pseudo-R²から当てはまりの良さを評価する。線形回帰のR²と異なりスケールが違う点に注意
- * （McFadden(1974)は0.2〜0.4を「非常に良い当てはまり」としており、線形回帰のR²の閾値をそのまま流用すると
- * 実際には良好なモデルを過小評価してしまう）。
+ * Assesses goodness of fit from McFadden's pseudo-R². Note that the scale differs from linear regression's R²
+ * (McFadden (1974) considers 0.2–0.4 to be "a very good fit"; reusing linear regression's R² thresholds as-is
+ * would actually underrate a genuinely good model).
  */
 function assessPseudoR2(pseudoR2: number): ValidityCheckItem {
 	if (pseudoR2 >= 0.4) {
-		return { label: '当てはまりの良さ', level: 'good', comment: `疑似R²(McFadden)=${pseudoR2.toFixed(3)}で非常に良好な当てはまりです` };
+		return { label: 'Goodness of fit', level: 'good', comment: `Pseudo-R² (McFadden) = ${pseudoR2.toFixed(3)}, indicating a very good fit` };
 	}
 	if (pseudoR2 >= 0.2) {
-		return { label: '当てはまりの良さ', level: 'good', comment: `疑似R²(McFadden)=${pseudoR2.toFixed(3)}で良好な当てはまりです（0.2〜0.4は良好とされます）` };
+		return { label: 'Goodness of fit', level: 'good', comment: `Pseudo-R² (McFadden) = ${pseudoR2.toFixed(3)}, indicating a good fit (0.2–0.4 is considered good)` };
 	}
 	if (pseudoR2 >= 0.1) {
-		return { label: '当てはまりの良さ', level: 'caution', comment: `疑似R²(McFadden)=${pseudoR2.toFixed(3)}で当てはまりはやや弱く、参考程度に留めてください` };
+		return { label: 'Goodness of fit', level: 'caution', comment: `Pseudo-R² (McFadden) = ${pseudoR2.toFixed(3)}; the fit is somewhat weak, so treat it as a rough indication only` };
 	}
-	return { label: '当てはまりの良さ', level: 'poor', comment: `疑似R²(McFadden)=${pseudoR2.toFixed(3)}で当てはまりが弱く、この説明変数では十分に予測できていません` };
+	return { label: 'Goodness of fit', level: 'poor', comment: `Pseudo-R² (McFadden) = ${pseudoR2.toFixed(3)}; the fit is weak, and these features do not predict the outcome well` };
 }
 
 /**
- * 分類モデルの妥当性を評価する。当てはまり（疑似R²）・サンプル数の十分性・
- * IRLSの収束・目的変数のクラスバランス（極端な偏りがあると少数派クラスの予測精度が低くなりやすい）をチェックする。
+ * Assesses the validity of a classification model. Checks the fit (pseudo-R²), sample size adequacy,
+ * IRLS convergence, and target class balance (extreme imbalance tends to hurt prediction accuracy for the minority class).
  */
 export function assessClassificationValidity(model: LogisticRegressionModel): ValidityAssessment {
 	const checks: ValidityCheckItem[] = [
@@ -204,12 +205,12 @@ export function assessClassificationValidity(model: LogisticRegressionModel): Va
 
 	if (!model.metrics.converged) {
 		checks.push({
-			label: '学習の収束',
+			label: 'Training convergence',
 			level: 'poor',
-			comment: '最大反復回数に達し、学習が収束しませんでした。係数の信頼性が低い可能性があります'
+			comment: 'Training did not converge within the maximum number of iterations. The coefficients may be unreliable'
 		});
 	} else {
-		checks.push({ label: '学習の収束', level: 'good', comment: `${model.metrics.iterations}回の反復で収束しました` });
+		checks.push({ label: 'Training convergence', level: 'good', comment: `Converged after ${model.metrics.iterations} iterations` });
 	}
 
 	const cm = model.confusionMatrix;
@@ -217,36 +218,36 @@ export function assessClassificationValidity(model: LogisticRegressionModel): Va
 	const positiveRate = total > 0 ? (cm.truePositive + cm.falseNegative) / total : 0;
 	const minorityRate = Math.min(positiveRate, 1 - positiveRate);
 	if (minorityRate >= 0.2) {
-		checks.push({ label: 'クラスバランス', level: 'good', comment: `正例の割合は${(positiveRate * 100).toFixed(1)}%で、両クラスのバランスは概ね取れています` });
+		checks.push({ label: 'Class balance', level: 'good', comment: `The positive class rate is ${(positiveRate * 100).toFixed(1)}%, so the two classes are reasonably balanced` });
 	} else if (minorityRate >= 0.05) {
 		checks.push({
-			label: 'クラスバランス',
+			label: 'Class balance',
 			level: 'caution',
-			comment: `正例の割合が${(positiveRate * 100).toFixed(1)}%とやや偏っています。少数派クラスの予測精度が低い可能性があります`
+			comment: `The positive class rate is somewhat skewed at ${(positiveRate * 100).toFixed(1)}%. Prediction accuracy for the minority class may be low`
 		});
 	} else {
 		checks.push({
-			label: 'クラスバランス',
+			label: 'Class balance',
 			level: 'poor',
-			comment: `正例の割合が${(positiveRate * 100).toFixed(1)}%と極端に偏っています。正解率が高く見えても少数派クラスをほとんど当てられていない可能性があります`
+			comment: `The positive class rate is extremely skewed at ${(positiveRate * 100).toFixed(1)}%. Even if overall accuracy looks high, the model may barely predict the minority class correctly`
 		});
 	}
 
 	const { overallLevel, overallComment } = combineOverall(
 		checks,
-		'この分類モデルは妥当性チェックの主要な観点で問題は見つかりませんでした'
+		'No issues were found on the main validity checks for this classification model'
 	);
 	return { overallLevel, overallComment, checks };
 }
 
-/** 保存済みモデルから予測確率（0〜1、正例と判定した確率）を計算する純粋関数 */
+/** Pure function that computes the predicted probability (0–1, probability of the positive class) from a saved model */
 export function predictLogisticRegression(model: LogisticRegressionModel, vars: Record<string, number>): number {
 	let e = model.intercept;
 	for (let i = 0; i < model.featureColumns.length; i++) {
 		const col = model.featureColumns[i];
 		const v = vars[col];
 		if (typeof v !== 'number' || !Number.isFinite(v)) {
-			throw new Error(`変数 ${col} の値が指定されていません`);
+			throw new Error(`No value was provided for variable ${col}`);
 		}
 		e += model.coefficients[i] * v;
 	}

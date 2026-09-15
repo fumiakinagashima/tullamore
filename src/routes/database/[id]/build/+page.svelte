@@ -27,19 +27,19 @@
 				})
 			});
 			const schemaJson = (await schemaRes.json()) as { error?: string };
-			if (!schemaRes.ok) throw new Error(schemaJson.error ?? 'スキーマの更新に失敗しました');
+			if (!schemaRes.ok) throw new Error(schemaJson.error ?? 'Failed to update the schema');
 
 			const infoRes = await fetch(`/api/data-sources/${source.id}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ name: formData.name, description: formData.description })
 			});
-			if (!infoRes.ok) throw new Error('名前・説明の更新に失敗しました');
+			if (!infoRes.ok) throw new Error('Failed to update the name/description');
 
 			await invalidateAll();
 			await goto(`/database/${source.id}`);
 		} catch (e) {
-			error = e instanceof Error ? e.message : '更新に失敗しました';
+			error = e instanceof Error ? e.message : 'Update failed';
 		} finally {
 			saving = false;
 		}
@@ -48,8 +48,8 @@
 
 <DataSourceForm
 	mode="edit"
-	title="テーブルを編集"
-	submitLabel="保存"
+	title="Edit Table"
+	submitLabel="Save"
 	submitting={saving}
 	{error}
 	cancelHref="/database/{source.id}"

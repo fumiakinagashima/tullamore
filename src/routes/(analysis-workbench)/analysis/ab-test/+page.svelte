@@ -14,8 +14,8 @@
 	const bridge = getContext<AnalysisBridge>(ANALYSIS_BRIDGE_KEY);
 
 	const TEST_TYPE_OPTIONS = [
-		{ value: 'mean', label: '平均の差を検定（t検定・連続値の指標）' },
-		{ value: 'proportion', label: '比率の差を検定（z検定・0/1の指標）' }
+		{ value: 'mean', label: 'Test difference in means (t-test, continuous metric)' },
+		{ value: 'proportion', label: 'Test difference in proportions (z-test, 0/1 metric)' }
 	];
 
 	let dataSourceId = $state('');
@@ -100,7 +100,7 @@
 				validity?: ValidityAssessment;
 				error?: string;
 			};
-			if (!res.ok) throw new Error(body.error ?? '検定に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'The test failed');
 			result = body.result ?? null;
 			validity = body.validity ?? null;
 		} catch (e) {
@@ -110,7 +110,7 @@
 		}
 	}
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
@@ -121,27 +121,27 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">A/Bテスト・有意差検定</h1>
-		<p class="page-sub">2つのグループ間で指標に統計的に有意な差があるかを検定します（平均はWelchのt検定、比率はz検定）</p>
+		<h1 class="page-title">A/B Test - Significance Test</h1>
+		<p class="page-sub">Tests whether there is a statistically significant difference in a metric between two groups (Welch's t-test for means, z-test for proportions)</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="グループ列（値が2種類である列）" bind:value={groupColumn} options={groupOptions} disabled={!dataSourceId} />
+			<Select label="Data source" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Group column (a column with two distinct values)" bind:value={groupColumn} options={groupOptions} disabled={!dataSourceId} />
 		</div>
 		<div class="config-row">
-			<Select label="指標列（数値）" bind:value={metricColumn} options={metricOptions} disabled={!dataSourceId} />
-			<Select label="検定方法" bind:value={testType} options={TEST_TYPE_OPTIONS} />
+			<Select label="Metric column (numeric)" bind:value={metricColumn} options={metricOptions} disabled={!dataSourceId} />
+			<Select label="Test method" bind:value={testType} options={TEST_TYPE_OPTIONS} />
 		</div>
 		{#if testType === 'proportion'}
-			<p class="hint">比率のz検定を選ぶ場合、指標列の値は0または1である必要があります（例: コンバージョンの有無）</p>
+			<p class="hint">If you choose the proportion z-test, the metric column's values must be 0 or 1 (e.g. whether a conversion occurred)</p>
 		{/if}
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '検定中…' : '検定を実行'}
+				{loading ? 'Testing…' : 'Run test'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
@@ -152,54 +152,54 @@
 			<div class="results-card">
 				<p class="verdict" class:significant={result.significant}>
 					{result.significant
-						? `統計的に有意な差があります（p = ${fmt(result.pValue)} < ${AB_TEST_SIGNIFICANCE_ALPHA}）`
-						: `統計的に有意な差は見られません（p = ${fmt(result.pValue)} ≥ ${AB_TEST_SIGNIFICANCE_ALPHA}）`}
+						? `There is a statistically significant difference (p = ${fmt(result.pValue)} < ${AB_TEST_SIGNIFICANCE_ALPHA})`
+						: `No statistically significant difference was found (p = ${fmt(result.pValue)} ≥ ${AB_TEST_SIGNIFICANCE_ALPHA})`}
 				</p>
 
 				<div class="groups-row">
 					<div class="group-card">
 						<p class="group-name">{result.groupA.group}</p>
 						{#if result.kind === 'mean'}
-							<span class="group-metric">平均 {fmt(result.groupA.mean)}（n={result.groupA.n}）</span>
+							<span class="group-metric">Mean {fmt(result.groupA.mean)} (n={result.groupA.n})</span>
 						{:else}
-							<span class="group-metric">比率 {fmtPct(result.propA)}（{result.groupA.successes}/{result.groupA.n}）</span>
+							<span class="group-metric">Proportion {fmtPct(result.propA)} ({result.groupA.successes}/{result.groupA.n})</span>
 						{/if}
 					</div>
 					<div class="group-card">
 						<p class="group-name">{result.groupB.group}</p>
 						{#if result.kind === 'mean'}
-							<span class="group-metric">平均 {fmt(result.groupB.mean)}（n={result.groupB.n}）</span>
+							<span class="group-metric">Mean {fmt(result.groupB.mean)} (n={result.groupB.n})</span>
 						{:else}
-							<span class="group-metric">比率 {fmtPct(result.propB)}（{result.groupB.successes}/{result.groupB.n}）</span>
+							<span class="group-metric">Proportion {fmtPct(result.propB)} ({result.groupB.successes}/{result.groupB.n})</span>
 						{/if}
 					</div>
 				</div>
 
 				<div class="metrics-row">
 					<div class="metric">
-						<span class="metric-label">差</span>
+						<span class="metric-label">Difference</span>
 						<span class="metric-value highlight">
 							{result.kind === 'mean' ? fmt(result.meanDiff) : fmtPct(result.diff)}
 						</span>
 					</div>
 					<div class="metric">
-						<span class="metric-label">{result.kind === 'mean' ? 't統計量' : 'z統計量'}</span>
+						<span class="metric-label">{result.kind === 'mean' ? 't-statistic' : 'z-statistic'}</span>
 						<span class="metric-value">{fmt(result.kind === 'mean' ? result.tStat : result.zStat)}</span>
 					</div>
 					{#if result.kind === 'mean'}
 						<div class="metric">
-							<span class="metric-label">自由度</span>
+							<span class="metric-label">Degrees of freedom</span>
 							<span class="metric-value">{fmt(result.df)}</span>
 						</div>
 					{/if}
 					<div class="metric">
-						<span class="metric-label">p値</span>
+						<span class="metric-label">p-value</span>
 						<span class="metric-value">{fmt(result.pValue)}</span>
 					</div>
 					<div class="metric">
-						<span class="metric-label">95%信頼区間</span>
+						<span class="metric-label">95% confidence interval</span>
 						<span class="metric-value">
-							{result.kind === 'mean' ? `${fmt(result.ci95[0])} 〜 ${fmt(result.ci95[1])}` : `${fmtPct(result.ci95[0])} 〜 ${fmtPct(result.ci95[1])}`}
+							{result.kind === 'mean' ? `${fmt(result.ci95[0])} - ${fmt(result.ci95[1])}` : `${fmtPct(result.ci95[0])} - ${fmtPct(result.ci95[1])}`}
 						</span>
 					</div>
 				</div>
@@ -210,7 +210,7 @@
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソース・グループ列（2値）・指標列・検定方法を選び、「検定を実行」を押してください</p>
+				<p>In the settings panel above, choose a data source, group column (2 values), metric column, and test method, then click "Run test"</p>
 			</div>
 		{/if}
 	</section>

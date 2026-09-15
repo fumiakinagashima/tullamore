@@ -42,10 +42,10 @@
 	const bridge = getContext<AnalysisBridge>(ANALYSIS_BRIDGE_KEY);
 
 	const PERIOD_TYPE_OPTIONS = [
-		{ value: 'year', label: '年次' },
-		{ value: 'month', label: '月次' },
-		{ value: 'week', label: '週次' },
-		{ value: 'custom', label: '自由入力' }
+		{ value: 'year', label: 'Annual' },
+		{ value: 'month', label: 'Monthly' },
+		{ value: 'week', label: 'Weekly' },
+		{ value: 'custom', label: 'Custom' }
 	];
 
 	let dataSourceId = $state(initial?.dataSourceId ?? '');
@@ -83,7 +83,7 @@
 	const sourceOptions = $derived(sources.map((s) => ({ value: s.id, label: s.name })));
 	const targetValue = $derived(targetValueText === '' ? null : Number(targetValueText));
 
-	// このデータソースに日付列がある場合のみ、達成率トラッキングの対象期間（日付列＋FROM/TO）の入力を必須にする
+	// Only require the achievement-tracking target period (date column + FROM/TO) when this data source has a date column
 	const dateCandidates = $derived(selectedSource ? selectedSource.columns.filter((c) => c.type === 'date') : []);
 	const dateOptions = $derived(dateCandidates.map((c) => ({ value: c.key, label: c.label })));
 	const needsPeriodRange = $derived(dateCandidates.length > 0);
@@ -99,7 +99,7 @@
 		plan = null;
 	}
 
-	// データソースを切り替えた時だけ配下の設定をリセットする（初期表示・編集時のプリフィルでは発火させない）
+	// Only reset the downstream settings when the data source is switched (must not fire on initial render or edit-mode prefill)
 	let prevDataSourceId = dataSourceId;
 	$effect(() => {
 		if (dataSourceId === prevDataSourceId) return;
@@ -114,7 +114,7 @@
 		error = '';
 	});
 
-	// 目的変数を選んだら、KPI候補の相関を先に確認できるようにする（度外れなKPI候補選択を防ぐガードレール）
+	// Once the target variable is chosen, let the user check KPI candidate correlations up front (a guardrail against picking an outlandish KPI candidate)
 	$effect(() => {
 		const src = selectedSource;
 		const target = targetColumn;
@@ -144,7 +144,7 @@
 				});
 				correlations = map;
 			} catch {
-				// 相関の取得に失敗しても致命的ではないため無視する（候補選択のヒントが出ないだけ）
+				// Not fatal if fetching correlations fails — just means candidate-selection hints won't show
 			} finally {
 				correlationsLoading = false;
 			}
@@ -155,8 +155,8 @@
 		featureColumns = checked ? [...featureColumns, key] : featureColumns.filter((k) => k !== key);
 	}
 
-	// 目的変数を切り替えた時、それまでKPI候補として選んでいた列が新しい目的変数と重複していたら除外する
-	// （featureCandidates からは自動的に消えるが、チェック状態自体は featureColumns に残ってしまうため）
+	// When the target variable is switched, drop any previously selected KPI candidate column that now duplicates the new target
+	// (it disappears from featureCandidates automatically, but the checked state itself would otherwise remain in featureColumns)
 	$effect(() => {
 		if (featureColumns.includes(targetColumn)) {
 			featureColumns = featureColumns.filter((k) => k !== targetColumn);
@@ -218,7 +218,7 @@
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
 			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
-			if (!res.ok) throw new Error(body.error ?? 'モデルの学習に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Failed to train the model');
 			model = body.model ?? null;
 			validity = body.validity ?? null;
 			if (model) {
@@ -261,7 +261,7 @@
 					? await fetch(`/api/kpi-plans/${planId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body })
 					: await fetch('/api/kpi-plans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
 			const resBody = (await res.json()) as { id?: string; error?: string };
-			if (!res.ok) throw new Error(resBody.error ?? '保存に失敗しました');
+			if (!res.ok) throw new Error(resBody.error ?? 'Failed to save');
 			await goto(`/kpi/${mode === 'edit' ? planId : resBody.id}`);
 		} catch (e) {
 			saveError = e instanceof Error ? e.message : String(e);
@@ -270,17 +270,17 @@
 		}
 	}
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
 
 	const tableColumns = [
-		{ key: 'label', label: 'KPI項目' },
-		{ key: 'current', label: '現在値' },
-		{ key: 'target', label: '目標値' },
-		{ key: 'delta', label: '増減' },
-		{ key: 'range', label: '実測レンジ' }
+		{ key: 'label', label: 'KPI item' },
+		{ key: 'current', label: 'Current' },
+		{ key: 'target', label: 'Target' },
+		{ key: 'delta', label: 'Change' },
+		{ key: 'range', label: 'Observed range' }
 	];
 
 	const tableRows = $derived(
@@ -290,7 +290,7 @@
 					current: fmt(i.current),
 					target: fmt(i.target),
 					delta: (i.target - i.current >= 0 ? '+' : '') + fmt(i.target - i.current),
-					range: `${fmt(i.min)} 〜 ${fmt(i.max)}`
+					range: `${fmt(i.min)} - ${fmt(i.max)}`
 				}))
 			: []
 	);
@@ -298,54 +298,54 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">{mode === 'edit' ? 'KPI編集' : 'KPI新規登録'}</h1>
-		<p class="page-sub">目的変数の目標値から、KPI候補（説明変数）の目標値を実測レンジ内に収まる形で逆算します</p>
+		<h1 class="page-title">{mode === 'edit' ? 'Edit KPI' : 'New KPI'}</h1>
+		<p class="page-sub">Back-calculates target values for KPI candidates (feature variables) from the target variable's goal, keeping them within the observed range</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+			<Select label="Data source" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Target variable" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 			<div class="field-narrow">
-				<Textbox label="目的変数の目標値" type="number" bind:value={targetValueText} />
+				<Textbox label="Target variable goal" type="number" bind:value={targetValueText} />
 			</div>
 		</div>
 
 		<div class="config-row">
-			<Select label="期間の種類" bind:value={periodType} options={PERIOD_TYPE_OPTIONS} />
-			<Textbox label="期間ラベル" bind:value={periodLabel} placeholder="例: 2027年度 / 2026年7月 / 第3四半期" />
+			<Select label="Period type" bind:value={periodType} options={PERIOD_TYPE_OPTIONS} />
+			<Textbox label="Period label" bind:value={periodLabel} placeholder="e.g. FY2027 / July 2026 / Q3" />
 		</div>
 
 		{#if dataSourceId}
 			{#if needsPeriodRange}
 				<div class="config-row">
-					<Select label="達成率トラッキングの対象の日時カラム" bind:value={dateColumn} options={dateOptions} />
+					<Select label="Date column for achievement tracking" bind:value={dateColumn} options={dateOptions} />
 					<div class="field-narrow">
-						<DatePicker label="期間FROM" bind:value={periodFrom} required max={periodTo || undefined} />
+						<DatePicker label="Period FROM" bind:value={periodFrom} required max={periodTo || undefined} />
 					</div>
 					<div class="field-narrow">
-						<DatePicker label="期間TO" bind:value={periodTo} required min={periodFrom || undefined} />
+						<DatePicker label="Period TO" bind:value={periodTo} required min={periodFrom || undefined} />
 					</div>
 				</div>
 				<p class="hint">
-					達成率トラッキング（現在の実績・達成率のゲージ表示）は、この日時カラムがFROM〜TOの範囲に入っている行だけを対象に計算します。
-					回帰モデル自体の学習は、これまで通りデータソースの全期間のデータを使います。
+					Achievement tracking (the current actuals and achievement-rate gauge) is calculated only over rows whose date column falls within the FROM-TO range.
+					Training of the regression model itself still uses the data source's full history, as before.
 				</p>
 			{:else}
-				<p class="hint">このデータソースには日時型の列がないため、達成率トラッキングはデータソースの全期間を対象に計算されます。</p>
+				<p class="hint">This data source has no date-type column, so achievement tracking is calculated over the data source's full history.</p>
 			{/if}
 		{/if}
 
 		<div class="feature-picker">
 			<span class="field-label">
-				KPI候補（説明変数、複数選択可）
-				{#if correlationsLoading}<span class="hint-inline">相関を確認中…</span>{/if}
+				KPI candidates (feature variables, multiple selection allowed)
+				{#if correlationsLoading}<span class="hint-inline">Checking correlations…</span>{/if}
 			</span>
 			{#if !targetColumn}
-				<p class="hint">先に目的変数を選択してください</p>
+				<p class="hint">Select a target variable first</p>
 			{:else if featureCandidates.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
+				<p class="hint">No numeric columns available to select</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each featureCandidates as col (col.key)}
@@ -367,7 +367,7 @@
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '計算中…' : 'KPIを作成'}
+				{loading ? 'Calculating…' : 'Create KPI'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
@@ -378,15 +378,15 @@
 			<div class="results-card">
 				{#if !plan.achievable}
 					<p class="warning-text">
-						選択したKPI候補の実測レンジ内だけでは目標に届きません（不足分: {fmt(plan.gap - plan.coveredGap)}）。
-						目標値を見直すか、KPI候補を追加してください。以下は実測レンジ内で最大限に近づけた場合の目標値です。
+						The selected KPI candidates can't reach the goal within their observed ranges alone (shortfall: {fmt(plan.gap - plan.coveredGap)}).
+						Reconsider the target value or add more KPI candidates. The values below are the closest achievable targets within the observed ranges.
 					</p>
 				{/if}
 
 				<div class="metrics-row">
-					<div class="metric"><span class="metric-label">現状の予測値</span><span class="metric-value">{fmt(plan.baseline)}</span></div>
-					<div class="metric"><span class="metric-label">目標値</span><span class="metric-value highlight">{fmt(plan.targetValue)}</span></div>
-					<div class="metric"><span class="metric-label">差分</span><span class="metric-value">{plan.gap >= 0 ? '+' : ''}{fmt(plan.gap)}</span></div>
+					<div class="metric"><span class="metric-label">Current predicted value</span><span class="metric-value">{fmt(plan.baseline)}</span></div>
+					<div class="metric"><span class="metric-label">Target value</span><span class="metric-value highlight">{fmt(plan.targetValue)}</span></div>
+					<div class="metric"><span class="metric-label">Difference</span><span class="metric-value">{plan.gap >= 0 ? '+' : ''}{fmt(plan.gap)}</span></div>
 				</div>
 
 				<Table columns={tableColumns} rows={tableRows} />
@@ -394,22 +394,22 @@
 				<ValidityCard {validity} />
 
 				{#if needsPeriodRange && !periodRangeValid}
-					<p class="warning-text">保存するには、上の設定欄で達成率トラッキングの対象期間（日付列・期間FROM/TO）を指定してください。</p>
+					<p class="warning-text">To save, specify the achievement-tracking target period (date column and period FROM/TO) in the settings above.</p>
 				{/if}
 
 				<div class="save-row">
 					<div class="name-field">
-						<Textbox label="このKPIプランの名前" bind:value={planName} placeholder="例: 2027年度 売上目標KPI" />
+						<Textbox label="Name of this KPI plan" bind:value={planName} placeholder="e.g. FY2027 revenue target KPI" />
 					</div>
 					<button class="run-btn" onclick={savePlan} disabled={saving || !planName.trim() || !periodLabel.trim() || !periodRangeValid}>
-						{saving ? '保存中…' : mode === 'edit' ? '更新する' : '保存する'}
+						{saving ? 'Saving…' : mode === 'edit' ? 'Update' : 'Save'}
 					</button>
 				</div>
 				{#if saveError}<p class="error-text">{saveError}</p>{/if}
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソース・目的変数・KPI候補・目標値・期間を選び、「KPIを作成」を押してください</p>
+				<p>Choose a data source, target variable, KPI candidates, target value, and period in the settings above, then click "Create KPI"</p>
 			</div>
 		{/if}
 	</section>

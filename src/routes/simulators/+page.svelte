@@ -5,10 +5,10 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
 
 	async function deleteSimulator(id: string, name: string) {
-		if (!confirm(`「${name}」を削除しますか？`)) return;
+		if (!confirm(`Delete "${name}"?`)) return;
 		await fetch(`/api/simulators/${id}`, { method: 'DELETE' });
 		await invalidateAll();
 	}
@@ -16,15 +16,15 @@
 
 <div class="page">
 	<div class="page-header">
-		<h1 class="page-title">シミュレーター</h1>
+		<h1 class="page-title">Simulators</h1>
 	</div>
-	<p class="page-desc">チャットでAIに依頼して作成したシミュレーターの一覧です。「〇〇を予測するシミュレーターを作って」のように依頼すると作成されます。</p>
+	<p class="page-desc">A list of simulators created by asking the AI in chat. Ask something like "create a simulator that predicts X" to create one.</p>
 
 	{#if data.simulators.length === 0}
 		<div class="empty">
 			<Sparkles size={32} />
-			<p>シミュレーターがまだありません</p>
-			<p class="empty-sub">メインチャットで「〇〇を予測するシミュレーターを作って」のように依頼してください。</p>
+			<p>No simulators yet</p>
+			<p class="empty-sub">Ask the main chat something like "create a simulator that predicts X."</p>
 		</div>
 	{:else}
 		<div class="sim-grid">
@@ -36,12 +36,12 @@
 							<div class="sim-desc">{sim.description}</div>
 						{/if}
 						<div class="sim-meta">
-							目的変数: {sim.targetColumn} · R²={numberFmt.format(sim.r2)} · サンプル数{sim.sampleSize}件
+							Target variable: {sim.targetColumn} · R²={numberFmt.format(sim.r2)} · {sim.sampleSize} samples
 						</div>
 					</div>
 					<div class="sim-actions">
-						<a href="/simulators/{sim.id}" class="btn-secondary-sm">詳細</a>
-						<button class="btn-danger-sm" onclick={() => deleteSimulator(sim.id, sim.name)}>削除</button>
+						<a href="/simulators/{sim.id}" class="btn-secondary-sm">Details</a>
+						<button class="btn-danger-sm" onclick={() => deleteSimulator(sim.id, sim.name)}>Delete</button>
 					</div>
 				</div>
 			{/each}

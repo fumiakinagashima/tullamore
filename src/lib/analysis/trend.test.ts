@@ -21,7 +21,7 @@ describe('buildTrendSeries', () => {
 		const model = fitTrendFromRows(rows);
 		const series = buildTrendSeries(rows, model, 6, 'day');
 		expect(series.historicalCount).toBe(10);
-		// 半年後まで日次予測すると、実績日数よりずっと多い予測点数になる
+		// Forecasting daily out to six months produces far more predicted points than actual data days
 		expect(series.trend.length).toBeGreaterThan(180);
 	});
 

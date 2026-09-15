@@ -9,25 +9,25 @@ export const tools: Tool[] = [
 	{
 		name: 'design_variables',
 		description:
-			'指定したデータソースの列を分析し、目的変数・説明変数の候補を提案する。シミュレーター作成の最初のステップとして使う。' +
-			'target_column を指定すると、その列との相関係数で説明変数候補をランキングして返す（相関の絶対値が大きい順）。',
+			'Analyzes the columns of the specified data source and proposes candidate target and feature variables. Use this as the first step in creating a simulator. ' +
+			'If target_column is given, it ranks candidate feature variables by their correlation coefficient with that column (largest absolute correlation first).',
 		input_schema: {
 			type: 'object',
 			properties: {
-				data_source_id: { type: 'string', description: 'データソースID（list_data_sources で確認）' },
-				target_column: { type: 'string', description: '目的変数の列名（省略時は目的変数の候補一覧のみ返す）' }
+				data_source_id: { type: 'string', description: 'Data source ID (check with list_data_sources)' },
+				target_column: { type: 'string', description: 'Target variable column name (if omitted, only the list of candidate target variables is returned)' }
 			},
 			required: ['data_source_id']
 		}
 	},
 	{
 		name: 'select_analysis_method',
-		description: '目的変数の性質から適切な分析手法を判別する。design_variables で目的変数を決めた後に呼び出す。',
+		description: 'Determines the appropriate analysis method based on the nature of the target variable. Call this after deciding on the target variable with design_variables.',
 		input_schema: {
 			type: 'object',
 			properties: {
-				data_source_id: { type: 'string', description: 'データソースID' },
-				target_column: { type: 'string', description: '目的変数の列名' }
+				data_source_id: { type: 'string', description: 'Data source ID' },
+				target_column: { type: 'string', description: 'Target variable column name' }
 			},
 			required: ['data_source_id', 'target_column']
 		}
@@ -42,8 +42,8 @@ const designVariablesInputSchema = z.object({
 export async function handleDesignVariables(db: Db, input: unknown, env?: { DB?: D1Database }) {
 	const { data_source_id, target_column } = designVariablesInputSchema.parse(input);
 	const source = await getDataSource(db, data_source_id);
-	if (!source) return { error: 'データソースが見つかりません' };
-	if (!env?.DB) return { error: 'データベースに接続できません' };
+	if (!source) return { error: 'Data source not found' };
+	if (!env?.DB) return { error: 'Unable to connect to the database' };
 
 	try {
 		return await designVariables(env.DB, source, target_column);
@@ -60,6 +60,6 @@ const selectAnalysisMethodInputSchema = z.object({
 export async function handleSelectAnalysisMethod(db: Db, input: unknown) {
 	const { data_source_id, target_column } = selectAnalysisMethodInputSchema.parse(input);
 	const source = await getDataSource(db, data_source_id);
-	if (!source) return { error: 'データソースが見つかりません' };
+	if (!source) return { error: 'Data source not found' };
 	return selectAnalysisMethod(source, target_column);
 }

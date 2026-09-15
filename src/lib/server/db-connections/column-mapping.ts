@@ -6,7 +6,7 @@ const BOOLEAN_TYPES = /^boolean$/i;
 const DATE_TYPES =
 	/^(date|timestamp|timestamp with time zone|timestamp without time zone|time|time with time zone|time without time zone)$/i;
 
-/** Postgresの information_schema.columns.data_type を Tullamoreの4種類の列型に変換する */
+/** Converts Postgres's information_schema.columns.data_type into Tullamore's four column types */
 export function mapPgTypeToColumnType(pgType: string): ColumnDef['type'] {
 	if (BOOLEAN_TYPES.test(pgType)) return 'boolean';
 	if (NUMBER_TYPES.test(pgType)) return 'number';
@@ -18,9 +18,9 @@ const MYSQL_NUMBER_TYPES = /^(tinyint|smallint|mediumint|int|bigint|decimal|nume
 const MYSQL_DATE_TYPES = /^(date|datetime|timestamp|time)$/i;
 
 /**
- * MySQLの information_schema.columns.data_type を Tullamoreの4種類の列型に変換する。
- * MySQLのBOOLEAN/BOOLはTINYINT(1)の別名で、data_type上は単なる'tinyint'としか返らず
- * 通常のtinyint列と区別できないため、boolean判定は行わずnumberとして扱う（既知の制約）
+ * Converts MySQL's information_schema.columns.data_type into Tullamore's four column types.
+ * MySQL's BOOLEAN/BOOL is just an alias for TINYINT(1) — data_type reports it as plain 'tinyint',
+ * indistinguishable from a regular tinyint column, so we don't attempt boolean detection and treat it as number (a known limitation)
  */
 export function mapMysqlTypeToColumnType(mysqlType: string): ColumnDef['type'] {
 	if (MYSQL_DATE_TYPES.test(mysqlType)) return 'date';
@@ -28,7 +28,7 @@ export function mapMysqlTypeToColumnType(mysqlType: string): ColumnDef['type'] {
 	return 'text';
 }
 
-/** 外部DBの列名を isValidColumnKey（英字始まり・英数字とアンダースコアのみ）を満たす形に変換する */
+/** Converts an external DB column name into a form that satisfies isValidColumnKey (starts with a letter, letters/digits/underscore only) */
 export function sanitizeColumnKey(name: string): string {
 	let key = name.replace(/[^a-zA-Z0-9_]/g, '_');
 	if (!/^[a-zA-Z]/.test(key)) key = `c_${key}`;

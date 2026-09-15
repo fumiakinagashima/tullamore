@@ -1,7 +1,7 @@
-# @cloudflare/vitest-pool-workers 向けの最小構成。
-# 本番用 wrangler.toml は main(worker.ts)・queues consumer 等を持ち、これをそのまま読み込むと
-# vitest-pool-workers 側のバンドラーが worker.ts を解決しようとして $lib エイリアスで失敗するため、
-# D1 バインディングのテストに必要な最小限だけを別ファイルとして切り出す。
+# Minimal configuration for @cloudflare/vitest-pool-workers.
+# The production wrangler.toml has main (worker.ts), a queues consumer, etc., and loading it as-is
+# would make vitest-pool-workers' bundler try to resolve worker.ts and fail on the $lib alias,
+# so we split out just the minimum needed to test D1 bindings into this separate file.
 name = "tullamore-test"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]

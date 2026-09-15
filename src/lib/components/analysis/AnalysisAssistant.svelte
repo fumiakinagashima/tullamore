@@ -67,7 +67,7 @@
 				body: JSON.stringify({ analysisType, config, resultSummary })
 			});
 			const body = (await res.json()) as { report?: string; error?: string };
-			if (!res.ok) throw new Error(body.error ?? 'レポートの作成に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Failed to create the report');
 			report = body.report ?? null;
 		} catch (e) {
 			reportError = e instanceof Error ? e.message : String(e);
@@ -101,7 +101,7 @@
 			});
 
 			if (!res.ok || !res.body) {
-				messages = [...messages.slice(0, -1), { role: 'assistant', text: 'エラーが発生しました。' }];
+				messages = [...messages.slice(0, -1), { role: 'assistant', text: 'An error occurred.' }];
 				return;
 			}
 
@@ -147,32 +147,32 @@
 	}
 
 	const EMPTY_HINTS: Record<Exclude<Props['analysisType'], null>, string> = {
-		regression: '「広告費と来店数が売上に与える影響を見たい」のように伝えると設定します。使い方や結果の見方の質問もどうぞ。',
-		trend: '「売上の推移を1年後まで予測して」のように伝えると設定します。使い方や結果の見方の質問もどうぞ。',
-		sensitivity: '「売上にどの変数が一番効いているか見たい」のように伝えると設定します。使い方や結果の見方の質問もどうぞ。',
-		scenario: '「広告費と来店数で売上を比較したい」のように伝えると設定します。シナリオの値はグリッドで編集してください。',
-		'goal-seek': '「売上を目標値にするには広告費をいくらにすればいいか」のように伝えると設定します。使い方の質問もどうぞ。',
-		'monte-carlo': '「広告費と来店数から売上のばらつきを見たい」のように伝えると設定します。各変数の分布や実行はページ側で設定してください。',
+		regression: 'Try saying something like "I want to see how ad spend and store visits affect sales" to set this up. Feel free to ask about how to use this or how to read the results.',
+		trend: 'Try saying something like "Forecast the sales trend one year out" to set this up. Feel free to ask about how to use this or how to read the results.',
+		sensitivity: 'Try saying something like "I want to see which variable has the biggest effect on sales" to set this up. Feel free to ask about how to use this or how to read the results.',
+		scenario: 'Try saying something like "I want to compare sales under different ad spend and store visit assumptions" to set this up. Edit the scenario values in the grid.',
+		'goal-seek': 'Try saying something like "What ad spend would it take to hit a sales target?" to set this up. Feel free to ask how to use this.',
+		'monte-carlo': 'Try saying something like "I want to see the spread of sales outcomes from ad spend and store visits" to set this up. Configure each variable\'s distribution and run it on the page.',
 		'budget-allocation':
-			'「広告費とSNS広告費の予算配分を最適化したい」のように伝えると設定します。予算総額やチャネルごとの上限はページ側で設定してください。',
-		correlation: '「売上・広告費・来店数の関係を見たい」のように伝えると設定します。列は2つ以上必要です。',
-		'descriptive-stats': '「売上の基本統計を見たい」のように伝えると設定します。列は1つ以上選択できます。',
-		'ab-test': '「施策Aと施策Bでコンバージョン率に差があるか調べたい」のように伝えると設定します。検定方法（平均/比率）はページ側でも切り替えられます。',
-		classification: '「広告費や来店数から購入するかどうかを予測したい」のように伝えると設定します。目的変数は2値の列を選んでください。',
-		'report-create': '「売上とその要因についてまとめて分析したい」のように伝えると、データソースや分析手法を設定します。レポートの作成は画面上の専用ボタンから行ってください。',
-		'kpi-planning': '「来年度の売上を3,000万円にするためのKPIを作りたい」のように伝えると設定します。KPI候補・目標値・期間は画面上で調整してください。'
+			'Try saying something like "I want to optimize the budget split between ad spend and social ad spend" to set this up. Configure the total budget and per-channel limits on the page.',
+		correlation: 'Try saying something like "I want to see the relationship between sales, ad spend, and store visits" to set this up. At least two columns are required.',
+		'descriptive-stats': 'Try saying something like "I want to see basic statistics for sales" to set this up. You can select one or more columns.',
+		'ab-test': 'Try saying something like "I want to check whether conversion rates differ between campaign A and campaign B" to set this up. You can also switch the test method (mean/proportion) on the page.',
+		classification: 'Try saying something like "I want to predict whether a purchase happens based on ad spend and store visits" to set this up. Choose a binary column as the target variable.',
+		'report-create': 'Try saying something like "I want a combined analysis of sales and its drivers" to configure the data source and analysis methods. Create the report using the dedicated button on the screen.',
+		'kpi-planning': 'Try saying something like "I want to build a KPI plan to hit 30 million yen in sales next year" to set this up. Adjust the KPI candidates, target value, and period on the screen.'
 	};
 
-	const emptyHint = $derived(analysisType ? EMPTY_HINTS[analysisType] : 'どの分析を試したいですか？サイドバーから選ぶか、内容を伝えてください。');
+	const emptyHint = $derived(analysisType ? EMPTY_HINTS[analysisType] : 'Which analysis would you like to try? Pick one from the sidebar, or just tell me what you have in mind.');
 </script>
 
 <div class="assistant">
 	<div class="assistant-header">
-		<span>AI アシスタント</span>
+		<span>AI Assistant</span>
 		{#if resultSummary}
-			<button class="report-btn" onclick={createReport} title="分析結果からレポートを作成">
+			<button class="report-btn" onclick={createReport} title="Create a report from the analysis results">
 				<FileText size={13} />
-				レポート作成
+				Create report
 			</button>
 		{/if}
 	</div>
@@ -198,11 +198,11 @@
 		<textarea
 			bind:value={input}
 			onkeydown={handleKey}
-			placeholder="分析したい内容や質問をどうぞ..."
+			placeholder="Tell me what you'd like to analyze, or ask a question..."
 			rows="2"
 			disabled={loading}
 		></textarea>
-		<button class="assistant-send" onclick={send} disabled={loading || !input.trim()} aria-label="送信">
+		<button class="assistant-send" onclick={send} disabled={loading || !input.trim()} aria-label="Send">
 			<ArrowUp size={14} />
 		</button>
 	</div>
@@ -218,7 +218,7 @@
 
 <style lang="scss">
 	.assistant {
-		/* 幅は親（+layout.svelte のドラッグでリサイズ可能な .analysis-sidebar）が決める */
+		/* Width is determined by the parent (the drag-resizable .analysis-sidebar in +layout.svelte) */
 		width: 100%;
 		height: 100%;
 		display: flex;

@@ -1,4 +1,4 @@
--- KPI設定（目標値からの逆算プラン）の永続化
+-- Persistence for KPI settings (plans back-calculated from a target value)
 CREATE TABLE `kpi_plans` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,

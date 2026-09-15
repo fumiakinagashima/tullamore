@@ -29,7 +29,9 @@ vite.config.ts.timestamp-*
 /playwright-report
 /blob-report
 
-# Internal docs
-/docs
+# Internal docs (product docs/, CONCEPT.md, DEPLOY.md, DATA_CONNECTIONS.md, and
+# docs/sample-data/ are public and tracked; these two stay private)
+/docs/roadmap.md
+/docs/memo.md
 CLAUDE.md
 /memory

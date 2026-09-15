@@ -58,8 +58,8 @@
 		featureColumns = checked ? [...featureColumns, key] : featureColumns.filter((k) => k !== key);
 	}
 
-	// 目的変数を切り替えた時、それまで説明変数として選んでいた列が新しい目的変数と重複していたら除外する
-	// （featureCandidates からは自動的に消えるが、チェック状態自体は featureColumns に残ってしまうため）
+	// When the target variable is switched, drop any previously selected feature column that now duplicates the new target
+	// (it disappears from featureCandidates automatically, but the checked state itself would otherwise remain in featureColumns)
 	$effect(() => {
 		if (featureColumns.includes(targetColumn)) {
 			featureColumns = featureColumns.filter((k) => k !== targetColumn);
@@ -68,7 +68,7 @@
 
 	const canRun = $derived(!!dataSourceId && !!targetColumn && featureColumns.length > 0);
 
-	// 右側のAIアシスタントに現在の設定・結果を渡す（チャネルごとの上下限は画面側でのみ調整する）
+	// Pass the current config/results to the AI assistant on the right (per-channel min/max are only adjusted on the page itself)
 	$effect(() => {
 		bridge.analysisType = 'budget-allocation';
 		bridge.config = {
@@ -91,7 +91,7 @@
 			: null;
 	});
 
-	// AIアシスタントの set_config ツールから呼ばれる。回帰分析ページと同じパターン
+	// Called from the AI assistant's set_config tool. Same pattern as the regression analysis page
 	async function applyConfig(patch: Record<string, unknown>) {
 		if (typeof patch.data_source_id === 'string' && patch.data_source_id !== dataSourceId) {
 			dataSourceId = patch.data_source_id;
@@ -124,7 +124,7 @@
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
 			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
-			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Analysis failed');
 			model = body.model ?? null;
 			validity = body.validity ?? null;
 			result = null;
@@ -144,7 +144,7 @@
 		result = optimizeBudgetAllocation(model, model.featureColumns, totalBudget, boundsRows, BUDGET_ALLOCATION_COEF_EPSILON);
 	}
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
@@ -152,24 +152,24 @@
 	const allocationChartSeries = $derived(
 		result
 			? [
-					{ name: '現在（平均）', data: result.channels.map((c) => ({ label: labelOf(c.key), value: c.current })) },
-					{ name: '最適配分', data: result.channels.map((c) => ({ label: labelOf(c.key), value: c.allocated })) }
+					{ name: 'Current (average)', data: result.channels.map((c) => ({ label: labelOf(c.key), value: c.current })) },
+					{ name: 'Optimal allocation', data: result.channels.map((c) => ({ label: labelOf(c.key), value: c.allocated })) }
 				]
 			: []
 	);
 
 	const tableColumns = [
-		{ key: 'channel', label: 'チャネル' },
-		{ key: 'coefficient', label: '限界効果（係数）' },
-		{ key: 'current', label: '現在（平均）' },
-		{ key: 'allocated', label: '最適配分' },
-		{ key: 'delta', label: '増減' }
+		{ key: 'channel', label: 'Channel' },
+		{ key: 'coefficient', label: 'Marginal effect (coefficient)' },
+		{ key: 'current', label: 'Current (average)' },
+		{ key: 'allocated', label: 'Optimal allocation' },
+		{ key: 'delta', label: 'Change' }
 	];
 
 	const tableRows = $derived(
 		result
 			? result.channels.map((c) => ({
-					channel: labelOf(c.key) + (c.isNegligible ? '（効果ほぼなし）' : ''),
+					channel: labelOf(c.key) + (c.isNegligible ? ' (negligible effect)' : ''),
 					coefficient: fmt(c.coefficient),
 					current: fmt(c.current),
 					allocated: fmt(c.allocated),
@@ -181,25 +181,25 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">予算配分最適化</h1>
+		<h1 class="page-title">Budget Allocation Optimization</h1>
 		<p class="page-sub">
-			説明変数を予算配分するチャネル（広告費等）とみなし、予算総額を目的変数が最大になるよう各チャネルへ配分します
+			Treats feature variables as channels (e.g. ad spend) to allocate a budget across, distributing the total budget among channels to maximize the target variable
 		</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+			<Select label="Data source" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Target variable" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 		</div>
 
 		<div class="feature-picker">
-			<span class="field-label">配分するチャネル（説明変数、複数選択可）</span>
+			<span class="field-label">Channels to allocate (feature variables, multiple selection allowed)</span>
 			{#if !targetColumn}
-				<p class="hint">先に目的変数を選択してください</p>
+				<p class="hint">Select a target variable first</p>
 			{:else if featureCandidates.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
+				<p class="hint">No numeric columns available to select</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each featureCandidates as col (col.key)}
@@ -218,31 +218,31 @@
 
 		<div class="run-row">
 			<button class="run-btn" onclick={fitModel} disabled={!canRun || loading}>
-				{loading ? 'モデル作成中…' : 'モデルを作成'}
+				{loading ? 'Creating model…' : 'Create model'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
 
 		{#if model}
 			<div class="bounds-section">
-				<p class="config-title">チャネルごとの上下限（既定は実測レンジ）</p>
+				<p class="config-title">Min/max per channel (defaults to observed range)</p>
 				<div class="bounds-rows">
 					{#each model.featureColumns as key (key)}
 						<div class="bounds-row">
 							<span class="bounds-label">{labelOf(key)}</span>
-							<NumberInput label="下限" bind:value={boundsRows[key].min} min={0} />
-							<NumberInput label="上限" bind:value={boundsRows[key].max} min={0} />
+							<NumberInput label="Min" bind:value={boundsRows[key].min} min={0} />
+							<NumberInput label="Max" bind:value={boundsRows[key].max} min={0} />
 						</div>
 					{/each}
 				</div>
 			</div>
 
 			<div class="config-row">
-				<NumberInput label="予算総額" bind:value={totalBudget} min={0} />
+				<NumberInput label="Total budget" bind:value={totalBudget} min={0} />
 			</div>
 
 			<div class="run-row">
-				<button class="run-btn" onclick={runOptimization}>配分を最適化</button>
+				<button class="run-btn" onclick={runOptimization}>Optimize allocation</button>
 			</div>
 		{/if}
 	</section>
@@ -252,29 +252,29 @@
 			<div class="results-card">
 				{#if result.infeasible}
 					<p class="warning-text">
-						指定した予算総額はチャネルの上下限の合計に収まらないため、配分は目安値です。上下限を見直してください。
+						The specified total budget doesn't fit within the sum of the channel min/max bounds, so the allocation shown is only approximate. Reconsider the min/max bounds.
 					</p>
 				{/if}
 				<div class="metrics-row">
 					<div class="metric">
-						<span class="metric-label">予算総額</span>
+						<span class="metric-label">Total budget</span>
 						<span class="metric-value">{fmt(result.totalBudget)}</span>
 					</div>
 					<div class="metric">
-						<span class="metric-label">現在配分での予測値</span>
+						<span class="metric-label">Predicted value at current allocation</span>
 						<span class="metric-value">{fmt(result.predictedCurrent)}</span>
 					</div>
 					<div class="metric">
-						<span class="metric-label">最適配分での予測値</span>
+						<span class="metric-label">Predicted value at optimal allocation</span>
 						<span class="metric-value highlight">{fmt(result.predictedOptimal)}</span>
 					</div>
 					<div class="metric">
-						<span class="metric-label">増加分</span>
+						<span class="metric-label">Uplift</span>
 						<span class="metric-value highlight">{result.uplift >= 0 ? '+' : ''}{fmt(result.uplift)}</span>
 					</div>
 				</div>
 
-				<BarChart series={allocationChartSeries} mode="grouped" title="チャネルごとの配分比較" />
+				<BarChart series={allocationChartSeries} mode="grouped" title="Allocation comparison by channel" />
 
 				<Table columns={tableColumns} rows={tableRows} />
 
@@ -284,7 +284,7 @@
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソース・目的変数・チャネルを選んでモデルを作成し、予算総額と上下限を設定してから「配分を最適化」を押してください</p>
+				<p>Choose a data source, target variable, and channels above to create a model, set the total budget and min/max bounds, then click "Optimize allocation"</p>
 			</div>
 		{/if}
 	</section>

@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const db = createDb(platform.env.DB);
 	const source = await getDataSource(db, params.id);
-	if (!source) return errors.notFound('データソースが見つかりません');
+	if (!source) return errors.notFound('Data source not found');
 
 	const report = await computeDataQuality(platform.env.DB, source);
 	return json({ report });

@@ -12,7 +12,8 @@ export function parseSchema(schemaJson: string): ColumnDef[] {
 	try { return JSON.parse(schemaJson); } catch { return []; }
 }
 
-// カラムキーはCREATE/ALTER TABLEに直接埋め込むため、SQLインジェクション対策として識別子として妥当な形式に制限する
+// Column keys are embedded directly into CREATE/ALTER TABLE statements, so as a SQL injection
+// countermeasure we restrict them to a form that is valid as an identifier
 export function isValidColumnKey(key: string): boolean {
 	return /^[a-zA-Z][a-zA-Z0-9_]*$/.test(key);
 }

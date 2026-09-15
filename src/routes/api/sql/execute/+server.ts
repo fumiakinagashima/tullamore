@@ -23,6 +23,6 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		const rows = result.results as Record<string, unknown>[];
 		return json({ columns: rows.length > 0 ? Object.keys(rows[0]) : [], rows });
 	} catch (e) {
-		return errors.badRequest(`SQLエラー: ${e instanceof Error ? e.message : String(e)}`);
+		return errors.badRequest(`SQL error: ${e instanceof Error ? e.message : String(e)}`);
 	}
 };

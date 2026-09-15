@@ -96,6 +96,6 @@ describe('computeDescriptiveStats', () => {
 		const aggregates = aggregatesOf(fullPopulation);
 		const sample = fullPopulation.slice(0, 100);
 		const result = computeDescriptiveStats(aggregates, sample, 10);
-		expect(result.validity.checks.some((c) => c.label === '中央値・四分位数の精度')).toBe(true);
+		expect(result.validity.checks.some((c) => c.label === 'Median/quartile precision')).toBe(true);
 	});
 });

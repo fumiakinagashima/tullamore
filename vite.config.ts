@@ -12,8 +12,8 @@ export default defineConfig({
 	test: {
 		environment: 'node',
 		include: ['src/**/*.{test,spec}.{js,ts}'],
-		// *.workers.test.ts は cloudflare:test（Miniflare上のWorkersランタイム）が要る別プール向けで、
-		// vitest.workers.config.ts 側で実行する（D1等のバインディングが必要なserver関数のテスト）
+		// *.workers.test.ts targets a separate pool that needs cloudflare:test (the Workers runtime on
+		// Miniflare), and is run from vitest.workers.config.ts (tests for server functions that need D1 and other bindings)
 		exclude: [...configDefaults.exclude, 'src/**/*.workers.test.ts']
 	}
 });

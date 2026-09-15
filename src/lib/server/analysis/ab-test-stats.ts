@@ -1,7 +1,7 @@
 import type { GroupMeanStats, GroupProportionStats } from '$lib/analysis/ab-test';
 import { quoteIdent } from './sql-ident';
 
-/** グループ列の値ごとにCOUNT/AVG/SUM/SUM_SQを集計する（1本のSQLクエリ） */
+/** Aggregates COUNT/AVG/SUM/SUM_SQ for each value of the group column (a single SQL query) */
 async function groupedAggregates(
 	db: D1Database,
 	tableName: string,
@@ -20,17 +20,17 @@ async function groupedAggregates(
 
 function requireTwoGroups<T extends { group: string; n: number }>(groups: T[]): [T, T] {
 	if (groups.length !== 2) {
-		const found = groups.map((g) => `"${g.group}"（${g.n}件）`).join(', ');
+		const found = groups.map((g) => `"${g.group}" (${g.n} rows)`).join(', ');
 		throw new Error(
 			groups.length === 0
-				? 'グループ列に値のある行が見つかりませんでした'
-				: `グループ列の値が2種類である必要があります（現在: ${found || groups.length + '種類'}）。データを絞り込むか別の列を選んでください`
+				? 'No rows with a value in the group column were found'
+				: `The group column must have exactly two distinct values (currently: ${found || groups.length + ' values'}). Filter the data or choose a different column`
 		);
 	}
 	return [groups[0], groups[1]];
 }
 
-/** 連続値指標（購入額など）の2グループ統計量を求める（Welchのt検定用） */
+/** Computes two-group statistics for a continuous metric (e.g., purchase amount), for Welch's t-test */
 export async function computeGroupMeanStats(
 	db: D1Database,
 	tableName: string,
@@ -41,7 +41,7 @@ export async function computeGroupMeanStats(
 	const [a, b] = requireTwoGroups(rows);
 
 	const toStats = (r: (typeof rows)[number]): GroupMeanStats => {
-		if (r.n < 2) throw new Error(`グループ "${r.group}" のサンプル数が不足しています（2件以上必要）`);
+		if (r.n < 2) throw new Error(`Group "${r.group}" has an insufficient sample size (at least 2 rows are required)`);
 		const mean = r.sum / r.n;
 		const variance = Math.max(0, r.sumSq - r.n * mean * mean) / (r.n - 1);
 		return { group: r.group, n: r.n, mean, variance };
@@ -50,7 +50,7 @@ export async function computeGroupMeanStats(
 	return [toStats(a), toStats(b)];
 }
 
-/** 二値指標（コンバージョンの有無=0/1など）の2グループ統計量を求める（比率のz検定用） */
+/** Computes two-group statistics for a binary metric (e.g., conversion yes/no = 0/1), for the z-test for proportions */
 export async function computeGroupProportionStats(
 	db: D1Database,
 	tableName: string,
@@ -62,7 +62,7 @@ export async function computeGroupProportionStats(
 
 	const toStats = (r: (typeof rows)[number]): GroupProportionStats => {
 		if (r.sum < 0 || r.sum > r.n) {
-			throw new Error(`指標列 "${metricColumn}" は0または1の二値である必要があります`);
+			throw new Error(`Metric column "${metricColumn}" must be a binary 0 or 1 value`);
 		}
 		return { group: r.group, n: r.n, successes: r.sum };
 	};

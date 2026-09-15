@@ -14,7 +14,7 @@
 	const ENGINE_LABEL: Record<string, string> = { postgres: 'PostgreSQL', mysql: 'MySQL' };
 	const ENGINE_DEFAULT_PORT: Record<string, string> = { postgres: '5432', mysql: '3306' };
 
-	// --- Hyperdrive（自動検出＋トグル） ---
+	// --- Hyperdrive (auto-detection + toggle) ---
 	type HyperdriveItem = {
 		bindingName: string;
 		connectionId: string | null;
@@ -43,7 +43,7 @@
 				});
 				const body = (await res.json()) as { id?: string; error?: string };
 				if (!res.ok) {
-					hyperdriveError = body.error ?? '有効化に失敗しました';
+					hyperdriveError = body.error ?? 'Failed to enable';
 					return;
 				}
 				hyperdriveItems = hyperdriveItems.map((i) =>
@@ -53,7 +53,7 @@
 				if (!item.connectionId) return;
 				const res = await fetch(`/api/db-connections/${item.connectionId}`, { method: 'DELETE' });
 				if (!res.ok) {
-					hyperdriveError = '無効化に失敗しました';
+					hyperdriveError = 'Failed to disable';
 					return;
 				}
 				hyperdriveItems = hyperdriveItems.map((i) =>
@@ -65,7 +65,7 @@
 		}
 	}
 
-	// --- TCP Sockets（手動作成のフォーム） ---
+	// --- TCP Sockets (manual creation form) ---
 	type TcpConnection = {
 		id: string;
 		name: string;
@@ -102,8 +102,8 @@
 	let tcpForm = $state(emptyTcpForm());
 	let lastEngine = 'postgres';
 
-	// エンジン切り替え時、ポート欄がまだ相手側のデフォルト値のままなら自動的に今のエンジンのデフォルトへ更新する
-	// （ユーザーが手動で入力したポートは上書きしない）
+	// When switching engines, if the port field is still at the other engine's default value, automatically update it to the current engine's default
+	// (a port the user entered manually is never overwritten)
 	$effect(() => {
 		const engine = tcpForm.engine;
 		if (engine !== lastEngine) {
@@ -132,7 +132,7 @@
 			port: String(item.config.port),
 			database: item.config.database,
 			username: item.config.username,
-			password: item.config.password, // マスク済み値。変更しなければサーバー側で既存パスワードを保持する
+			password: item.config.password, // Masked value. If left unchanged, the server keeps the existing password
 			ssl: item.config.ssl
 		};
 		lastEngine = item.config.engine;
@@ -165,7 +165,7 @@
 				});
 				const body = (await res.json()) as TcpConnection & { error?: string };
 				if (!res.ok) {
-					tcpError = body.error ?? '保存に失敗しました';
+					tcpError = body.error ?? 'Failed to save';
 					return;
 				}
 				tcpItems = tcpItems.map((i) => (i.id === editingTcpId ? body : i));
@@ -182,7 +182,7 @@
 				});
 				const body = (await res.json()) as TcpConnection & { error?: string };
 				if (!res.ok) {
-					tcpError = body.error ?? '保存に失敗しました';
+					tcpError = body.error ?? 'Failed to save';
 					return;
 				}
 				tcpItems = [...tcpItems, body];
@@ -194,7 +194,7 @@
 	}
 
 	async function removeTcp(id: string) {
-		if (!confirm('この接続を削除します。取り込み済みのデータソースは残ります。よろしいですか？')) return;
+		if (!confirm('This will delete the connection. Data sources already imported will remain. Are you sure?')) return;
 		await fetch(`/api/db-connections/${id}`, { method: 'DELETE' });
 		tcpItems = tcpItems.filter((i) => i.id !== id);
 	}
@@ -202,20 +202,20 @@
 
 <div class="page">
 	<div class="page-header">
-		<h1 class="page-title">接続管理</h1>
+		<h1 class="page-title">Connection Management</h1>
 	</div>
 
 	<section class="section">
-		<h2 class="section-title">Hyperdriveバインディング</h2>
+		<h2 class="section-title">Hyperdrive Bindings</h2>
 		<p class="lead">
-			wrangler.tomlに登録済みのHyperdriveバインディング（外部DB接続）を一覧表示します。有効にすると、そのDBのテーブルをデータソースとして取り込めるようになります。無効にしても、既に取り込み済みのデータソースは残ります。
+			Lists Hyperdrive bindings (external DB connections) registered in wrangler.toml. Enabling one lets you import that database's tables as data sources. Disabling one leaves already-imported data sources intact.
 		</p>
 
 		{#if hyperdriveError}<p class="form-error">{hyperdriveError}</p>{/if}
 
 		{#if hyperdriveItems.length === 0}
 			<p class="empty">
-				利用可能なHyperdriveバインディングがありません。wrangler.tomlに<code>HYPERDRIVE_</code>で始まる名前のバインディングを登録し、デプロイしてください。
+				No Hyperdrive bindings are available. Register a binding whose name starts with <code>HYPERDRIVE_</code> in wrangler.toml and deploy.
 			</p>
 		{:else}
 			<ul class="list">
@@ -229,7 +229,7 @@
 							<span class="badge">Hyperdrive</span>
 							{#if item.engine}<span class="badge engine">{ENGINE_LABEL[item.engine]}</span>{/if}
 							{#if item.enabled && item.connectionId}
-								<a href="/connections/{item.connectionId}" class="link-btn">テーブルを取り込む</a>
+								<a href="/connections/{item.connectionId}" class="link-btn">Import Tables</a>
 							{/if}
 							<Toggle
 								checked={item.enabled}
@@ -245,15 +245,15 @@
 
 	<section class="section">
 		<div class="section-header">
-			<h2 class="section-title">手動DB接続（TCP）</h2>
-			<button class="add-btn" onclick={openAddTcp}>+ 接続を追加</button>
+			<h2 class="section-title">Manual DB Connections (TCP)</h2>
+			<button class="add-btn" onclick={openAddTcp}>+ Add Connection</button>
 		</div>
 		<p class="lead">
-			ホスト・ポート・ユーザー名・パスワードを直接入力して接続します。wrangler.tomlの事前登録は不要ですぐ使えますが、Hyperdriveのようなコネクションプーリング・キャッシュはありません。
+			Connect by entering the host, port, username, and password directly. No pre-registration in wrangler.toml is required, so it's ready to use immediately, but there's no connection pooling or caching like Hyperdrive provides.
 		</p>
 
 		{#if tcpItems.length === 0 && !showTcpForm}
-			<p class="empty">接続がまだありません。</p>
+			<p class="empty">No connections yet.</p>
 		{/if}
 
 		<ul class="list">
@@ -269,9 +269,9 @@
 					<div class="item-meta">
 						<span class="badge">TCP Sockets</span>
 						<span class="badge engine">{ENGINE_LABEL[item.config.engine]}</span>
-						<a href="/connections/{item.id}" class="link-btn">テーブルを取り込む</a>
-						<button class="link-btn" onclick={() => openEditTcp(item)}>編集</button>
-						<button class="link-btn danger" onclick={() => removeTcp(item.id)}>削除</button>
+						<a href="/connections/{item.id}" class="link-btn">Import Tables</a>
+						<button class="link-btn" onclick={() => openEditTcp(item)}>Edit</button>
+						<button class="link-btn danger" onclick={() => removeTcp(item.id)}>Delete</button>
 					</div>
 				</li>
 			{/each}
@@ -279,31 +279,31 @@
 
 		{#if showTcpForm}
 			<div class="form-card">
-				<h3>{editingTcpId ? '接続を編集' : '接続を追加'}</h3>
+				<h3>{editingTcpId ? 'Edit Connection' : 'Add Connection'}</h3>
 				{#if tcpError}<p class="form-error">{tcpError}</p>{/if}
 				<div class="fields">
-					<Textbox label="名前" bind:value={tcpForm.name} placeholder="例: 顧客DB（本番RDS）" required />
-					<Textbox label="説明（任意）" bind:value={tcpForm.description} />
-					<Select label="エンジン" bind:value={tcpForm.engine} options={ENGINE_OPTIONS} />
+					<Textbox label="Name" bind:value={tcpForm.name} placeholder="e.g., Customer DB (Production RDS)" required />
+					<Textbox label="Description (optional)" bind:value={tcpForm.description} />
+					<Select label="Engine" bind:value={tcpForm.engine} options={ENGINE_OPTIONS} />
 					<div class="field-row">
-						<Textbox label="ホスト" bind:value={tcpForm.host} placeholder="db.example.com" required />
-						<Textbox label="ポート" type="number" bind:value={tcpForm.port} required />
+						<Textbox label="Host" bind:value={tcpForm.host} placeholder="db.example.com" required />
+						<Textbox label="Port" type="number" bind:value={tcpForm.port} required />
 					</div>
-					<Textbox label="データベース名" bind:value={tcpForm.database} required />
+					<Textbox label="Database Name" bind:value={tcpForm.database} required />
 					<div class="field-row">
-						<Textbox label="ユーザー名" bind:value={tcpForm.username} required />
-						<Textbox label="パスワード" type="password" bind:value={tcpForm.password} required />
+						<Textbox label="Username" bind:value={tcpForm.username} required />
+						<Textbox label="Password" type="password" bind:value={tcpForm.password} required />
 					</div>
-					<Toggle bind:checked={tcpForm.ssl} label="SSLを使う" />
+					<Toggle bind:checked={tcpForm.ssl} label="Use SSL" />
 				</div>
 				<div class="form-actions">
-					<button class="cancel-btn" onclick={cancelTcp}>キャンセル</button>
+					<button class="cancel-btn" onclick={cancelTcp}>Cancel</button>
 					<button
 						class="save-btn"
 						onclick={saveTcp}
 						disabled={tcpSaving || !tcpForm.name || !tcpForm.host || !tcpForm.database || !tcpForm.username || !tcpForm.password}
 					>
-						保存
+						Save
 					</button>
 				</div>
 			</div>

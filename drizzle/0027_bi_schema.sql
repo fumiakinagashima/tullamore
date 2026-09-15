@@ -1,11 +1,11 @@
--- CRM固有テーブルを削除
+-- Drop CRM-specific tables
 DROP TABLE IF EXISTS `activities`;
 DROP TABLE IF EXISTS `deals`;
 DROP TABLE IF EXISTS `contacts`;
 DROP TABLE IF EXISTS `customers`;
 DROP TABLE IF EXISTS `core_custom_fields`;
 
--- BIデータソースカタログテーブル
+-- BI data source catalog table
 CREATE TABLE `data_sources` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,

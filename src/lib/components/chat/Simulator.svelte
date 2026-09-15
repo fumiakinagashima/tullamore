@@ -8,7 +8,7 @@
 
 	let { name, description, targetLabel, intercept, features, metrics }: Props = $props();
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
 
 	function fmt(n: number): string {
 		return numberFmt.format(n);
@@ -18,8 +18,8 @@
 		return `${coefficient >= 0 ? '+' : '−'} ${fmt(Math.abs(coefficient))}`;
 	}
 
-	// features は create_simulator/get_simulator の結果からAIが構築するprops。
-	// クライアントサイドの即時再計算にはサーバーと同じ predict() 純関数を使う（サーバーラウンドトリップなし）。
+	// `features` are props the AI builds from the result of create_simulator/get_simulator.
+	// For instant client-side recalculation we use the same pure predict() function as the server (no server round trip).
 	const model = $derived<LinearRegressionModel>({
 		method: 'linear_regression',
 		targetColumn: '',
@@ -64,11 +64,11 @@
 			<p class="simulator-title">{name}</p>
 			{#if description}<p class="simulator-desc">{description}</p>{/if}
 		</div>
-		<button type="button" class="reset-btn" onclick={resetToMean}>平均値に戻す</button>
+		<button type="button" class="reset-btn" onclick={resetToMean}>Reset to mean</button>
 	</div>
 
 	<div class="predicted-card">
-		<span class="predicted-label">{targetLabel}（予測値）</span>
+		<span class="predicted-label">{targetLabel} (predicted)</span>
 		<span class="predicted-value">{predicted === null ? '—' : fmt(predicted)}</span>
 	</div>
 
@@ -92,7 +92,7 @@
 					<span>{fmt(f.max)}</span>
 				</div>
 				{#if isOutOfRange(f.key)}
-					<p class="warn-text">実測データの範囲外です（外挿）。予測の信頼性は低くなります</p>
+					<p class="warn-text">Outside the range of observed data (extrapolation). Prediction reliability is lower.</p>
 				{/if}
 			</div>
 		{/each}
@@ -108,9 +108,9 @@
 	</div>
 
 	<div class="metrics">
-		<span class="metric"><span class="metric-label">決定係数 R²</span><span class="metric-value">{fmt(metrics.r2)}</span></span>
-		<span class="metric"><span class="metric-label">自由度調整済みR²</span><span class="metric-value">{fmt(metrics.adjustedR2)}</span></span>
-		<span class="metric"><span class="metric-label">サンプル数</span><span class="metric-value">{metrics.sampleSize}件</span></span>
+		<span class="metric"><span class="metric-label">R² (coefficient of determination)</span><span class="metric-value">{fmt(metrics.r2)}</span></span>
+		<span class="metric"><span class="metric-label">Adjusted R²</span><span class="metric-value">{fmt(metrics.adjustedR2)}</span></span>
+		<span class="metric"><span class="metric-label">Sample size</span><span class="metric-value">{metrics.sampleSize}</span></span>
 	</div>
 </div>
 

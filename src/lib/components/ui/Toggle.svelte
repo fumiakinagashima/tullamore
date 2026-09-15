@@ -3,7 +3,7 @@
 		label?: string;
 		checked?: boolean;
 		disabled?: boolean;
-		/** checked が変わった直後に呼ばれる。API呼び出し等の副作用をトリガーしたい場合に使う */
+		/** Called immediately after checked changes. Use this when you want to trigger a side effect such as an API call */
 		onchange?: (checked: boolean) => void;
 	};
 

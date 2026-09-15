@@ -17,7 +17,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		formTitle: string;
 		formFields: { key: string; label: string }[];
 		history: { role: 'user' | 'assistant'; text: string }[];
-		// ダイアログに表示中のレコード（詳細表示時）。指示語「この顧客」等の解決に使う
+		// The record currently shown in the dialog (when viewing details). Used to resolve references like "this customer"
 		recordContext?: {
 			type: string;
 			typeLabel: string;
@@ -32,7 +32,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 			async start(controller) {
 				const enqueue = (e: StreamEvent) => controller.enqueue(new TextEncoder().encode(sse(e)));
 				await new Promise((r) => setTimeout(r, 300));
-				for (const char of 'ご質問ありがとうございます。') {
+				for (const char of 'Thank you for your question.') {
 					enqueue({ type: 'delta', text: char });
 					await new Promise((r) => setTimeout(r, 20));
 				}
@@ -49,14 +49,14 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	if (!apiKey) return json({ error: 'ANTHROPIC_API_KEY not set' }, { status: 500 });
 
 	const sections: string[] = [
-		'あなたはダイアログの左側に表示されるAIアシスタントです。'
+		'You are the AI assistant shown on the left side of the dialog.'
 	];
 
 	if (body.formFields.length > 0) {
-		const fieldList = body.formFields.map((f) => `- ${f.label}（${f.key}）`).join('\n');
+		const fieldList = body.formFields.map((f) => `- ${f.label} (${f.key})`).join('\n');
 		sections.push(
-			`このダイアログは「${body.formTitle}」フォームです。ユーザーが各フィールドを正しく入力できるよう、具体的なアドバイスを提供してください。
-フォームのフィールド一覧:
+			`This dialog is the "${body.formTitle}" form. Provide specific advice so the user can fill in each field correctly.
+Form fields:
 ${fieldList}`
 		);
 	}
@@ -64,12 +64,12 @@ ${fieldList}`
 	if (body.recordContext) {
 		const { typeLabel, label, data } = body.recordContext;
 		sections.push(
-			`現在表示中の${typeLabel}「${label}」について質問された場合はこの情報を参照して答えてください（指示語「これ」「この〇〇」は上記を指す）:
+			`If asked about the currently displayed ${typeLabel} "${label}", answer using this information (references like "this" or "this X" refer to it):
 ${JSON.stringify(data ?? {}, null, 2)}`
 		);
 	}
 
-	sections.push('回答は簡潔にしてください。');
+	sections.push('Keep your answers concise.');
 
 	const systemPrompt = sections.join('\n\n');
 

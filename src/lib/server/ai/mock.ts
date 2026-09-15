@@ -2,71 +2,71 @@ import type { MessageContent } from '$lib/types/chat';
 
 const MOCK_RESPONSES: MessageContent[][] = [
 	[
-		{ type: 'text', text: '顧客情報を登録します。以下のフォームに入力してください。' },
+		{ type: 'text', text: 'I will register the customer information. Please fill out the form below.' },
 		{
 			type: 'form',
-			title: '顧客登録',
+			title: 'Customer Registration',
 			tool: 'create_customer',
 			fields: [
-				{ key: 'name', label: '会社名', type: 'text', required: true, placeholder: '株式会社サンプル' },
-				{ key: 'email', label: 'メールアドレス', type: 'email', placeholder: 'taro@example.com' },
-				{ key: 'phone', label: '電話番号', type: 'tel', placeholder: '03-0000-0000' },
-				{ key: 'postal_code', label: '郵便番号', type: 'text', placeholder: '100-0001' },
-				{ key: 'address', label: '住所', type: 'text', placeholder: '東京都千代田区...' },
-				{ key: 'website', label: 'ホームページ', type: 'text', placeholder: 'https://example.com' },
+				{ key: 'name', label: 'Company Name', type: 'text', required: true, placeholder: 'Sample Corp' },
+				{ key: 'email', label: 'Email Address', type: 'email', placeholder: 'taro@example.com' },
+				{ key: 'phone', label: 'Phone Number', type: 'tel', placeholder: '03-0000-0000' },
+				{ key: 'postal_code', label: 'Postal Code', type: 'text', placeholder: '100-0001' },
+				{ key: 'address', label: 'Address', type: 'text', placeholder: 'Chiyoda-ku, Tokyo...' },
+				{ key: 'website', label: 'Website', type: 'text', placeholder: 'https://example.com' },
 				{
 					key: 'status',
-					label: 'ステータス',
+					label: 'Status',
 					type: 'select',
 					options: [
-						{ value: 'lead', label: 'リード' },
-						{ value: 'active', label: '有効' },
-						{ value: 'inactive', label: '無効' }
+						{ value: 'lead', label: 'Lead' },
+						{ value: 'active', label: 'Active' },
+						{ value: 'inactive', label: 'Inactive' }
 					]
 				},
-				{ key: 'notes', label: 'メモ', type: 'textarea', placeholder: '自由記述' }
+				{ key: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Free-form notes' }
 			]
 		}
 	],
 	[
-		{ type: 'text', text: '登録済みの顧客一覧です。' },
+		{ type: 'text', text: 'Here is the list of registered customers.' },
 		{
 			type: 'table',
 			columns: [
-				{ key: 'name', label: '会社名' },
-				{ key: 'email', label: 'メール' },
-				{ key: 'status', label: 'ステータス' }
+				{ key: 'name', label: 'Company Name' },
+				{ key: 'email', label: 'Email' },
+				{ key: 'status', label: 'Status' }
 			],
 			rows: [
-				{ name: '株式会社アルコジー', email: 'taro@alcogy.com', status: 'active' },
-				{ name: '合同会社テスト商事', email: 'hanako@test.co.jp', status: 'lead' },
-				{ name: 'サンプル株式会社', email: 'jiro@sample.jp', status: 'inactive' }
+				{ name: 'Acme Inc.', email: 'alex@acme.example.com', status: 'active' },
+				{ name: 'Test Trading LLC', email: 'jamie@test.example.com', status: 'lead' },
+				{ name: 'Sample Corp', email: 'sam@sample.example.com', status: 'inactive' }
 			]
 		}
 	],
 	[
-		{ type: 'text', text: 'こんにちは！Tullamoreです。何をお手伝いしましょうか？' },
+		{ type: 'text', text: 'Hello! This is Tullamore. How can I help you?' },
 		{
 			type: 'actions',
-			title: '操作を選択してください',
+			title: 'Please select an action',
 			actions: [
-				{ id: 'create', label: '顧客を登録する', description: '新規顧客情報をフォームで入力します' },
-				{ id: 'list', label: '顧客一覧を見る', description: '登録済みの顧客一覧を表示します' },
-				{ id: 'report', label: 'レポートを見る', description: '月次の売上レポートを表示します' }
+				{ id: 'create', label: 'Register a customer', description: 'Enter new customer information via a form' },
+				{ id: 'list', label: 'View customer list', description: 'Show the list of registered customers' },
+				{ id: 'report', label: 'View report', description: 'Show the monthly sales report' }
 			]
 		}
 	],
 	[
-		{ type: 'text', text: '月次の売上推移をグラフにしました。' },
+		{ type: 'text', text: 'I have charted the monthly sales trend.' },
 		{
 			type: 'chart',
 			chartType: 'line',
-			title: '月次売上推移',
+			title: 'Monthly Sales Trend',
 			data: [
-				{ label: '1月', value: 1200000 },
-				{ label: '2月', value: 1450000 },
-				{ label: '3月', value: 1380000 },
-				{ label: '4月', value: 1620000 }
+				{ label: 'Jan', value: 1200000 },
+				{ label: 'Feb', value: 1450000 },
+				{ label: 'Mar', value: 1380000 },
+				{ label: 'Apr', value: 1620000 }
 			]
 		}
 	]

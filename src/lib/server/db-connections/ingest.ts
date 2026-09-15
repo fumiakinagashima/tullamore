@@ -1,27 +1,29 @@
 import type { ColumnDef } from '$lib/server/db/data-source-service';
 import type { DbConnectionDriver, ExternalTableRef } from './types';
 
-/** 取り込み対象の1列。key/label/type はTullamore側のColumnDef、externalName は外部DB側の実際の列名 */
+/** One column to ingest. key/label/type are Tullamore's ColumnDef; externalName is the actual column name on the external DB */
 export type SyncColumn = ColumnDef & { externalName: string };
 
 const BATCH_SIZE = 100;
-// 1回のHTTPリクエスト（同期実行）で取り込む行数の上限。Workersの1リクエストCPU時間制限に収まるよう
-// 抑えた暫定値で、これを超える分はQueueベースの継続取り込み（ingestExternalTableChunk）に引き継ぐ。
+// Upper bound on the number of rows ingested per HTTP request (synchronous run). This is a provisional
+// value kept low enough to fit within a Worker's per-request CPU time limit; anything beyond this is
+// handed off to the Queue-based continuation ingest (ingestExternalTableChunk).
 const SYNC_ROW_BUDGET = 50_000;
-// Queue consumer 1回の呼び出し（1メッセージ）で処理する行数の上限。Queue consumerはHTTPリクエストより
-// 緩やかだが無限ではないため、キリよく数千〜数万行単位に区切り、残りがあれば自分自身を再度キューに積む。
+// Upper bound on the number of rows processed per Queue consumer invocation (one message). Queue consumers
+// have more relaxed limits than an HTTP request, but not unlimited ones, so we chunk into a round few-thousand
+// to tens-of-thousands of rows and re-enqueue ourselves for any remainder.
 export const QUEUE_BATCH_ROWS = 20_000;
 
 export type IngestResult = {
 	inserted: number;
-	/** SYNC_ROW_BUDGET に達して打ち切った場合 true（続きはQueueで取り込む） */
+	/** true if ingestion was cut off after hitting SYNC_ROW_BUDGET (the rest continues via Queue) */
 	truncated: boolean;
 };
 
 export type IngestChunkResult = {
-	/** このチャンクで挿入した行数 */
+	/** Number of rows inserted in this chunk */
 	inserted: number;
-	/** 外部テーブルの末尾に達した（=もう続きがない）場合 true */
+	/** true if the end of the external table was reached (i.e. there is no more to process) */
 	done: boolean;
 };
 
@@ -34,9 +36,9 @@ function coerceValue(value: unknown, type: ColumnDef['type']): string | number |
 }
 
 /**
- * 外部テーブルから行を取得し、D1の物理テーブルへ投入する共通ループ。
- * `replaceExisting`が真なら最初のバッチにDELETEを原子的に含める（全件洗い替え）。
- * `offset`から始めて`rowBudget`行に達するか外部テーブルの末尾に達したら終了する。
+ * Common loop that fetches rows from an external table and writes them into the D1 physical table.
+ * If `replaceExisting` is true, a DELETE is atomically included in the first batch (full replace).
+ * Starts at `offset` and finishes once `rowBudget` rows are reached or the end of the external table is hit.
  */
 async function runIngestBatches(
 	db: D1Database,
@@ -78,12 +80,12 @@ async function runIngestBatches(
 		cursor += rows.length;
 		if (rows.length < BATCH_SIZE) {
 			done = true;
-			break; // 最後のページ
+			break; // last page
 		}
 	}
 
 	if (replaceExisting && inserted === 0 && offset === 0) {
-		// 空テーブルの場合も既存データの削除だけは実行する（CSVインポートの空ファイルreplaceと同じ扱い）
+		// Even for an empty table, still delete existing data (same handling as replacing with an empty CSV import file)
 		await db.batch([deleteStmt]);
 	}
 
@@ -91,10 +93,12 @@ async function runIngestBatches(
 }
 
 /**
- * 外部テーブルから行を取得し、D1の物理テーブルへ全件洗い替えで投入する（同期実行、1リクエスト内）。
- * CSVインポート（src/routes/api/data-sources/[id]/import/+server.ts）と同じ
- * 「100行ずつ db.batch() でチャンク投入し、DELETEは最初のバッチに含めて原子的にコミットする」パターンを踏襲する。
- * SYNC_ROW_BUDGETに達して打ち切った場合は`truncated: true`を返し、呼び出し側がQueueへ継続取り込みを積む。
+ * Fetches rows from an external table and writes them into the D1 physical table as a full replace
+ * (synchronous run, within a single request). Follows the same pattern as the CSV import
+ * (src/routes/api/data-sources/[id]/import/+server.ts): "insert in chunks of 100 rows via db.batch(),
+ * with the DELETE atomically committed as part of the first batch."
+ * If ingestion is cut off after hitting SYNC_ROW_BUDGET, returns `truncated: true` so the caller can
+ * enqueue a Queue job to continue ingestion.
  */
 export async function ingestExternalTable(
 	db: D1Database,
@@ -108,9 +112,10 @@ export async function ingestExternalTable(
 }
 
 /**
- * Queue consumer から呼ばれる継続取り込みの1チャンク分。`offset`から続きを取得し、DELETEは行わず追記する
- * （最初のDELETEは同期実行側のingestExternalTableが既に行っている前提）。QUEUE_BATCH_ROWSに達してもまだ
- * 続きがある場合は`done: false`を返し、呼び出し側（queue-consumer.ts）が次のoffsetで自身を再度キューに積む。
+ * One chunk of continuation ingest, called from the Queue consumer. Resumes from `offset` and appends
+ * without issuing a DELETE (on the assumption that the initial DELETE was already done by the synchronous
+ * ingestExternalTable). If there is still more to process after reaching QUEUE_BATCH_ROWS, returns
+ * `done: false` so the caller (queue-consumer.ts) re-enqueues itself at the next offset.
  */
 export async function ingestExternalTableChunk(
 	db: D1Database,

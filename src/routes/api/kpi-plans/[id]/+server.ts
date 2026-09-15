@@ -21,7 +21,7 @@ export const PUT: RequestHandler = async ({ params, request, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const db = createDb(platform.env.DB);
 	const plan = await getKpiPlan(db, params.id);
-	if (!plan) return errors.notFound('KPIプランが見つかりません');
+	if (!plan) return errors.notFound('KPI plan not found');
 
 	const body = bodySchema.parse(await request.json());
 	const updated = await updateKpiPlan(db, params.id, {
@@ -42,7 +42,7 @@ export const DELETE: RequestHandler = async ({ params, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const db = createDb(platform.env.DB);
 	const plan = await getKpiPlan(db, params.id);
-	if (!plan) return errors.notFound('KPIプランが見つかりません');
+	if (!plan) return errors.notFound('KPI plan not found');
 
 	await deleteKpiPlan(db, params.id);
 	return json({ ok: true });

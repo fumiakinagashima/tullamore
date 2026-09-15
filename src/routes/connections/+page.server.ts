@@ -10,8 +10,9 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
 	const env = platform!.env as unknown as Record<string, unknown>;
 	const availableBindings = listAvailableHyperdriveBindings(env);
 
-	// wrangler.tomlに登録済みの全バインディングを一覧化し、既にdb_connections行があるものは
-	// 「有効」として扱う（行の有無=トグルのON/OFF。行が無いバインディングは未登録＝OFF表示）
+	// List all bindings registered in wrangler.toml, and treat any that already have a
+	// db_connections row as "enabled" (presence/absence of the row = the toggle's ON/OFF state;
+	// a binding with no row is shown as unregistered = OFF)
 	const hyperdriveItems = availableBindings.map((bindingName) => {
 		const connection = rows.find(
 			(r) => r.provider === 'hyperdrive' && (JSON.parse(r.config) as { bindingName?: string }).bindingName === bindingName
@@ -25,7 +26,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
 		};
 	});
 
-	// tcp_socket接続は自動検出できないため、db_connectionsに登録済みのものをそのまま一覧化する
+	// tcp_socket connections cannot be auto-detected, so list whatever is already registered in db_connections as-is
 	const tcpItems = rows
 		.filter((r) => r.provider === 'tcp_socket')
 		.map((r) => ({

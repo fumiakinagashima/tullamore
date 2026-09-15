@@ -40,15 +40,15 @@
 	async function importTable(t: { schema: string; name: string }) {
 		error = '';
 		if (!name.trim()) {
-			error = '名前を入力してください';
+			error = 'Please enter a name';
 			return;
 		}
 		if (columns.some((c) => !c.key.trim() || !c.label.trim())) {
-			error = 'キーとラベルは必須です';
+			error = 'Key and label are required';
 			return;
 		}
 		if (new Set(columns.map((c) => c.key.trim())).size !== columns.length) {
-			error = 'カラムキーが重複しています';
+			error = 'Column keys are duplicated';
 			return;
 		}
 		submitting = true;
@@ -71,7 +71,7 @@
 			});
 			const body = (await res.json()) as { dataSourceId?: string; error?: string };
 			if (!res.ok) {
-				error = body.error ?? '取り込みに失敗しました';
+				error = body.error ?? 'Import failed';
 				return;
 			}
 			goto(`/database/${body.dataSourceId}`);
@@ -82,42 +82,42 @@
 </script>
 
 <div class="page">
-	<a href="/connections" class="back-link">← 接続管理一覧</a>
+	<a href="/connections" class="back-link">← Connections</a>
 	<h1 class="page-title">{data.connection.name}</h1>
 	<p class="page-sub">
 		{#if data.connection.provider === 'hyperdrive'}
-			バインディング: {data.connection.config.bindingName}
+			Binding: {data.connection.config.bindingName}
 		{:else}
 			{data.connection.config.host}:{data.connection.config.port}/{data.connection.config.database}
 		{/if}
 	</p>
 
 	{#if data.tablesError}
-		<p class="error-box">接続に失敗しました: {data.tablesError}</p>
+		<p class="error-box">Connection failed: {data.tablesError}</p>
 	{:else if data.tables.length === 0}
-		<p class="empty">取り込み可能なテーブルが見つかりませんでした</p>
+		<p class="empty">No importable tables were found</p>
 	{:else}
 		<ul class="table-list">
 			{#each data.tables as t (tableKey(t))}
 				<li class="table-item">
 					<button type="button" class="table-row" onclick={() => openTable(t)}>
 						<span class="table-name">{t.schema}.{t.name}</span>
-						<span class="table-cols">{t.columns.length}列</span>
+						<span class="table-cols">{t.columns.length} columns</span>
 					</button>
 
 					{#if openTableKey === tableKey(t)}
 						<div class="import-panel">
 							{#if error}<p class="form-error">{error}</p>{/if}
 							<div class="fields">
-								<Textbox label="データソース名" bind:value={name} required />
-								<Textbox label="説明" bind:value={description} />
+								<Textbox label="Data Source Name" bind:value={name} required />
+								<Textbox label="Description" bind:value={description} />
 							</div>
 
 							<div class="col-row col-row-head">
-								<span class="col-ext">外部列名</span>
-								<span class="col-key">キー（物理名）</span>
-								<span class="col-label">ラベル</span>
-								<span class="col-type">型</span>
+								<span class="col-ext">External Column Name</span>
+								<span class="col-key">Key (physical name)</span>
+								<span class="col-label">Label</span>
+								<span class="col-type">Type</span>
 							</div>
 							{#each columns as col, i (col.externalName)}
 								<div class="col-row">
@@ -125,17 +125,17 @@
 									<input type="text" bind:value={columns[i].key} class="col-key mono" />
 									<input type="text" bind:value={columns[i].label} class="col-label" />
 									<select bind:value={columns[i].type} class="col-type">
-										<option value="text">テキスト</option>
-										<option value="number">数値</option>
-										<option value="date">日付</option>
-										<option value="boolean">真偽値</option>
+										<option value="text">Text</option>
+										<option value="number">Number</option>
+										<option value="date">Date</option>
+										<option value="boolean">Boolean</option>
 									</select>
 								</div>
 							{/each}
 
 							<div class="import-actions">
 								<button type="button" class="import-btn" onclick={() => importTable(t)} disabled={submitting}>
-									{submitting ? '取り込み中…' : 'このテーブルを取り込む'}
+									{submitting ? 'Importing…' : 'Import This Table'}
 								</button>
 							</div>
 						</div>

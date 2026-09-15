@@ -200,7 +200,7 @@ export function createChatState(getData: () => PageData) {
 				})
 			});
 		} catch {
-			// 保存失敗時もチャット表示は継続する
+			// Keep showing the chat even if saving fails
 		}
 		if (firstMessageText) {
 			chatHistory.prepend({ id: chatId, title: chatTitleFrom(firstMessageText), updatedAt: new Date().toISOString() });
@@ -219,7 +219,7 @@ export function createChatState(getData: () => PageData) {
 			const { title } = (await res.json()) as { title: string };
 			if (title) chatHistory.updateTitle(chatId, title);
 		} catch {
-			// 失敗時は切り詰めタイトルのまま
+			// Keep the truncated title if this fails
 		}
 	}
 

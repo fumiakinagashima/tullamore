@@ -31,7 +31,7 @@ const columnSchema = z.object({
 const syncSchema = z.object({
 	externalSchema: z.string().min(1),
 	externalTable: z.string().min(1),
-	// 未指定なら新規データソースを作成、指定済みなら既存データソースへ再同期（全件洗い替え）する
+	// If omitted, creates a new data source; if given, re-syncs (full replace) into an existing data source
 	dataSourceId: z.string().optional(),
 	name: z.string().min(1).optional(),
 	description: z.string().optional(),
@@ -46,10 +46,10 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
 
 	const body = syncSchema.parse(await request.json());
 	if (body.columns.some((c) => !isValidColumnKey(c.key))) {
-		return errors.badRequest('カラムキーは英字で始まる英数字・アンダースコアのみ使用できます');
+		return errors.badRequest('Column keys may only contain letters, digits, and underscores, and must start with a letter');
 	}
 	if (new Set(body.columns.map((c) => c.key)).size !== body.columns.length) {
-		return errors.badRequest('カラムキーが重複しています');
+		return errors.badRequest('Column keys must not be duplicated');
 	}
 
 	const config = JSON.parse(connection.config) as { bindingName?: string };
@@ -63,10 +63,10 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
 
 		if (dataSourceId) {
 			const existing = await getDataSource(db, dataSourceId);
-			if (!existing) return errors.notFound('データソースが見つかりません');
+			if (!existing) return errors.notFound('Data source not found');
 			tableName = existing.tableName;
 		} else {
-			if (!body.name) return errors.badRequest('nameは必須です');
+			if (!body.name) return errors.badRequest('name is required');
 			dataSourceId = crypto.randomUUID();
 			tableName = makeTableName(dataSourceId);
 			const colDefsSql = columnDefs
@@ -128,14 +128,14 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
 			} else {
 				await updateExternalTableSync(db, syncId, {
 					lastSyncStatus: 'failed',
-					lastSyncError: 'INGEST_QUEUE バインディングが設定されていないため継続取り込みできません'
+					lastSyncError: 'Cannot continue ingestion because the INGEST_QUEUE binding is not configured'
 				});
 			}
 		}
 
 		return json({ dataSourceId, inserted: result.inserted, truncated: result.truncated, queued });
 	} catch (e) {
-		return errors.badRequest(`取り込みに失敗しました: ${e instanceof Error ? e.message : String(e)}`);
+		return errors.badRequest(`Ingestion failed: ${e instanceof Error ? e.message : String(e)}`);
 	} finally {
 		await driver.close();
 	}

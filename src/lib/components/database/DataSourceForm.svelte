@@ -8,7 +8,7 @@
 
 	type Props = {
 		title: string;
-		// 'edit' では初期カラムを既存列として扱い、型を変更不可にする（列削除は破壊的操作として警告する）
+		// In 'edit' mode, the initial columns are treated as existing columns and their type cannot be changed (deleting a column warns as a destructive operation)
 		mode: 'create' | 'edit';
 		initialName?: string;
 		initialDescription?: string;
@@ -25,7 +25,7 @@
 		mode,
 		initialName = '',
 		initialDescription = '',
-		initialColumns = [{ key: 'column1', label: 'カラム1', type: 'text' }],
+		initialColumns = [{ key: 'column1', label: 'Column 1', type: 'text' }],
 		submitLabel,
 		submitting = false,
 		error = '',
@@ -33,7 +33,7 @@
 		onsubmit
 	}: Props = $props();
 
-	// 初期値は props からの一度きりのスナップショット。以降はローカルなフォーム状態として編集する
+	// The initial values are a one-time snapshot from props. From here on they're edited as local form state
 	let name = $state(untrack(() => initialName));
 	let description = $state(untrack(() => initialDescription));
 
@@ -73,22 +73,22 @@
 	function handleSubmit() {
 		localError = '';
 		if (!name.trim()) {
-			localError = '名前を入力してください';
+			localError = 'Please enter a name';
 			return;
 		}
 		if (columns.length === 0) {
-			localError = '少なくとも1つの列が必要です';
+			localError = 'At least one column is required';
 			return;
 		}
 		if (columns.some((c) => !c.key.trim() || !c.label.trim())) {
-			localError = 'キーとラベルは必須です';
+			localError = 'Key and label are required';
 			return;
 		}
 		if (new Set(columns.map((c) => c.key.trim())).size !== columns.length) {
-			localError = 'カラムキーが重複しています';
+			localError = 'Column keys must be unique';
 			return;
 		}
-		if (deletedCount > 0 && !confirm(`${deletedCount}件の列を削除します。該当する列のデータは失われます。よろしいですか？`)) {
+		if (deletedCount > 0 && !confirm(`This will delete ${deletedCount} column(s). Data in those columns will be lost. Are you sure?`)) {
 			return;
 		}
 		onsubmit({
@@ -105,37 +105,37 @@
 	{#if displayError}<p class="form-error">{displayError}</p>{/if}
 
 	<div class="field">
-		<label for="ds-name">名前 <span class="required">*</span></label>
-		<input id="ds-name" type="text" bind:value={name} placeholder="例: 月次売上データ" />
+		<label for="ds-name">Name <span class="required">*</span></label>
+		<input id="ds-name" type="text" bind:value={name} placeholder="e.g. Monthly Sales Data" />
 	</div>
 	<div class="field">
-		<label for="ds-desc">説明</label>
-		<input id="ds-desc" type="text" bind:value={description} placeholder="このデータソースの説明（任意）" />
+		<label for="ds-desc">Description</label>
+		<input id="ds-desc" type="text" bind:value={description} placeholder="Description of this data source (optional)" />
 	</div>
 
 	<div class="cols-section">
 		<div class="cols-header">
-			<span class="cols-label">カラム定義</span>
-			<button type="button" class="btn-link" onclick={addColumn}>+ カラム追加</button>
+			<span class="cols-label">Column Definitions</span>
+			<button type="button" class="btn-link" onclick={addColumn}>+ Add Column</button>
 		</div>
 		<div class="col-row col-row-head">
-			<span class="col-key">キー（物理名・英数字）</span>
-			<span class="col-label">ラベル（日本語可）</span>
-			<span class="col-type">型</span>
+			<span class="col-key">Key (physical name, alphanumeric)</span>
+			<span class="col-label">Label (Japanese allowed)</span>
+			<span class="col-type">Type</span>
 			<span class="col-del"></span>
 		</div>
 		{#each columns as col (col.uid)}
 			<div class="col-row">
 				<input type="text" bind:value={col.key} placeholder="advertising_cost" class="col-key mono" />
-				<input type="text" bind:value={col.label} placeholder="広告費" class="col-label" />
+				<input type="text" bind:value={col.label} placeholder="Ad Spend" class="col-label" />
 				{#if col.originalKey}
 					<span class="col-type type-badge">{col.type}</span>
 				{:else}
 					<select bind:value={col.type} class="col-type">
-						<option value="text">テキスト</option>
-						<option value="number">数値</option>
-						<option value="date">日付</option>
-						<option value="boolean">真偽値</option>
+						<option value="text">Text</option>
+						<option value="number">Number</option>
+						<option value="date">Date</option>
+						<option value="boolean">Boolean</option>
 					</select>
 				{/if}
 				<button
@@ -143,22 +143,22 @@
 					class="btn-icon-sm col-del"
 					onclick={() => removeColumn(col.uid)}
 					disabled={columns.length <= 1}
-					aria-label="この列を削除"
+					aria-label="Delete this column"
 				>
 					<X size={12} />
 				</button>
 			</div>
 		{/each}
 		{#if mode === 'edit'}
-			<p class="cols-hint">既存列の型は変更できません（新規に作成し直してください）</p>
+			<p class="cols-hint">The type of an existing column cannot be changed (create a new one instead)</p>
 		{/if}
 	</div>
 
 	<div class="form-actions">
 		<button type="button" class="btn-primary" onclick={handleSubmit} disabled={submitting || !name.trim()}>
-			{submitting ? '保存中...' : submitLabel}
+			{submitting ? 'Saving...' : submitLabel}
 		</button>
-		<a href={cancelHref} class="btn-secondary">キャンセル</a>
+		<a href={cancelHref} class="btn-secondary">Cancel</a>
 	</div>
 </div>
 

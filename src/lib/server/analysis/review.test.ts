@@ -15,7 +15,7 @@ function makeModel(overrides: Partial<LinearRegressionModel> = {}): LinearRegres
 	};
 }
 
-// 説明変数が1個の場合は多重共線性チェックが走らずD1に問い合わせないため、スタブで十分
+// With a single feature column, the multicollinearity check doesn't run and D1 is never queried, so a stub is sufficient
 const unusedDb = {} as D1Database;
 
 describe('reviewSimulator', () => {
@@ -31,7 +31,7 @@ describe('reviewSimulator', () => {
 		const model = makeModel({ metrics: { sampleSize: 100, r2: 0.15, adjustedR2: 0.1, residualStdError: 5 } });
 		const review = await reviewSimulator(unusedDb, 'ds_test', model);
 		expect(review.fitQuality).toBe('weak');
-		expect(review.overallComment).toContain('参考程度');
+		expect(review.overallComment).toContain('reference only');
 	});
 
 	it('reports insufficient sample size for too few rows relative to feature count', async () => {

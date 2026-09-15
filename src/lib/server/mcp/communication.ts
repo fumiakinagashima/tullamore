@@ -10,22 +10,22 @@ export const tools: Tool[] = [
 	{
 		name: 'delete_read_notifications',
 		description:
-			'既読済みの通知をまとめて削除する。未読の通知は削除されない。自分の通知のみ対象。',
+			'Bulk-deletes read notifications. Unread notifications are not deleted. Only affects the current user\'s own notifications.',
 		input_schema: { type: 'object', properties: {}, required: [] }
 	},
 	{
 		name: 'send_email',
 		description:
-			'指定した宛先にメールを送信する。送信成功時、customer_id を指定すると活動履歴に「メール」記録が自動追加される。',
+			'Sends an email to the specified recipient. On success, if customer_id is given, an "email" entry is automatically added to the activity history.',
 		input_schema: {
 			type: 'object',
 			properties: {
-				to: { type: 'string', description: '送信先メールアドレス' },
-				subject: { type: 'string', description: '件名' },
-				body: { type: 'string', description: '本文（プレーンテキスト）' },
+				to: { type: 'string', description: 'Recipient email address' },
+				subject: { type: 'string', description: 'Subject' },
+				body: { type: 'string', description: 'Body (plain text)' },
 				customer_id: {
 					type: 'string',
-					description: '関連する顧客ID（指定すると活動履歴に記録される）'
+					description: 'Related customer ID (if given, this is recorded in the activity history)'
 				}
 			},
 			required: ['to', 'subject', 'body']
@@ -33,12 +33,12 @@ export const tools: Tool[] = [
 	},
 	{
 		name: 'send_notification',
-		description: '自分宛てに通知センターへ通知を送る。メールではなくアプリ内の通知として知らせたい場合に使う。',
+		description: 'Sends a notification to the notification center addressed to the current user. Use this when you want to notify via an in-app notification rather than email.',
 		input_schema: {
 			type: 'object',
 			properties: {
-				title: { type: 'string', description: '通知のタイトル' },
-				body: { type: 'string', description: '通知の本文' }
+				title: { type: 'string', description: 'Notification title' },
+				body: { type: 'string', description: 'Notification body' }
 			},
 			required: ['title', 'body']
 		}
@@ -57,7 +57,7 @@ export async function handleSendEmail(db: Db, input: unknown, env?: ToolEnv) {
 	const setup = await getEmailSetup(db, env);
 	if (!setup) {
 		throw new Error(
-			'メール送信が設定されていません（/settings/email、または EMAIL_PROVIDER / EMAIL_FROM などの環境変数を設定してください）'
+			'Email sending is not configured (set it up at /settings/email, or configure environment variables such as EMAIL_PROVIDER / EMAIL_FROM)'
 		);
 	}
 	const body = setup.signature ? `${data.body}\n\n${setup.signature}` : data.body;
@@ -78,7 +78,7 @@ const sendNotificationSchema = z.object({
 
 export async function handleSendNotification(db: Db, input: unknown, env?: ToolEnv) {
 	const data = sendNotificationSchema.parse(input);
-	if (!env?.accountId) throw new Error('通知先のアカウントが特定できません。');
+	if (!env?.accountId) throw new Error('Could not determine the recipient account for the notification.');
 	const notification = await createNotification(db, {
 		type: 'workflow',
 		title: data.title,
@@ -94,17 +94,17 @@ const sendSlackNotificationSchema = z.object({
 	body: z.string().min(1)
 });
 
-/** ワークフロー専用（AIチャットには公開しない）。AIがSlackに送る場合はlist_integrations + call_external_apiを使う。 */
+/** Workflow-only (not exposed to the AI chat). When the AI needs to send to Slack, it uses list_integrations + call_external_api instead. */
 export async function handleSendSlackNotification(db: Db, input: unknown, _env?: ToolEnv) {
 	const data = sendSlackNotificationSchema.parse(input);
 	const integration = await getSlackIntegration(db, data.integration_id);
-	if (!integration) throw new Error(`Slack連携が見つかりません（id: ${data.integration_id}）`);
+	if (!integration) throw new Error(`Slack integration not found (id: ${data.integration_id})`);
 	await sendSlackMessage(integration, data.body);
 	return { integrationName: integration.name };
 }
 
 export async function handleDeleteReadNotifications(db: Db, _input: unknown, env?: ToolEnv) {
-	if (!env?.accountId) throw new Error('ログインユーザーが特定できません。');
+	if (!env?.accountId) throw new Error('Could not determine the logged-in user.');
 	const count = await deleteReadNotifications(db, env.accountId);
 	return { deleted: count };
 }

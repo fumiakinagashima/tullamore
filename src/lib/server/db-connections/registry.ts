@@ -2,14 +2,14 @@ import type { DbConnectionDriver } from './types';
 import { createHyperdriveDriver } from './hyperdrive';
 import { createTcpSocketDriver } from './tcp-socket';
 
-// provider は db_connections.provider の enum と一致させる。将来 'http_api' を追加する際は
-// ここに実装を足すだけでよい設計
+// provider must match the enum for db_connections.provider. When adding 'http_api' in the future,
+// this is designed so you only need to add the implementation here
 export type DbConnectionProvider = 'hyperdrive' | 'tcp_socket';
 
 export type DbConnectionConfig = {
-	/** hyperdrive の場合のみ使用: env.HYPERDRIVE_* のバインディング名（エンジンはバインディングの形から自動判別する） */
+	/** Used only for hyperdrive: the env.HYPERDRIVE_* binding name (the engine is auto-detected from the binding's shape) */
 	bindingName?: string;
-	/** tcp_socket の場合のみ使用: 直接接続するDBの接続情報 */
+	/** Used only for tcp_socket: connection info for the directly connected DB */
 	engine?: 'postgres' | 'mysql';
 	host?: string;
 	port?: number;
@@ -26,12 +26,12 @@ export function getDriver(
 ): DbConnectionDriver {
 	switch (provider) {
 		case 'hyperdrive': {
-			if (!config.bindingName) throw new Error('bindingNameが設定されていません');
+			if (!config.bindingName) throw new Error('bindingName is not configured');
 			return createHyperdriveDriver(env, config.bindingName);
 		}
 		case 'tcp_socket': {
 			if (!config.host || !config.port || !config.database || !config.username) {
-				throw new Error('host/port/database/usernameが設定されていません');
+				throw new Error('host/port/database/username is not configured');
 			}
 			return createTcpSocketDriver({
 				engine: config.engine ?? 'postgres',
@@ -44,6 +44,6 @@ export function getDriver(
 			});
 		}
 		default:
-			throw new Error(`未対応のproviderです: ${provider}`);
+			throw new Error(`Unsupported provider: ${provider}`);
 	}
 }

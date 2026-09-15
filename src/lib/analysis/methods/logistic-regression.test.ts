@@ -101,7 +101,7 @@ describe('assessClassificationValidity', () => {
 
 	it('uses McFadden thresholds (0.2-0.4 is good), not linear-regression R² thresholds', () => {
 		const validity = assessClassificationValidity(makeModel({ metrics: { sampleSize: 200, accuracy: 0.85, precision: 0.8, recall: 0.75, f1: 0.77, pseudoR2: 0.25, iterations: 8, converged: true } }));
-		const fitCheck = validity.checks.find((c) => c.label === '当てはまりの良さ');
+		const fitCheck = validity.checks.find((c) => c.label === 'Goodness of fit');
 		expect(fitCheck?.level).toBe('good');
 	});
 
@@ -110,14 +110,14 @@ describe('assessClassificationValidity', () => {
 			makeModel({ metrics: { sampleSize: 200, accuracy: 0.6, precision: 0.5, recall: 0.5, f1: 0.5, pseudoR2: 0.3, iterations: 50, converged: false } })
 		);
 		expect(validity.overallLevel).toBe('poor');
-		expect(validity.checks.some((c) => c.label === '学習の収束' && c.level === 'poor')).toBe(true);
+		expect(validity.checks.some((c) => c.label === 'Training convergence' && c.level === 'poor')).toBe(true);
 	});
 
 	it('flags poor class balance for a heavily skewed target', () => {
 		const validity = assessClassificationValidity(
 			makeModel({ confusionMatrix: { truePositive: 2, falsePositive: 1, trueNegative: 190, falseNegative: 7 } })
 		);
-		expect(validity.checks.some((c) => c.label === 'クラスバランス' && c.level === 'poor')).toBe(true);
+		expect(validity.checks.some((c) => c.label === 'Class balance' && c.level === 'poor')).toBe(true);
 	});
 });
 

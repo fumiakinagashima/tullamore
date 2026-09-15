@@ -42,7 +42,7 @@
 
 	const canRun = $derived(!!dataSourceId && selectedColumns.length >= 2);
 
-	// 右側のAIアシスタントに現在の設定・結果を渡す
+	// Pass the current config/results to the AI assistant on the right
 	$effect(() => {
 		bridge.analysisType = 'correlation';
 		bridge.config = {
@@ -94,7 +94,7 @@
 				body: JSON.stringify({ dataSourceId, columns: selectedColumns })
 			});
 			const body = (await res.json()) as { matrix?: CorrelationMatrix; validity?: ValidityAssessment; error?: string };
-			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Analysis failed');
 			result = body.matrix ?? null;
 			validity = body.validity ?? null;
 		} catch (e) {
@@ -123,22 +123,22 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">相関分析</h1>
-		<p class="page-sub">選択した列どうしのピアソン相関係数を計算し、ヒートマップで表示します</p>
+		<h1 class="page-title">Correlation Analysis</h1>
+		<p class="page-sub">Computes the Pearson correlation coefficient between the selected columns and displays it as a heatmap</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Data source" bind:value={dataSourceId} options={sourceOptions} />
 		</div>
 
 		<div class="feature-picker">
-			<span class="field-label">相関を見る列（2つ以上選択）</span>
+			<span class="field-label">Columns to correlate (select 2 or more)</span>
 			{#if !dataSourceId}
-				<p class="hint">先にデータソースを選択してください</p>
+				<p class="hint">Select a data source first</p>
 			{:else if numericColumns.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
+				<p class="hint">No numeric columns available to select</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each numericColumns as col (col.key)}
@@ -157,7 +157,7 @@
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '計算中…' : '相関を計算'}
+				{loading ? 'Calculating…' : 'Calculate correlation'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
@@ -168,7 +168,7 @@
 			<div class="results-card">
 				{#if strongestPair}
 					<p class="highlight-text">
-						最も相関が強いのは「{labelOf(strongestPair.a)}」と「{labelOf(strongestPair.b)}」（r = {strongestPair.value.toFixed(2)}）
+						The strongest correlation is between "{labelOf(strongestPair.a)}" and "{labelOf(strongestPair.b)}" (r = {strongestPair.value.toFixed(2)})
 					</p>
 				{/if}
 				<CorrelationHeatmap columns={heatmapColumns} matrix={result.matrix} />
@@ -178,7 +178,7 @@
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソースと相関を見たい列（2つ以上）を選び、「相関を計算」を押してください</p>
+				<p>Choose a data source and the columns to correlate (2 or more) above, then click "Calculate correlation"</p>
 			</div>
 		{/if}
 	</section>

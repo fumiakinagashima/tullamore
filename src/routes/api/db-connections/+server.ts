@@ -46,20 +46,20 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		const available = listAvailableHyperdriveBindings(platform.env as Record<string, unknown>);
 		if (!available.includes(body.config.bindingName)) {
 			return errors.badRequest(
-				`バインディング「${body.config.bindingName}」が見つかりません。wrangler.tomlの登録内容を確認してください`
+				`Binding "${body.config.bindingName}" was not found. Check the registration in wrangler.toml`
 			);
 		}
 	}
 
 	const db = createDb(platform.env.DB);
-	// hyperdriveはバインディング名が一意なので、それをそのままidに使う（他のproviderはランダムUUID）。
-	// こうすることで「無効化→再度有効化」で同じidの行が復活し、external_table_syncs.dbConnectionId経由の
-	// 取り込み元表示・再同期が無効化前の状態のまま繋がり続ける（idが毎回変わると紐付けが切れてしまう）
+	// Hyperdrive binding names are unique, so we use the binding name itself as the id (other providers get a random UUID).
+	// This way, disabling and re-enabling a connection revives the same row id, so the ingestion source display and
+	// resync via external_table_syncs.dbConnectionId stay linked to their pre-disable state (a changing id would break the link)
 	const id = body.provider === 'hyperdrive' ? body.config.bindingName : crypto.randomUUID();
 
 	const existing = await getDbConnection(db, id);
 	if (existing) {
-		// 既に有効化済み（同じbindingへの重複リクエスト）。冪等に既存行を返す
+		// Already enabled (duplicate request for the same binding). Return the existing row idempotently
 		return json({ ...existing, config: maskAuthConfig(JSON.parse(existing.config)) });
 	}
 

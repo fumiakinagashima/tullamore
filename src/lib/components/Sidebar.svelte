@@ -35,28 +35,28 @@
 	let { account }: Props = $props();
 
 	const workModules = [
-		{ href: '/report-create', label: 'レポート作成', icon: Layers },
-		{ href: '/kpi', label: 'KPI管理', icon: Flag }
+		{ href: '/report-create', label: 'Create Report', icon: Layers },
+		{ href: '/kpi', label: 'KPI Management', icon: Flag }
 	];
 
 	const analysisModules = [
-		{ href: '/analysis/descriptive-stats', label: '記述統計', icon: Sigma },
-		{ href: '/analysis/correlation', label: '相関分析', icon: Grid },
-		{ href: '/analysis/ab-test', label: 'A/Bテスト', icon: Flask },
-		{ href: '/analysis/regression', label: '回帰分析', icon: Scatter },
-		{ href: '/analysis/classification', label: 'ロジスティック回帰', icon: Split },
-		{ href: '/analysis/sensitivity', label: '感度分析', icon: Tornado },
-		{ href: '/analysis/scenario', label: 'シナリオ比較', icon: Compare },
-		{ href: '/analysis/goal-seek', label: 'ゴールシーク', icon: Target },
-		{ href: '/analysis/trend', label: 'トレンド予測', icon: TrendingUp },
-		{ href: '/analysis/monte-carlo', label: 'モンテカルロ', icon: Dice },
-		{ href: '/analysis/budget-allocation', label: '予算配分最適化', icon: Coins }
+		{ href: '/analysis/descriptive-stats', label: 'Descriptive Stats', icon: Sigma },
+		{ href: '/analysis/correlation', label: 'Correlation', icon: Grid },
+		{ href: '/analysis/ab-test', label: 'A/B Test', icon: Flask },
+		{ href: '/analysis/regression', label: 'Regression', icon: Scatter },
+		{ href: '/analysis/classification', label: 'Logistic Regression', icon: Split },
+		{ href: '/analysis/sensitivity', label: 'Sensitivity Analysis', icon: Tornado },
+		{ href: '/analysis/scenario', label: 'Scenario Comparison', icon: Compare },
+		{ href: '/analysis/goal-seek', label: 'Goal Seek', icon: Target },
+		{ href: '/analysis/trend', label: 'Trend Forecast', icon: TrendingUp },
+		{ href: '/analysis/monte-carlo', label: 'Monte Carlo', icon: Dice },
+		{ href: '/analysis/budget-allocation', label: 'Budget Allocation', icon: Coins }
 	];
 
 	const dataSourceModules = $derived(
 		[
-			{ href: '/database', label: 'データベース管理', icon: Database, adminOnly: false },
-			{ href: '/connections', label: '接続管理', icon: Plug, adminOnly: true }
+			{ href: '/database', label: 'Database Management', icon: Database, adminOnly: false },
+			{ href: '/connections', label: 'Connections', icon: Plug, adminOnly: true }
 		].filter((mod) => !mod.adminOnly || account.permission === 'admin')
 	);
 
@@ -126,7 +126,7 @@
 				body: JSON.stringify({ title })
 			});
 		} catch {
-			// 失敗時もUI上は変更後のタイトルを維持する
+			// Keep the updated title in the UI even if the request fails
 		}
 	}
 
@@ -147,7 +147,7 @@
 		try {
 			await fetch(`/api/chats/${item.id}`, { method: 'DELETE' });
 		} catch {
-			// ローカル一覧からは削除済み。失敗時はリロードで復活する
+			// Already removed from the local list; a reload will restore it if the request failed
 		}
 	}
 
@@ -174,13 +174,13 @@
 
 	<a href="/" class="portal" class:active={page.url.pathname === '/'}>
 		<Dashboard size={14} />
-		ポータル
+		Portal
 	</a>
 
 	<nav class="history">
 		<button class="group-label" onclick={() => toggleGroup('works')} aria-expanded={!collapsedGroups.works}>
 			<span class="group-chevron" class:collapsed={collapsedGroups.works}><ChevronDown size={12} /></span>
-			業務
+			Work
 		</button>
 		{#if !collapsedGroups.works}
 			{#each workModules as mod (mod.href)}
@@ -193,7 +193,7 @@
 
 		<button class="group-label" onclick={() => toggleGroup('analysis')} aria-expanded={!collapsedGroups.analysis}>
 			<span class="group-chevron" class:collapsed={collapsedGroups.analysis}><ChevronDown size={12} /></span>
-			分析
+			Analysis
 		</button>
 		{#if !collapsedGroups.analysis}
 			{#each analysisModules as mod (mod.href)}
@@ -206,7 +206,7 @@
 
 		<button class="group-label" onclick={() => toggleGroup('data-source')} aria-expanded={!collapsedGroups['data-source']}>
 			<span class="group-chevron" class:collapsed={collapsedGroups['data-source']}><ChevronDown size={12} /></span>
-			データソース
+			Data Source
 		</button>
 		{#if !collapsedGroups['data-source']}
 			{#each dataSourceModules as mod (mod.href)}
@@ -219,7 +219,7 @@
 
 		<button class="group-label" onclick={() => toggleGroup('chat')} aria-expanded={!collapsedGroups.chat}>
 			<span class="group-chevron" class:collapsed={collapsedGroups.chat}><ChevronDown size={12} /></span>
-			チャット
+			Chat
 		</button>
 		{#if !collapsedGroups.chat}
 			<a href="/chat" class="new-chat-row" onclick={() => chatSession.startNew()}>
@@ -283,7 +283,7 @@
 		{#if account.permission === 'admin'}
 			<a href="/database/accounts" class="settings-row">
 				<Users size={15} />
-				アカウント
+				Accounts
 			</a>
 		{/if}
 

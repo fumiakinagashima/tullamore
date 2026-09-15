@@ -1,9 +1,11 @@
-// data_sources のカラム型（text/number/date/boolean）だけでは「回帰分析にそのまま使えるか」の判定が粗いため、
-// 列名のヒューリスティックを加えた分析用の分類を用意する（Phase 2の変数設計AIが除外候補の判定に使う）。
+// Judging "can this be used directly in a regression" purely from data_sources' column type
+// (text/number/date/boolean) is too coarse, so we add a column-name heuristic on top to build an
+// analysis-oriented classification (used by the Phase 2 variable-design AI to judge exclusion candidates).
 //
-// ColumnDef の型を server/db から直接importしない: このファイルは client (Phase 4のシミュレーターUI) からも
-// importされる想定のisomorphicなモジュールで、server/配下のモジュールをimportするとSvelteKitのビルドで弾かれるため、
-// 構造的に互換な最小限の型をここで定義する（data-source-service.ts の ColumnDef は構造的にこの型を満たす）。
+// Do not import the ColumnDef type directly from server/db: this file is an isomorphic module also meant
+// to be imported from the client (the Phase 4 simulator UI), and importing a module under server/ would be
+// rejected by SvelteKit's build, so we define a minimal structurally-compatible type here instead
+// (data-source-service.ts's ColumnDef structurally satisfies this type).
 export type AnalysisColumnType = 'continuous' | 'categorical' | 'date' | 'id';
 
 type ColumnDef = {
@@ -12,7 +14,8 @@ type ColumnDef = {
 	type: 'text' | 'number' | 'date' | 'boolean';
 };
 
-// 日本語のID接尾辞は語境界がないため単純な後方一致で、英語は誤検出を避けるため語頭 or 区切り文字の後だけ許可する
+// Japanese ID suffixes have no word boundary, so we just match the tail; English is only allowed at the
+// start of the string or right after a separator, to avoid false positives
 const ID_SUFFIX_JA = /(番号|コード)$/;
 const ID_SUFFIX_EN = /(^|[_-])(id|no|code)$/i;
 
@@ -25,12 +28,12 @@ export function inferAnalysisColumnType(column: ColumnDef): AnalysisColumnType {
 	if (column.type === 'number') {
 		return looksLikeId(column.key) ? 'id' : 'continuous';
 	}
-	// text / boolean は現状カテゴリ変数として扱う（one-hotエンコード等の対応はスコープ外、Phase 2で検討）
+	// text / boolean are currently treated as categorical variables (support for one-hot encoding etc. is out of scope; to be considered in Phase 2)
 	if (looksLikeId(column.key)) return 'id';
 	return 'categorical';
 }
 
-/** MVP（線形結合のみ）の目的変数・説明変数として使える列（連続値の数値列）だけを抽出する */
+/** Extracts only the columns (continuous numeric columns) usable as target/feature variables for the MVP (linear combination only) */
 export function continuousColumns(columns: ColumnDef[]): ColumnDef[] {
 	return columns.filter((c) => inferAnalysisColumnType(c) === 'continuous');
 }

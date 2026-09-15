@@ -35,10 +35,10 @@
 </script>
 
 <div class="page">
-	<h1>設定</h1>
+	<h1>Settings</h1>
 
 	<nav class="subnav">
-		<a href="/settings" class:active={currentPath === '/settings'}>一般</a>
+		<a href="/settings" class:active={currentPath === '/settings'}>General</a>
 		{#if data.account.permission === 'admin'}
 			<a href="/settings/integrations" class:active={currentPath === '/settings/integrations'}>{m.integrations()}</a>
 		{/if}
@@ -51,7 +51,7 @@
 	</nav>
 
 	<section>
-		<h2>テーマ</h2>
+		<h2>Theme</h2>
 		<div class="theme-switcher">
 			{#each THEME_OPTIONS as opt}
 				<button

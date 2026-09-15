@@ -1,18 +1,18 @@
 import { createConnection, type Connection, type ConnectionOptions, type RowDataPacket } from 'mysql2/promise';
 import type { DbConnectionDriver, ExternalColumn, ExternalTableRef } from './types';
 
-// 識別子（スキーマ名・テーブル名・列名）は必ず information_schema から取得した値のみを渡す想定。
-// SQL文字列に直接埋め込む前に、想定外の文字が混ざっていないか防御的に検証する
+// Identifiers (schema name, table name, column name) are assumed to always come from values obtained via information_schema.
+// Defensively validate that no unexpected characters are mixed in before embedding them directly into a SQL string
 function assertSafeIdentifier(id: string): void {
 	if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(id)) {
-		throw new Error(`不正な識別子です: ${id}`);
+		throw new Error(`Invalid identifier: ${id}`);
 	}
 }
 
-// mysql2の`createConnection(uri)`オーバーロードはオブジェクト形式のオプション（disableEval等）を
-// 併用できないため、URI文字列で渡された場合は自前でパースしてConnectionOptionsに正規化する
-// （Hyperdriveのローカル開発モード（localConnectionString）は、実際の接続がMySQLでも
-// connectionString形式で渡ってくるため、この正規化が必要）
+// mysql2's `createConnection(uri)` overload can't be combined with object-form options (disableEval, etc.),
+// so when a URI string is passed we parse it ourselves and normalize it into ConnectionOptions
+// (this normalization is needed because Hyperdrive's local dev mode (localConnectionString) always
+// hands us a connectionString-style value even when the actual connection is MySQL)
 function parseMysqlConnectionString(uri: string): ConnectionOptions {
 	const url = new URL(uri);
 	return {
@@ -25,12 +25,12 @@ function parseMysqlConnectionString(uri: string): ConnectionOptions {
 }
 
 /**
- * `mysql2`ベースのMySQLドライバ。`pg-driver.ts`と役割は同じだが、プレースホルダ記法（`?`）・
- * 識別子クォート（バッククォート）・クライアントAPI（`query()`が`[rows, fields]`を返す）が
- * Postgresと異なるため別実装にしている。
+ * MySQL driver based on `mysql2`. It plays the same role as `pg-driver.ts`, but is implemented
+ * separately because the placeholder syntax (`?`), identifier quoting (backticks), and client API
+ * (`query()` returns `[rows, fields]`) differ from Postgres.
  *
- * `disableEval: true` は Cloudflare Workers 上で必須（mysql2はデフォルトで行パース最適化に
- * `eval()` を使うが、Workersのサンドボックスでは許可されないため）。
+ * `disableEval: true` is required on Cloudflare Workers (mysql2 uses `eval()` by default for
+ * row-parsing optimization, which isn't allowed in the Workers sandbox).
  */
 export function createMysqlDriver(clientConfig: string | ConnectionOptions): DbConnectionDriver {
 	const baseConfig = typeof clientConfig === 'string' ? parseMysqlConnectionString(clientConfig) : clientConfig;
@@ -38,8 +38,9 @@ export function createMysqlDriver(clientConfig: string | ConnectionOptions): DbC
 
 	async function ensureConnected(): Promise<Connection> {
 		if (!connection) {
-			// dateStrings: mysql2はデフォルトでdate/datetime列をプロセスのローカルタイムゾーンで
-			// 解釈してDateオブジェクトに変換するため、pg-driver.tsと同じ理由でtrueにして生の文字列で受け取る
+			// dateStrings: by default mysql2 interprets date/datetime columns in the process's local
+			// timezone and converts them to Date objects, so for the same reason as pg-driver.ts we set
+			// this to true and receive the raw string instead
 			connection = await createConnection({ ...baseConfig, disableEval: true, dateStrings: true });
 		}
 		return connection;
@@ -50,8 +51,8 @@ export function createMysqlDriver(clientConfig: string | ConnectionOptions): DbC
 
 		async listTables(): Promise<ExternalTableRef[]> {
 			const conn = await ensureConnected();
-			// information_schemaのシステムビューは列名が本来大文字（TABLE_SCHEMA等）のため、
-			// 明示的にASで小文字エイリアスを付けないと結果セットのキーが大文字になり参照できない
+			// information_schema's system views naturally use uppercase column names (TABLE_SCHEMA, etc.),
+			// so without an explicit AS lowercase alias, the result set's keys would come back uppercase and be unreferenceable
 			type Row = RowDataPacket & { table_schema: string; table_name: string };
 			const [rows] = await conn.query<Row[]>(
 				`SELECT table_schema AS table_schema, table_name AS table_name FROM information_schema.tables

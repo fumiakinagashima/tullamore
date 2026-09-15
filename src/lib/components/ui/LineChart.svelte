@@ -7,9 +7,9 @@
 		series?: Series[];
 		title?: string;
 		color?: string;
-		/** 指定するとviewBoxの縦幅を上書きする（未指定時は従来通りラベル数から自動計算） */
+		/** If given, overrides the viewBox's height (otherwise auto-computed from the label count as before) */
 		height?: number;
-		/** 指定すると縦の基準線を描画する（データ点のインデックス。小数可＝2点の間に置ける） */
+		/** If given, draws a vertical reference line (index into the data points; decimals allowed, placing it between two points) */
 		markerIndex?: number;
 		markerLabel?: string;
 	};
@@ -37,10 +37,10 @@
 	const PL = 90;
 	const PR = 16;
 	const rotateLabs = $derived(labels.length > 10);
-	// 日次粒度のトレンド予測等、点数が多い場合にラベル・ドットが埋め尽くさないよう間引く（少数点数の既存利用箇所は影響なし）
+	// Thin out labels/dots when there are many points (e.g. daily-granularity trend forecasts) so they don't overcrowd the chart (no effect on existing usages with few points)
 	const labelStep = $derived(Math.max(1, Math.ceil(labels.length / 15)));
 	const showDots = $derived(labels.length <= 120);
-	// height指定時（横長のダッシュボード用）は縦の余白も詰めて、単純な縮小ではなく横に広いアスペクト比にする
+	// When height is given (for wide dashboards), also tighten the vertical padding so the result is a wide aspect ratio rather than a simple shrink
 	const PT = $derived(height ? 10 : 16);
 	const H = $derived(height ?? (rotateLabs ? 300 : 220));
 	const PB = $derived(
@@ -118,7 +118,7 @@
 				stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
 		{/each}
 
-		<!-- Dots（点数が多い時は省略し、線だけで表現する） -->
+		<!-- Dots (omitted when there are many points, leaving just the line) -->
 		{#if showDots}
 			{#each allSeries as s, si}
 				{#each s.data as d, i}
@@ -127,7 +127,7 @@
 			{/each}
 		{/if}
 
-		<!-- X-axis labels (from first series。点数が多い時は間引いて表示する) -->
+		<!-- X-axis labels (from first series; thinned out when there are many points) -->
 		{#each labels as label, i}
 			{#if i % labelStep === 0 || i === labels.length - 1}
 				{@const lx = px(i, labels.length)}
@@ -148,7 +148,7 @@
 		<line x1={PL} y1={PT + plotH} x2={W - PR} y2={PT + plotH}
 			stroke="var(--color-border)" stroke-width="1" />
 
-		<!-- Marker (e.g. 実績/予測の境界) -->
+		<!-- Marker (e.g. the boundary between actuals and forecast) -->
 		{#if markerIndex !== undefined && labels.length > 1}
 			{@const mx = px(markerIndex, labels.length)}
 			<line x1={mx} y1={PT} x2={mx} y2={PT + plotH}

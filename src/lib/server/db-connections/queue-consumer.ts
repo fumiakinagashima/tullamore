@@ -5,7 +5,7 @@ import { getDriver, type DbConnectionProvider } from './registry';
 import { ingestExternalTableChunk, type SyncColumn } from './ingest';
 import type { ExternalTableRef } from './types';
 
-/** ingestExternalTable がSYNC_ROW_BUDGETで打ち切った続きを、Queue経由で継続取り込みするためのメッセージ */
+/** Message for continuing ingestion via the Queue where ingestExternalTable left off after hitting SYNC_ROW_BUDGET */
 export type IngestQueueMessage = {
 	syncId: string;
 	dataSourceId: string;
@@ -13,7 +13,7 @@ export type IngestQueueMessage = {
 	tableName: string;
 	table: ExternalTableRef;
 	columns: SyncColumn[];
-	/** 次にfetchRowsを開始する位置 */
+	/** The position at which the next fetchRows should start */
 	offset: number;
 };
 
@@ -23,11 +23,12 @@ export type IngestQueueEnv = {
 } & Record<string, unknown>;
 
 /**
- * worker.ts の queue() ハンドラから呼ばれる。バッチ内の各メッセージを順に処理し、
- * まだ続きがあれば次のoffsetで自分自身を再度キューに積む（1メッセージ = 1呼び出し分のCPU予算に収める）。
- * 失敗時もack()する: 同じ接続情報・外部テーブルに起因するエラーは再送しても大抵同じ理由で失敗し、
- * 無限リトライでキューを詰まらせるだけのため、external_table_syncsにfailedとして記録して終わらせる
- * （ユーザーは/database/[id]の「今すぐ再同期」から手動でやり直せる）。
+ * Called from worker.ts's queue() handler. Processes each message in the batch in order, and if
+ * there is more to ingest, re-enqueues itself with the next offset (keeping 1 message = 1 call's
+ * worth of CPU budget). Also ack()s on failure: an error caused by the same connection info/external
+ * table will almost always fail again for the same reason on redelivery, which would just clog the
+ * queue with infinite retries, so instead we record it as failed in external_table_syncs and stop
+ * (the user can manually retry from "Resync now" on /database/[id]).
  */
 export async function handleIngestQueueBatch(batch: MessageBatch<IngestQueueMessage>, env: IngestQueueEnv): Promise<void> {
 	for (const message of batch.messages) {
@@ -47,7 +48,7 @@ async function processIngestMessage(payload: IngestQueueMessage, env: IngestQueu
 	if (!connection) {
 		await updateExternalTableSync(db, payload.syncId, {
 			lastSyncStatus: 'failed',
-			lastSyncError: '接続設定が見つかりません（削除された可能性があります）'
+			lastSyncError: 'Connection settings not found (it may have been deleted)'
 		});
 		return;
 	}
@@ -72,7 +73,7 @@ async function processIngestMessage(payload: IngestQueueMessage, env: IngestQueu
 			if (!env.INGEST_QUEUE) {
 				await updateExternalTableSync(db, payload.syncId, {
 					lastSyncStatus: 'failed',
-					lastSyncError: 'INGEST_QUEUE バインディングが設定されていないため継続取り込みできません'
+					lastSyncError: 'Cannot continue ingestion because the INGEST_QUEUE binding is not configured'
 				});
 				return;
 			}

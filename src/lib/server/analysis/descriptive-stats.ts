@@ -5,9 +5,10 @@ import type { DataSource } from '../db/schema';
 import { quoteIdent } from './sql-ident';
 
 /**
- * 選択した列それぞれについて COUNT/SUM/SUM_SQ/MIN/MAX を1本のSQLクエリで取得する。
- * sufficient-stats.tsと異なり、行を跨いだ整合性（全列非NULLの同じ行）を要求しないため
- * 単純に列ごとの集計関数を並べるだけでよい（各集計関数はSQLite標準でNULLを無視する）。
+ * Fetches COUNT/SUM/SUM_SQ/MIN/MAX for each selected column in a single SQL query.
+ * Unlike sufficient-stats.ts, this doesn't require cross-row consistency (the same row being
+ * non-NULL across all columns), so it's fine to simply line up per-column aggregate functions
+ * (each aggregate function ignores NULL per the SQLite standard).
  */
 async function computeColumnAggregates(db: D1Database, tableName: string, columns: string[]): Promise<Record<string, ColumnAggregates>> {
 	const selects: string[] = [];
@@ -21,12 +22,12 @@ async function computeColumnAggregates(db: D1Database, tableName: string, column
 	});
 	const sql = `SELECT ${selects.join(', ')} FROM ${quoteIdent(tableName)}`;
 	const row = await db.prepare(sql).first<Record<string, number | null>>();
-	if (!row) throw new Error('集計に失敗しました');
+	if (!row) throw new Error('Aggregation failed');
 
 	const result: Record<string, ColumnAggregates> = {};
 	columns.forEach((col, i) => {
 		const n = Number(row[`n_${i}`] ?? 0);
-		if (n === 0) throw new Error(`"${col}" に値のある行が見つかりませんでした`);
+		if (n === 0) throw new Error(`No rows with a value for "${col}" were found`);
 		result[col] = {
 			n,
 			sum: Number(row[`sum_${i}`] ?? 0),
@@ -38,7 +39,7 @@ async function computeColumnAggregates(db: D1Database, tableName: string, column
 	return result;
 }
 
-/** 中央値・四分位数・ヒストグラムを求めるための生データを、上限件数までフェッチする */
+/** Fetches raw data, up to a maximum row count, for computing the median, quartiles, and histogram */
 async function fetchColumnSample(db: D1Database, tableName: string, column: string, cap: number): Promise<number[]> {
 	const c = quoteIdent(column);
 	const sql = `SELECT ${c} AS v FROM ${quoteIdent(tableName)} WHERE ${c} IS NOT NULL LIMIT ?`;
@@ -50,15 +51,17 @@ async function fetchColumnSample(db: D1Database, tableName: string, column: stri
 }
 
 /**
- * 列の現在の平均値だけを、生データのサンプリングなしに1本の集計クエリで取得する。
- * KPI達成率トラッキングのように「平均だけ分かればよい」用途向け（中央値・ヒストグラム等が要らないぶん軽い）。
+ * Fetches just the current mean of a column with a single aggregate query, without sampling raw
+ * data. Intended for use cases like KPI achievement-rate tracking where only the mean is needed
+ * (lighter weight since it skips the median, histogram, etc.).
  */
 /**
- * dateRangeを指定した場合、その期間に該当する行が1件も無ければ null を返す（例外にしない）。
- * 未来の期間を対象にしたKPIプラン作成直後など、「まだ実績データが無い」のは正常な状態であり、
- * データソース削除済み等の本当のエラーと区別して呼び出し側が「実績データがまだありません」と
- * 明示的に表示できるようにするため。dateRangeを指定しない場合（全期間）に対象列自体に値が
- * 1件も無いのは実際のエラーなので、そちらは従来通り例外を投げる。
+ * When a dateRange is given and no rows fall within that period, returns null instead of throwing.
+ * This is so that "no actuals yet" — a normal state, such as right after creating a KPI plan
+ * targeting a future period — can be distinguished by the caller from a genuine error such as the
+ * data source having been deleted, and explicitly shown as "no actuals data yet." When dateRange is
+ * omitted (i.e. the full period) and the target column itself has no values at all, that is a real
+ * error, so an exception is still thrown in that case as before.
  */
 export async function computeCurrentMean(
 	db: D1Database,
@@ -69,7 +72,7 @@ export async function computeCurrentMean(
 	const schemaColumns = parseSchema(dataSource.schemaJson);
 	const usable = new Set(continuousColumns(schemaColumns).map((c) => c.key));
 	if (!usable.has(column)) {
-		throw new Error(`"${column}" は数値列ではありません`);
+		throw new Error(`"${column}" is not a numeric column`);
 	}
 
 	if (!dateRange) {
@@ -77,8 +80,9 @@ export async function computeCurrentMean(
 		return aggregates[column].sum / aggregates[column].n;
 	}
 
-	// 日付部分だけの比較にする（date()でSQLite側の日時文字列表現の揺れを正規化する）ため、
-	// computeColumnAggregates共通ロジックは使わずWHERE付きの専用クエリを組み立てる
+	// Build a dedicated query with a WHERE clause instead of reusing the shared computeColumnAggregates
+	// logic, so the comparison is date-only (date() normalizes variations in SQLite's datetime string
+	// representation)
 	const c = quoteIdent(column);
 	const d = quoteIdent(dateRange.column);
 	const table = quoteIdent(dataSource.tableName);
@@ -97,13 +101,13 @@ export async function computeDescriptiveStatsFromDataSource(
 	histogramBins: number
 ): Promise<Record<string, DescriptiveStatsSummary>> {
 	if (columns.length === 0) {
-		throw new Error('統計を計算する列を1つ以上選択してください');
+		throw new Error('Please select at least one column to compute statistics for');
 	}
 	const schemaColumns = parseSchema(dataSource.schemaJson);
 	const usable = new Set(continuousColumns(schemaColumns).map((c) => c.key));
 	const invalid = columns.filter((c) => !usable.has(c));
 	if (invalid.length > 0) {
-		throw new Error(`数値列でないものが含まれています: ${invalid.join(', ')}`);
+		throw new Error(`The following are not numeric columns: ${invalid.join(', ')}`);
 	}
 
 	const aggregates = await computeColumnAggregates(db, dataSource.tableName, columns);

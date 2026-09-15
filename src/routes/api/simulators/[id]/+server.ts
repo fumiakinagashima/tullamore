@@ -8,7 +8,7 @@ export const DELETE: RequestHandler = async ({ params, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const db = createDb(platform.env.DB);
 	const simulator = await getSimulator(db, params.id);
-	if (!simulator) return errors.notFound('シミュレーターが見つかりません');
+	if (!simulator) return errors.notFound('Simulator not found');
 
 	await deleteSimulator(db, params.id);
 	return json({ ok: true });

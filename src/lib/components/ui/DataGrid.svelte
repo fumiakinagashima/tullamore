@@ -21,7 +21,7 @@
 		addable?: boolean;
 		deletable?: boolean;
 		onchange?: (rows: GridRow[]) => void;
-		/** 指定すると表の高さをこの値（px）で固定し、はみ出た行は縦スクロールにする（未指定時は従来通り高さ無制限） */
+		/** When set, fixes the table height at this value (px) and vertically scrolls overflowing rows (unlimited height as before when unset) */
 		maxHeight?: number;
 	};
 
@@ -36,11 +36,12 @@
 		maxHeight
 	}: Props = $props();
 
-	// セルは常に input/select 要素として描画する（非編集時だけ span に差し替える、といったことはしない）。
-	// 要素の種類を切り替えると、table の auto-layout が列幅を再計算してクリックの度にガタつくため
+	// Cells are always rendered as input/select elements (never swapped for a span when not editing).
+	// Switching the element type would cause the table's auto-layout to recompute column widths and
+	// jitter on every click
 	let active = $state<{ row: number; col: number } | null>(null);
 
-	// キーボードでのセル移動（Tab/Enter）で次のセルへ実際にフォーカスを移すための参照テーブル
+	// Lookup table used to actually move focus to the next cell when navigating by keyboard (Tab/Enter)
 	let cellEls: (HTMLInputElement | HTMLSelectElement | null)[][] = [];
 
 	let scrollEl: HTMLDivElement | undefined = $state();
@@ -97,7 +98,8 @@
 	async function addRow() {
 		rows = [...rows, blankRow()];
 		onchange?.(rows);
-		// maxHeight指定でスクロール領域になっている場合、隠れた位置に追加されて気づきにくいので一番下まで送る
+		// When maxHeight makes this a scroll area, the new row could be added out of view and easy to
+		// miss, so scroll all the way to the bottom
 		await tick();
 		if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
 	}
@@ -111,7 +113,7 @@
 		onchange?.(rows);
 	}
 
-	// 行メニュー（コピー・ペースト・行挿入・削除）。クリップボードはこのグリッド内だけで完結する単純な内部状態
+	// Row menu (copy/paste/insert row/delete). The clipboard is simple internal state scoped to this grid only
 	let openRowMenu = $state<number | null>(null);
 	let clipboardRow = $state<GridRow | null>(null);
 
@@ -169,7 +171,7 @@
 								<button
 									type="button"
 									class="row-menu-btn"
-									aria-label="行メニュー"
+									aria-label="Row menu"
 									aria-expanded={openRowMenu === ri}
 									onclick={(e) => {
 										e.stopPropagation();
@@ -180,10 +182,10 @@
 								</button>
 								{#if openRowMenu === ri}
 									<div class="row-menu">
-										<button class="row-menu-item" onclick={() => copyRow(ri)}>コピー</button>
-										<button class="row-menu-item" disabled={!clipboardRow} onclick={() => pasteRow(ri)}>ペースト</button>
-										<button class="row-menu-item" onclick={() => insertRowAt(ri)}>行挿入</button>
-										<button class="row-menu-item danger" onclick={() => deleteRow(ri)}>削除</button>
+										<button class="row-menu-item" onclick={() => copyRow(ri)}>Copy</button>
+										<button class="row-menu-item" disabled={!clipboardRow} onclick={() => pasteRow(ri)}>Paste</button>
+										<button class="row-menu-item" onclick={() => insertRowAt(ri)}>Insert row</button>
+										<button class="row-menu-item danger" onclick={() => deleteRow(ri)}>Delete</button>
 									</div>
 								{/if}
 							</td>
@@ -235,7 +237,7 @@
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
 			</svg>
-			行を追加
+			Add row
 		</button>
 	{/if}
 </div>
@@ -256,7 +258,7 @@
 		font-size: 0.9375rem;
 	}
 
-	/* maxHeight指定時にスクロールしても列見出しが見えるよう固定する（未指定時は無効なので副作用なし） */
+	/* Sticky so column headers stay visible when scrolling with maxHeight set (inert and has no side effect when unset) */
 	thead {
 		position: sticky;
 		top: 0;
@@ -276,7 +278,7 @@
 	}
 
 	.ctrl-th { width: 32px; }
-	/* 列の合計幅がコンテナより狭い場合、右側は罫線の無い余白として見せる（表を無理に引き伸ばさない） */
+	/* When the total column width is narrower than the container, show the right side as borderless whitespace (don't force-stretch the table) */
 	.filler-th, .filler-td { border: none; }
 
 	td {
@@ -299,8 +301,8 @@
 		z-index: 1;
 	}
 
-	/* 常に input/select を描画し、非アクティブ時は枠線・背景を消してテキスト表示のように見せる
-	   （active/非active でDOM要素の種類自体は切り替えない＝クリックのたびに列幅がガタつく問題を避ける） */
+	/* Always render input/select, hiding the border/background when inactive to look like plain text
+	   (the DOM element type itself never switches between active/inactive, avoiding column-width jitter on every click) */
 	td input,
 	td select {
 		display: block;

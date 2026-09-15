@@ -7,7 +7,7 @@ import type { Db } from '../db';
 export const tools: Tool[] = [
 	{
 		name: 'list_data_sources',
-		description: '利用可能なデータソース（テーブル）の一覧とスキーマを返す。分析を始める前に必ず呼び出して、どのデータが使えるか確認すること。',
+		description: 'Returns the list of available data sources (tables) and their schemas. Always call this before starting an analysis to check what data is available.',
 		input_schema: {
 			type: 'object' as const,
 			properties: {},
@@ -16,17 +16,17 @@ export const tools: Tool[] = [
 	},
 	{
 		name: 'execute_sql',
-		description: 'D1データベースに対してSELECTクエリを実行し、結果を返す。集計・フィルタ・JOIN・GROUP BYなど複雑なクエリも可能。SELECTのみ許可（INSERT/UPDATE/DELETE/DROP不可）。テーブル名は list_data_sources で確認したものを使うこと。',
+		description: 'Runs a SELECT query against the D1 database and returns the results. Supports complex queries such as aggregation, filtering, JOIN, and GROUP BY. Only SELECT is allowed (no INSERT/UPDATE/DELETE/DROP). Use table names as confirmed via list_data_sources.',
 		input_schema: {
 			type: 'object' as const,
 			properties: {
 				sql: {
 					type: 'string',
-					description: '実行するSQLクエリ（SELECT文のみ）'
+					description: 'The SQL query to run (SELECT statements only)'
 				},
 				description: {
 					type: 'string',
-					description: 'このクエリが何を取得するか簡単に説明（ログ用）'
+					description: 'A brief explanation of what this query fetches (for logging)'
 				}
 			},
 			required: ['sql']
@@ -34,13 +34,13 @@ export const tools: Tool[] = [
 	},
 	{
 		name: 'preview_data',
-		description: '指定したデータソースの先頭20行をプレビューとして返す。データの形式・内容を把握してSQLを書く前の確認に使う。',
+		description: 'Returns the first 20 rows of the specified data source as a preview. Use this to understand the shape and content of the data before writing SQL.',
 		input_schema: {
 			type: 'object' as const,
 			properties: {
 				data_source_id: {
 					type: 'string',
-					description: 'データソースID'
+					description: 'The data source ID'
 				}
 			},
 			required: ['data_source_id']
@@ -51,7 +51,7 @@ export const tools: Tool[] = [
 export async function handleListDataSources(db: Db) {
 	const sources = await listDataSources(db);
 	if (sources.length === 0) {
-		return { count: 0, data_sources: [], message: 'データソースが登録されていません。/database ページからデータソースを追加してください。' };
+		return { count: 0, data_sources: [], message: 'No data sources are registered. Please add a data source from the /database page.' };
 	}
 	return {
 		count: sources.length,
@@ -77,7 +77,7 @@ export async function handleExecuteSql(db: Db, input: unknown, env?: { DB?: D1Da
 	const selectError = validateSelectOnly(sql);
 	if (selectError) return { error: selectError };
 
-	if (!env?.DB) return { error: 'データベースに接続できません' };
+	if (!env?.DB) return { error: 'Could not connect to the database' };
 
 	const systemError = await validateNoSystemTables(db, sql);
 	if (systemError) return { error: systemError };
@@ -93,7 +93,7 @@ export async function handleExecuteSql(db: Db, input: unknown, env?: { DB?: D1Da
 			truncated: rows.length === 1000
 		};
 	} catch (e) {
-		return { error: `SQLエラー: ${e instanceof Error ? e.message : String(e)}` };
+		return { error: `SQL error: ${e instanceof Error ? e.message : String(e)}` };
 	}
 }
 
@@ -104,8 +104,8 @@ const previewDataInputSchema = z.object({
 export async function handlePreviewData(db: Db, input: unknown, env?: { DB?: D1Database }) {
 	const { data_source_id } = previewDataInputSchema.parse(input);
 	const source = await getDataSource(db, data_source_id);
-	if (!source) return { error: 'データソースが見つかりません' };
-	if (!env?.DB) return { error: 'データベースに接続できません' };
+	if (!source) return { error: 'Data source not found' };
+	if (!env?.DB) return { error: 'Could not connect to the database' };
 
 	try {
 		const result = await env.DB.prepare(`SELECT * FROM \`${source.tableName}\` LIMIT 20`).all();
@@ -117,6 +117,6 @@ export async function handlePreviewData(db: Db, input: unknown, env?: { DB?: D1D
 			row_count: source.rowCount
 		};
 	} catch (e) {
-		return { error: `プレビューエラー: ${e instanceof Error ? e.message : String(e)}` };
+		return { error: `Preview error: ${e instanceof Error ? e.message : String(e)}` };
 	}
 }

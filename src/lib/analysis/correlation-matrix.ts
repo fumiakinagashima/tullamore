@@ -4,16 +4,17 @@ import { combineOverall, type ValidityAssessment, type ValidityCheckItem } from 
 
 export type CorrelationMatrix = {
 	columns: string[];
-	/** matrix[i][j] = columns[i] と columns[j] のピアソン相関係数（対称、対角は1） */
+	/** matrix[i][j] = Pearson correlation coefficient between columns[i] and columns[j] (symmetric, diagonal is 1) */
 	matrix: number[][];
-	/** 相関の算出に使ったサンプル数（全列が非NULLの行数） */
+	/** Sample size used to compute the correlations (number of rows where all columns are non-NULL) */
 	sampleSize: number;
 };
 
 /**
- * columns[0] を「目的変数」、それ以外を「説明変数」として computeSufficientStats を呼んだ結果から、
- * 全列ペアの相関行列を組み立てる。既存のサマリー統計量（Σx, Σxᵢxⱼ 等）だけで求まるため、
- * 新たなSQL集計は不要（columns[0]とのペアは pearsonCorrelation、それ以外のペアは featurePairCorrelation を使う）。
+ * Builds the correlation matrix for all column pairs from the result of calling computeSufficientStats
+ * with columns[0] as the "target variable" and the rest as "feature variables". This can be derived purely
+ * from the existing summary statistics (Σx, Σxᵢxⱼ, etc.), so no new SQL aggregation is needed
+ * (pairs with columns[0] use pearsonCorrelation, other pairs use featurePairCorrelation).
  */
 export function buildCorrelationMatrix(stats: SufficientStats, columns: string[]): CorrelationMatrix {
 	const n = columns.length;
@@ -30,22 +31,22 @@ export function buildCorrelationMatrix(stats: SufficientStats, columns: string[]
 	return { columns, matrix, sampleSize: stats.n };
 }
 
-/** 相関行列の妥当性を評価する。サンプル数が少ないと相関係数の推定が不安定になるため、その一点をチェックする */
+/** Assesses the validity of a correlation matrix. A small sample size makes the correlation coefficient estimate unstable, so that is the one thing checked. */
 export function assessCorrelationValidity(result: CorrelationMatrix): ValidityAssessment {
 	const checks: ValidityCheckItem[] = [];
 	const n = result.sampleSize;
 
 	if (n >= 30) {
-		checks.push({ label: 'サンプル数', level: 'good', comment: `サンプル数${n}件は相関係数の推定に十分です` });
+		checks.push({ label: 'Sample size', level: 'good', comment: `A sample size of ${n} is sufficient for estimating correlation coefficients` });
 	} else if (n >= 10) {
-		checks.push({ label: 'サンプル数', level: 'caution', comment: `サンプル数${n}件はやや少なく、相関係数が不安定になりやすいです（目安: 30件以上）` });
+		checks.push({ label: 'Sample size', level: 'caution', comment: `A sample size of ${n} is a bit small, so correlation coefficients tend to be unstable (guideline: 30 or more)` });
 	} else {
-		checks.push({ label: 'サンプル数', level: 'poor', comment: `サンプル数${n}件は不足しており、相関係数の信頼性が低い可能性があります（目安: 30件以上）` });
+		checks.push({ label: 'Sample size', level: 'poor', comment: `A sample size of ${n} is insufficient; the correlation coefficients may not be reliable (guideline: 30 or more)` });
 	}
 
 	const { overallLevel, overallComment } = combineOverall(
 		checks,
-		'この相関分析は妥当性チェックの主要な観点で問題は見つかりませんでした'
+		'No issues were found in the main aspects of the validity check for this correlation analysis'
 	);
 	return { overallLevel, overallComment, checks };
 }

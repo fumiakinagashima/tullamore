@@ -5,7 +5,7 @@ import type { Db } from './index';
 
 const DANGEROUS_KEYWORDS = /\b(INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|TRUNCATE|REPLACE|ATTACH|DETACH)\b/i;
 
-// SQLite の組み込みカタログテーブル（全テーブル名の列挙などに使われうるため塞ぐ）
+// SQLite's built-in catalog tables (blocked since they could be used to enumerate all table names, etc.)
 const SQLITE_INTERNAL_TABLES = [
 	'sqlite_master',
 	'sqlite_schema',
@@ -19,10 +19,10 @@ const SQLITE_INTERNAL_TABLES = [
 export function validateSelectOnly(sql: string): string | null {
 	const normalized = sql.trim().toUpperCase();
 	if (!normalized.startsWith('SELECT') && !normalized.startsWith('WITH')) {
-		return 'SELECT文のみ実行できます';
+		return 'Only SELECT statements can be executed';
 	}
 	if (DANGEROUS_KEYWORDS.test(sql)) {
-		return 'SELECT以外のSQL文は実行できません';
+		return 'SQL statements other than SELECT cannot be executed';
 	}
 	return null;
 }
@@ -31,9 +31,10 @@ function escapeRegExp(s: string): string {
 	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// data_sources に登録された ds_* テーブル以外（accounts・integrations・email_providers 等の
-// アプリ内部テーブル、SQLiteカタログ）へのアクセスを、クエリ文字列中の単語一致で検出して拒否する。
-// スキーマ変更で内部テーブルが増えても schema.ts から動的に取得するため塞ぎ漏れしない。
+// Detects and rejects access, via word matching in the query string, to anything other than the
+// ds_* tables registered in data_sources (app-internal tables such as accounts, integrations,
+// email_providers, and the SQLite catalog). Since these are fetched dynamically from schema.ts,
+// no new internal table introduced by a schema change will slip through unblocked.
 export async function validateNoSystemTables(db: Db, sql: string): Promise<string | null> {
 	const sources = await listDataSources(db);
 	const allowedTables = new Set(sources.map((s) => s.tableName));
@@ -52,7 +53,7 @@ export async function validateNoSystemTables(db: Db, sql: string): Promise<strin
 
 	for (const table of forbidden) {
 		if (new RegExp(`\\b${escapeRegExp(table)}\\b`, 'i').test(sql)) {
-			return 'このテーブルへのアクセスは許可されていません';
+			return 'Access to this table is not permitted';
 		}
 	}
 	return null;

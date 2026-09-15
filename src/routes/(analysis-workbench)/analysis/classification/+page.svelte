@@ -23,7 +23,7 @@
 	let truncated = $state(false);
 
 	const selectedSource = $derived(data.sources.find((s) => s.id === dataSourceId));
-	// 目的変数は2値であれば数値・カテゴリどちらの列でもよい（id/date列は除外）
+	// The target variable can be either a numeric or categorical column as long as it's binary (id/date columns are excluded)
 	const targetCandidates = $derived(
 		selectedSource?.columns.filter((c) => {
 			const t = inferAnalysisColumnType(c);
@@ -52,8 +52,9 @@
 		featureColumns = checked ? [...featureColumns, key] : featureColumns.filter((k) => k !== key);
 	}
 
-	// 目的変数を切り替えた時、それまで説明変数として選んでいた列が新しい目的変数と重複していたら除外する
-	// （featureCandidates からは自動的に消えるが、チェック状態自体は featureColumns に残ってしまうため）
+	// When the target variable is switched, drop any previously selected explanatory-variable column
+	// that now duplicates the new target variable (it disappears from featureCandidates automatically,
+	// but the checked state itself would otherwise remain in featureColumns)
 	$effect(() => {
 		if (featureColumns.includes(targetColumn)) {
 			featureColumns = featureColumns.filter((k) => k !== targetColumn);
@@ -119,7 +120,7 @@
 				validity?: ValidityAssessment;
 				error?: string;
 			};
-			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Analysis failed');
 			model = body.model ?? null;
 			validity = body.validity ?? null;
 			truncated = body.truncated ?? false;
@@ -130,7 +131,7 @@
 		}
 	}
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
@@ -148,31 +149,31 @@
 			: []
 	);
 	const coefficientColumns = [
-		{ key: 'variable', label: '説明変数' },
-		{ key: 'coefficient', label: '係数（対数オッズ）' },
-		{ key: 'odds_ratio', label: 'オッズ比' }
+		{ key: 'variable', label: 'Explanatory variable' },
+		{ key: 'coefficient', label: 'Coefficient (log-odds)' },
+		{ key: 'odds_ratio', label: 'Odds ratio' }
 	];
 </script>
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">ロジスティック回帰・分類</h1>
-		<p class="page-sub">目的変数が2値（購入した/しない、解約した/しない等）の場合に、説明変数からその確率を予測するモデルを作ります</p>
+		<h1 class="page-title">Logistic Regression / Classification</h1>
+		<p class="page-sub">Builds a model that predicts the probability of a binary target variable (e.g. purchased/not purchased, churned/not churned) from explanatory variables</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="目的変数（2値）" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+			<Select label="Data source" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Target variable (binary)" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 		</div>
 
 		<div class="feature-picker">
-			<span class="field-label">説明変数（数値列、複数選択可）</span>
+			<span class="field-label">Explanatory variables (numeric columns, multiple selection allowed)</span>
 			{#if !targetColumn}
-				<p class="hint">先に目的変数を選択してください</p>
+				<p class="hint">Select a target variable first</p>
 			{:else if featureCandidates.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
+				<p class="hint">No numeric columns available to select</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each featureCandidates as col (col.key)}
@@ -191,7 +192,7 @@
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? 'モデル作成中…' : 'モデルを作成'}
+				{loading ? 'Building model…' : 'Build model'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
@@ -201,29 +202,29 @@
 		{#if model}
 			<div class="results-card">
 				{#if truncated}
-					<p class="warning-text">データ件数が多いため先頭の一部（{model.metrics.sampleSize.toLocaleString()}件）のみで学習しました。</p>
+					<p class="warning-text">The dataset is large, so the model was trained on only the first {model.metrics.sampleSize.toLocaleString()} rows.</p>
 				{/if}
-				<p class="positive-class-note">正例（1）として扱った値: <strong>{model.positiveClassLabel}</strong></p>
+				<p class="positive-class-note">Value treated as the positive class (1): <strong>{model.positiveClassLabel}</strong></p>
 
 				<div class="content-row">
 					<div class="confusion-matrix">
-						<p class="subsection-title">混同行列</p>
+						<p class="subsection-title">Confusion matrix</p>
 						<table class="cm-table">
 							<thead>
 								<tr>
 									<th></th>
-									<th>予測: 正例</th>
-									<th>予測: 負例</th>
+									<th>Predicted: positive</th>
+									<th>Predicted: negative</th>
 								</tr>
 							</thead>
 							<tbody>
 								<tr>
-									<th>実際: 正例</th>
+									<th>Actual: positive</th>
 									<td class="cm-correct">{model.confusionMatrix.truePositive}</td>
 									<td>{model.confusionMatrix.falseNegative}</td>
 								</tr>
 								<tr>
-									<th>実際: 負例</th>
+									<th>Actual: negative</th>
 									<td>{model.confusionMatrix.falsePositive}</td>
 									<td class="cm-correct">{model.confusionMatrix.trueNegative}</td>
 								</tr>
@@ -233,34 +234,34 @@
 
 					<div class="metrics-row">
 						<div class="metric">
-							<span class="metric-label">正解率</span>
+							<span class="metric-label">Accuracy</span>
 							<span class="metric-value highlight">{fmtPct(model.metrics.accuracy)}</span>
 						</div>
 						<div class="metric">
-							<span class="metric-label">適合率</span>
+							<span class="metric-label">Precision</span>
 							<span class="metric-value">{fmtPct(model.metrics.precision)}</span>
 						</div>
 						<div class="metric">
-							<span class="metric-label">再現率</span>
+							<span class="metric-label">Recall</span>
 							<span class="metric-value">{fmtPct(model.metrics.recall)}</span>
 						</div>
 						<div class="metric">
-							<span class="metric-label">F1スコア</span>
+							<span class="metric-label">F1 score</span>
 							<span class="metric-value">{fmt(model.metrics.f1)}</span>
 						</div>
 						<div class="metric">
-							<span class="metric-label">疑似R²（McFadden）</span>
+							<span class="metric-label">Pseudo-R² (McFadden)</span>
 							<span class="metric-value">{fmt(model.metrics.pseudoR2)}</span>
 						</div>
 						<div class="metric">
-							<span class="metric-label">サンプル数</span>
+							<span class="metric-label">Sample size</span>
 							<span class="metric-value">{model.metrics.sampleSize.toLocaleString()}</span>
 						</div>
 					</div>
 				</div>
 
 				<div>
-					<p class="subsection-title">係数（オッズ比が1より大きい＝正例になりやすい方向に働く）</p>
+					<p class="subsection-title">Coefficients (an odds ratio greater than 1 means it pushes toward the positive class)</p>
 					<Table columns={coefficientColumns} rows={coefficientRows} />
 				</div>
 
@@ -270,7 +271,7 @@
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソース・目的変数（2値）・説明変数を選び、「モデルを作成」を押してください</p>
+				<p>Choose a data source, target variable (binary), and explanatory variables in the settings above, then click "Build model"</p>
 			</div>
 		{/if}
 	</section>

@@ -21,9 +21,9 @@ export type DataQualityReport = {
 };
 
 /**
- * データソースの数値列ごとに欠損件数・外れ値候補・妥当性チェックを算出する
- * （既存の記述統計エンジンをそのまま再利用。列ごとに独立して呼び出すことで、
- * 1列が全件NULL等で計算不能でも他の列の結果まで巻き込んで失敗しないようにする）。
+ * Computes the missing-value count, outlier candidates, and validity check for each numeric column in a data source
+ * (reuses the existing descriptive-stats engine as-is. Calling it independently per column ensures that if
+ * one column is uncomputable, e.g. because every value is NULL, it doesn't drag down the results for other columns).
  */
 export async function computeDataQuality(db: D1Database, dataSource: DataSource): Promise<DataQualityReport> {
 	const schemaColumns = parseSchema(dataSource.schemaJson);
@@ -55,7 +55,7 @@ export async function computeDataQuality(db: D1Database, dataSource: DataSource)
 				n: 0,
 				missingCount: dataSource.rowCount,
 				outlierCount: 0,
-				validity: { overallLevel: 'poor', overallComment: 'この列には値のあるデータがありません', checks: [] }
+				validity: { overallLevel: 'poor', overallComment: 'This column has no non-null data', checks: [] }
 			});
 		}
 	}

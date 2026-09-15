@@ -6,21 +6,21 @@ import { errors } from '$lib/server/errors';
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB server-side limit
 
 export const POST: RequestHandler = async ({ request, platform }) => {
-	if (!platform?.env?.R2) return errors.serviceUnavailable('R2が設定されていません。wrangler.toml を確認してください。');
+	if (!platform?.env?.R2) return errors.serviceUnavailable('R2 is not configured. Check wrangler.toml.');
 
 	const contentLength = Number(request.headers.get('content-length') ?? 0);
-	if (contentLength > MAX_BYTES) return errors.badRequest('ファイルが大きすぎます（最大10MB）');
+	if (contentLength > MAX_BYTES) return errors.badRequest('File is too large (10MB max)');
 
 	let formData: FormData;
 	try {
 		formData = await request.formData();
 	} catch {
-		return errors.badRequest('フォームデータの解析に失敗しました');
+		return errors.badRequest('Failed to parse form data');
 	}
 
 	const file = formData.get('file');
-	if (!(file instanceof File)) return errors.badRequest('file フィールドが必要です');
-	if (file.size > MAX_BYTES) return errors.badRequest('ファイルが大きすぎます（最大10MB）');
+	if (!(file instanceof File)) return errors.badRequest('A "file" field is required');
+	if (file.size > MAX_BYTES) return errors.badRequest('File is too large (10MB max)');
 
 	const key = crypto.randomUUID();
 	const buffer = await file.arrayBuffer();

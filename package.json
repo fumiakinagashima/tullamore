@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fumiakinagashima/tullamore.git"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

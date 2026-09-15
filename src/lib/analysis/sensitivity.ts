@@ -9,9 +9,10 @@ export type TornadoItem = {
 };
 
 /**
- * 他の説明変数を平均値に固定し、対象の変数だけを実測レンジ（min/max）に動かした時の
- * 目的変数の予測値の振れ幅を算出する（感度分析＝トルネードチャートの元データ）。
- * 振れ幅（|high - low|）が大きい順にソートして返す。
+ * Fixes the other feature variables at their mean value and computes the swing in the predicted
+ * target variable as only the target variable is moved across its observed range (min/max)
+ * (this is the sensitivity analysis / source data for the tornado chart).
+ * Returns the items sorted by descending swing (|high - low|).
  */
 export function computeSensitivity(model: LinearRegressionModel): TornadoItem[] {
 	const means = Object.fromEntries(model.featureColumns.map((k) => [k, model.featureRanges[k].mean]));

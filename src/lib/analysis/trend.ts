@@ -1,7 +1,7 @@
-// トレンド予測のクライアントサイド再計算（isomorphic）。
-// サーバー側（src/lib/server/analysis/trend.ts）はSQL集計でサマリー統計量を取得するが、
-// こちらはグリッドで編集された生データ（メモリ上の配列）からその場で再学習するための版。
-// 同じ回帰エンジン（registry.ts）を使うため、TREND_TIME_FEATURE は両者で共有する。
+// Client-side recomputation of trend forecasts (isomorphic).
+// The server side (src/lib/server/analysis/trend.ts) gets summary statistics via SQL aggregation,
+// but this version retrains on the spot from raw data (an in-memory array) as edited in the grid.
+// Since it uses the same regression engine (registry.ts), TREND_TIME_FEATURE is shared between the two.
 import type { LinearRegressionModel, SufficientStats } from './types';
 import { fitModel, predict } from './registry';
 
@@ -10,7 +10,7 @@ export const TREND_TIME_FEATURE = '__time_days';
 export type TrendRawRow = { date: string; value: number };
 export type TrendPoint = { label: string; value: number };
 
-/** 集計粒度。回帰計算自体は日単位の連続値（TREND_TIME_FEATURE）なので、粒度は表示・集計バケツと予測の刻み幅にのみ影響する */
+/** Aggregation granularity. Since the regression itself operates on a continuous, daily-resolution value (TREND_TIME_FEATURE), granularity only affects the display/aggregation buckets and the forecast step size */
 export type TrendGranularity = 'day' | 'week' | 'month';
 
 function toTimeMs(dateStr: string): number {
@@ -31,7 +31,7 @@ function dayLabel(dateStr: string): string {
 	return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
 }
 
-/** ISO週（月曜始まり）の週初め日付をラベルとして使う */
+/** Uses the start-of-week date (ISO week, starting Monday) as the label */
 function weekLabel(dateStr: string): string {
 	const d = new Date(dateStr);
 	const day = d.getUTCDay();
@@ -46,7 +46,7 @@ function bucketLabel(dateStr: string, granularity: TrendGranularity): string {
 	return monthLabel(dateStr);
 }
 
-/** 日付を粒度単位でn個先に進める（予測期間の刻み幅の生成に使う） */
+/** Advances a date by n granularity units (used to generate the forecast period's step increments) */
 function addPeriod(d: Date, granularity: TrendGranularity, n: number): Date {
 	if (granularity === 'day') return new Date(d.getTime() + n * 86_400_000);
 	if (granularity === 'week') return new Date(d.getTime() + n * 7 * 86_400_000);
@@ -57,10 +57,10 @@ function validRows(rows: TrendRawRow[]): TrendRawRow[] {
 	return rows.filter((r) => r.date && Number.isFinite(toTimeMs(r.date)) && Number.isFinite(r.value));
 }
 
-/** グリッドの生データ（日付・数値のペア）から単回帰モデルを学習する。サーバー往復なしでブラウザ内で完結する */
+/** Trains a simple regression model from the grid's raw data (date/value pairs). Runs entirely in the browser, with no server round trip */
 export function fitTrendFromRows(rows: TrendRawRow[]): LinearRegressionModel {
 	const valid = validRows(rows);
-	if (valid.length === 0) throw new Error('分析対象のデータがありません');
+	if (valid.length === 0) throw new Error('No data to analyze');
 
 	const baseMs = Math.min(...valid.map((r) => toTimeMs(r.date)));
 
@@ -101,10 +101,14 @@ export function fitTrendFromRows(rows: TrendRawRow[]): LinearRegressionModel {
 }
 
 /**
- * 集計した実績値と、学習済みモデルによる「実績期間〜予測期間」通しのトレンド線を返す。
- * 2系列を同じ点数に揃えるのは server 版と同じ理由（LineChartは系列ごとの要素数で横位置を計算するため）。
- * granularity は表示・集計バケツと予測の刻み幅を変えるだけで、horizonMonths（予測期間の長さ）は従来通り月数で指定する
- * （例: 日次×半年後まで = 実測を日次集計し、直近の日から半年後までを1日刻みで予測する）。
+ * Returns the aggregated actual values along with a trend line from the trained model spanning
+ * the actuals period through the forecast period. The two series are aligned to the same number
+ * of points for the same reason as the server version (LineChart computes horizontal position
+ * from each series' element count).
+ * granularity only changes the display/aggregation buckets and the forecast step size;
+ * horizonMonths (the length of the forecast period) is still specified in months as before
+ * (e.g. daily granularity x 6-month horizon = aggregate actuals daily, then forecast day-by-day
+ * from the most recent date out to 6 months later).
  */
 export function buildTrendSeries(
 	rows: TrendRawRow[],
@@ -113,7 +117,7 @@ export function buildTrendSeries(
 	granularity: TrendGranularity = 'month'
 ): { historical: TrendPoint[]; trend: TrendPoint[]; historicalCount: number } {
 	const valid = validRows(rows);
-	if (valid.length === 0) throw new Error('分析対象のデータがありません');
+	if (valid.length === 0) throw new Error('No data to analyze');
 
 	const baseMs = Math.min(...valid.map((r) => toTimeMs(r.date)));
 

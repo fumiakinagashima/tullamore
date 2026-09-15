@@ -22,8 +22,8 @@ describe('computeCurrentMean (real D1)', () => {
 			name: 'Mean test (all)',
 			tableName,
 			schemaJson: JSON.stringify([
-				{ key: 'sold_at', label: '販売日', type: 'date' },
-				{ key: 'revenue', label: '売上', type: 'number' }
+				{ key: 'sold_at', label: 'Sale date', type: 'date' },
+				{ key: 'revenue', label: 'Revenue', type: 'number' }
 			]),
 			rowCount: rows.length
 		});
@@ -37,10 +37,10 @@ describe('computeCurrentMean (real D1)', () => {
 		const tableName = makeTableName('mean-test-scoped');
 		await env.DB.exec(`CREATE TABLE ${tableName} (id INTEGER PRIMARY KEY, sold_at TEXT, revenue REAL)`);
 		const rows: [number, string, number][] = [
-			[1, '2025-12-31', 100], // 期間外（2026年より前）
-			[2, '2026-03-15', 200], // 期間内
-			[3, '2026-09-20', 400], // 期間内
-			[4, '2027-01-01', 900] // 期間外（2027年）
+			[1, '2025-12-31', 100], // outside the range (before 2026)
+			[2, '2026-03-15', 200], // inside the range
+			[3, '2026-09-20', 400], // inside the range
+			[4, '2027-01-01', 900] // outside the range (2027)
 		];
 		for (const [id, soldAt, revenue] of rows) {
 			await env.DB.prepare(`INSERT INTO ${tableName} (id, sold_at, revenue) VALUES (?, ?, ?)`).bind(id, soldAt, revenue).run();
@@ -50,8 +50,8 @@ describe('computeCurrentMean (real D1)', () => {
 			name: 'Mean test (scoped)',
 			tableName,
 			schemaJson: JSON.stringify([
-				{ key: 'sold_at', label: '販売日', type: 'date' },
-				{ key: 'revenue', label: '売上', type: 'number' }
+				{ key: 'sold_at', label: 'Sale date', type: 'date' },
+				{ key: 'revenue', label: 'Revenue', type: 'number' }
 			]),
 			rowCount: rows.length
 		});
@@ -65,8 +65,9 @@ describe('computeCurrentMean (real D1)', () => {
 	});
 
 	it('returns null (not an error) when no rows fall within the given date range', async () => {
-		// 未来の期間を対象にしたKPIプラン作成直後等、期間内に実績がまだ無いのは正常な状態のため
-		// 例外にはせず null を返す（呼び出し側がプランごと非表示にせず「実績データがまだ無い」と案内できるように）
+		// It's a normal state for there to be no actuals yet within the period (e.g. right after
+		// creating a KPI plan targeting a future period), so we return null instead of throwing
+		// (allowing the caller to show "no actuals yet" instead of hiding the plan entirely)
 		const db = createDb(env.DB);
 		const tableName = makeTableName('mean-test-empty-range');
 		await env.DB.exec(`CREATE TABLE ${tableName} (id INTEGER PRIMARY KEY, sold_at TEXT, revenue REAL)`);
@@ -76,8 +77,8 @@ describe('computeCurrentMean (real D1)', () => {
 			name: 'Mean test (empty range)',
 			tableName,
 			schemaJson: JSON.stringify([
-				{ key: 'sold_at', label: '販売日', type: 'date' },
-				{ key: 'revenue', label: '売上', type: 'number' }
+				{ key: 'sold_at', label: 'Sale date', type: 'date' },
+				{ key: 'revenue', label: 'Revenue', type: 'number' }
 			]),
 			rowCount: 1
 		});

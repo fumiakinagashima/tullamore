@@ -1,6 +1,6 @@
 import type { SufficientStats } from './types';
 
-/** サマリー統計量から、目的変数（stats.targetSum等）と指定した説明変数のピアソンの相関係数を計算する（生データを読み込まない） */
+/** Computes the Pearson correlation coefficient between the target variable (stats.targetSum, etc.) and the given feature variable from summary statistics (without reading the raw data) */
 export function pearsonCorrelation(stats: SufficientStats, featureColumn: string): number {
 	const n = stats.n;
 	const sumX = stats.featureSums[featureColumn] ?? 0;
@@ -24,7 +24,7 @@ export function rankFeaturesByCorrelation(
 		.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
 }
 
-/** 説明変数どうしの相関係数を計算する（多重共線性チェック用。target側ではなくfeature側同士の組み合わせ） */
+/** Computes the correlation coefficient between two feature variables (for multicollinearity checks; a feature-to-feature pair, not target-to-feature) */
 export function featurePairCorrelation(stats: SufficientStats, colA: string, colB: string): number {
 	if (colA === colB) return 1;
 	const n = stats.n;
@@ -40,7 +40,7 @@ export function featurePairCorrelation(stats: SufficientStats, colA: string, col
 	return numerator / denominator;
 }
 
-/** 説明変数の全ペアのうち、相関係数の絶対値が最大のものを返す（2変数未満ならnull） */
+/** Returns the feature variable pair with the largest absolute correlation coefficient among all pairs (null if fewer than 2 variables) */
 export function maxFeaturePairCorrelation(
 	stats: SufficientStats,
 	featureColumns: string[]

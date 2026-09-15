@@ -5,8 +5,8 @@ import type { DataSource } from '../db/schema';
 import { quoteIdent } from './sql-ident';
 import { LOGISTIC_REGRESSION_MAX_ITERATIONS, LOGISTIC_REGRESSION_CONVERGENCE_TOLERANCE } from '$lib/constants';
 
-// 目的変数の2値のうち、どちらを「正例（1）」として扱うかのヒューリスティック。
-// 一致しない場合は distinctValues の2つ目（アルファベット/取得順で後者）を正例として扱う
+// Heuristic for which of the target variable's two values counts as the "positive class (1)".
+// If none match, the second of distinctValues (the latter in alphabetical/retrieval order) is treated as positive
 const POSITIVE_HEURISTICS = new Set(['1', 'true', 'yes', 'y', 'はい', '有', '成約', '成功', '購入', 'あり', '有り']);
 
 export type ClassificationSpec = {
@@ -17,13 +17,13 @@ export type ClassificationSpec = {
 
 export type ClassificationFitResult = {
 	model: LogisticRegressionModel;
-	/** maxRowsに達して行数を打ち切った場合true（学習はそのサンプルのみで行われている） */
+	/** True if the row count was truncated at maxRows (training used only that sample) */
 	truncated: boolean;
 };
 
 /**
- * ロジスティック回帰はOLSと異なりサマリー統計量に還元できないため、生の行データを
- * maxRows（呼び出し側でLOGISTIC_REGRESSION_MAX_ROWS）まで取得してJS側でIRLSを解く。
+ * Unlike OLS, logistic regression can't be reduced to summary statistics, so we fetch raw row data
+ * up to maxRows (the caller passes LOGISTIC_REGRESSION_MAX_ROWS) and solve IRLS in JS.
  */
 export async function fitClassifierFromDataSource(
 	db: D1Database,
@@ -34,13 +34,13 @@ export async function fitClassifierFromDataSource(
 	const usableFeatures = new Set(continuousColumns(columns).map((c) => c.key));
 	const invalidFeatures = spec.featureColumns.filter((c) => !usableFeatures.has(c));
 	if (invalidFeatures.length > 0) {
-		throw new Error(`説明変数に数値列でないものが含まれています: ${invalidFeatures.join(', ')}`);
+		throw new Error(`The feature variables include non-numeric columns: ${invalidFeatures.join(', ')}`);
 	}
 	if (spec.featureColumns.includes(spec.targetColumn)) {
-		throw new Error('目的変数と説明変数に同じ列を指定することはできません');
+		throw new Error('The target variable and feature variables cannot share the same column');
 	}
 	if (!columns.some((c) => c.key === spec.targetColumn)) {
-		throw new Error(`目的変数 "${spec.targetColumn}" がデータソースに存在しません`);
+		throw new Error(`Target variable "${spec.targetColumn}" does not exist in the data source`);
 	}
 
 	const t = quoteIdent(spec.targetColumn);
@@ -56,14 +56,14 @@ export async function fitClassifierFromDataSource(
 		.all<Record<string, string | number>>();
 
 	if (res.results.length === 0) {
-		throw new Error('分析対象の欠損値のない行が見つかりませんでした');
+		throw new Error('No rows without missing values were found to analyze');
 	}
 
 	const distinctValues = Array.from(new Set(res.results.map((r) => String(r.target))));
 	if (distinctValues.length !== 2) {
 		const shown = distinctValues.slice(0, 5).join(', ');
 		throw new Error(
-			`目的変数 "${spec.targetColumn}" の値が2種類である必要があります（現在: ${shown}${distinctValues.length > 5 ? ' 等' : ''}）`
+			`Target variable "${spec.targetColumn}" must have exactly two distinct values (found: ${shown}${distinctValues.length > 5 ? ', and more' : ''})`
 		);
 	}
 

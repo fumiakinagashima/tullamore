@@ -2,22 +2,22 @@
 	import type { ValidityLevel } from '$lib/analysis/validity';
 
 	type Props = {
-		/** 現在値 */
+		/** Current value */
 		value: number;
-		/** 目標値 */
+		/** Target value */
 		target: number;
 		title?: string;
-		/** ガウジの幅（px）。高さは内部で比率を保って決まる */
+		/** Gauge width (px). Height is derived internally, preserving the aspect ratio */
 		size?: number;
-		/** 現在値・目標値の数値キャプションを表示するか */
+		/** Whether to show numeric captions for the current and target values */
 		showValues?: boolean;
 	};
 
 	let { value, target, title, size = 160, showValues = true }: Props = $props();
 
-	const STATUS_LABEL: Record<ValidityLevel, string> = { good: '達成', caution: '順調', poor: '遅れ' };
+	const STATUS_LABEL: Record<ValidityLevel, string> = { good: 'Achieved', caution: 'On track', poor: 'Behind' };
 
-	// 達成率のしきい値は ValidityCard 等と同じ good/caution/poor の3段階に揃える
+	// The achievement-rate thresholds match the same good/caution/poor 3-level scale used by ValidityCard etc.
 	const rate = $derived(target !== 0 ? value / target : 0);
 	const level = $derived<ValidityLevel>(rate >= 1 ? 'good' : rate >= 0.7 ? 'caution' : 'poor');
 	const fillPct = $derived(Math.max(0, Math.min(1, rate)) * 100);
@@ -28,13 +28,13 @@
 	const strokeWidth = 18;
 	const pathD = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
 
 	const ariaLabel = $derived(
-		`${title ? title + ': ' : ''}現在値${fmt(value)}／目標値${fmt(target)}、達成率${Math.round(rate * 100)}%（${STATUS_LABEL[level]}）`
+		`${title ? title + ': ' : ''}Current value ${fmt(value)} / Target ${fmt(target)}, achievement rate ${Math.round(rate * 100)}% (${STATUS_LABEL[level]})`
 	);
 </script>
 
@@ -48,7 +48,7 @@
 		<span class="gauge-pct">{Math.round(rate * 100)}%</span>
 		<span class="gauge-status">{STATUS_LABEL[level]}</span>
 		{#if showValues}
-			<span class="gauge-values">現在 {fmt(value)} ／ 目標 {fmt(target)}</span>
+			<span class="gauge-values">Current {fmt(value)} / Target {fmt(target)}</span>
 		{/if}
 	</div>
 </figure>
@@ -84,7 +84,7 @@
 		transition: stroke-dasharray 0.3s ease;
 	}
 
-	/* トラック（未達成分）はfillと同系色を薄くした色にする。単純なニュートラルグレーだとカード背景とほぼ同色で見えなかったため */
+	/* The track (the unachieved portion) uses a lightened version of the same color as the fill. A plain neutral gray was nearly invisible against the card background */
 	.level-good .track { stroke: color-mix(in srgb, var(--color-success) 18%, var(--color-background)); }
 	.level-caution .track { stroke: color-mix(in srgb, var(--color-warning) 18%, var(--color-background)); }
 	.level-poor .track { stroke: color-mix(in srgb, var(--color-error) 18%, var(--color-background)); }

@@ -6,7 +6,7 @@ import { getDriver, type DbConnectionProvider } from '$lib/server/db-connections
 import { mapPgTypeToColumnType, mapMysqlTypeToColumnType, sanitizeColumnKey } from '$lib/server/db-connections/column-mapping';
 import { errors } from '$lib/server/errors';
 
-// 接続先のテーブル一覧・カラム一覧を返す（テーブル取り込みモーダルの選択肢に使う）
+// Returns the list of tables/columns at the connection destination (used for the options in the table import modal)
 export const GET: RequestHandler = async ({ params, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const db = createDb(platform.env.DB);
@@ -38,7 +38,7 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 		);
 		return json({ tables: withColumns });
 	} catch (e) {
-		return errors.badRequest(`接続に失敗しました: ${e instanceof Error ? e.message : String(e)}`);
+		return errors.badRequest(`Connection failed: ${e instanceof Error ? e.message : String(e)}`);
 	} finally {
 		await driver.close();
 	}

@@ -1,3 +1,3 @@
--- リマインダー・ブリーフィング機能を削除（未使用のCRM由来機能）
+-- Remove the reminders/briefings feature (unused, inherited from the CRM origin)
 DROP TABLE IF EXISTS `reminders`;
 DROP TABLE IF EXISTS `briefings`;

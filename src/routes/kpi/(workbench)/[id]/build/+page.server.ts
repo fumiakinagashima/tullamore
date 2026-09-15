@@ -6,7 +6,7 @@ import { getKpiPlan, parseKpiPlanSnapshot } from '$lib/server/db/kpi-service';
 export const load: PageServerLoad = async ({ params, platform }) => {
 	const db = createDb(platform!.env.DB);
 	const plan = await getKpiPlan(db, params.id);
-	if (!plan) throw error(404, 'KPIプランが見つかりません');
+	if (!plan) throw error(404, 'KPI plan not found');
 
 	const snapshot = parseKpiPlanSnapshot(plan.planJson);
 

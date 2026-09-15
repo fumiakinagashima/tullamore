@@ -1,10 +1,11 @@
-// 各分析モジュール共通の「妥当性チェック」の型と、判定ロジックのうちDBに依存しない純粋な部分。
-// 多重共線性チェック等サマリー統計量が必要なものは server/analysis/validity.ts（D1依存）が担当する。
+// Shared "validity check" types across analysis modules, plus the parts of the judging logic that
+// are pure and don't depend on the DB. Checks that need summary statistics, like multicollinearity,
+// are handled by server/analysis/validity.ts (which depends on D1).
 
 export type ValidityLevel = 'good' | 'caution' | 'poor';
 
 export type ValidityCheckItem = {
-	/** チェック項目名（例: 「当てはまりの良さ」） */
+	/** Check item name (e.g. "Goodness of fit") */
 	label: string;
 	level: ValidityLevel;
 	comment: string;
@@ -16,50 +17,50 @@ export type ValidityAssessment = {
 	checks: ValidityCheckItem[];
 };
 
-/** 決定係数R²から当てはまりの良さを評価する（review.tsのassessFitと同じ閾値） */
+/** Evaluates goodness of fit from the R² coefficient of determination (same thresholds as assessFit in review.ts) */
 export function assessFitQuality(r2: number): ValidityCheckItem {
-	if (r2 >= 0.8) return { label: '当てはまりの良さ', level: 'good', comment: `R²=${r2.toFixed(3)}で当てはまりは非常に良好です` };
-	if (r2 >= 0.5) return { label: '当てはまりの良さ', level: 'good', comment: `R²=${r2.toFixed(3)}で当てはまりは良好です` };
-	if (r2 >= 0.3) return { label: '当てはまりの良さ', level: 'caution', comment: `R²=${r2.toFixed(3)}で当てはまりはやや弱く、参考程度に留めてください` };
-	return { label: '当てはまりの良さ', level: 'poor', comment: `R²=${r2.toFixed(3)}で当てはまりが弱く、この説明変数では十分に予測できていません` };
+	if (r2 >= 0.8) return { label: 'Goodness of fit', level: 'good', comment: `R²=${r2.toFixed(3)}, the fit is excellent` };
+	if (r2 >= 0.5) return { label: 'Goodness of fit', level: 'good', comment: `R²=${r2.toFixed(3)}, the fit is good` };
+	if (r2 >= 0.3) return { label: 'Goodness of fit', level: 'caution', comment: `R²=${r2.toFixed(3)}, the fit is somewhat weak — treat the results as a reference only` };
+	return { label: 'Goodness of fit', level: 'poor', comment: `R²=${r2.toFixed(3)}, the fit is weak — these explanatory variables do not predict well enough` };
 }
 
 /**
- * サンプル数が説明変数の数（パラメータ数）に対して十分かを評価する。
- * 目安は「パラメータ数×10件以上」（review.tsのassessSampleSizeと同じ経験則）。
+ * Evaluates whether the sample size is sufficient relative to the number of explanatory variables (parameters).
+ * The rule of thumb is "10x the parameter count or more" (the same heuristic as assessSampleSize in review.ts).
  */
 export function assessSampleSizeAdequacy(sampleSize: number, paramCount: number): ValidityCheckItem {
 	const ideal = 10 * (paramCount + 1);
 	const marginal = 5 * (paramCount + 1);
 	if (sampleSize >= ideal) {
-		return { label: 'サンプル数', level: 'good', comment: `サンプル数${sampleSize}件は説明変数${paramCount}個に対して十分です` };
+		return { label: 'Sample size', level: 'good', comment: `A sample size of ${sampleSize} is sufficient for ${paramCount} explanatory variable(s)` };
 	}
 	if (sampleSize >= marginal) {
 		return {
-			label: 'サンプル数',
+			label: 'Sample size',
 			level: 'caution',
-			comment: `サンプル数${sampleSize}件は説明変数${paramCount}個に対してやや少なめです（目安: ${ideal}件以上）。データを追加できると信頼性が上がります`
+			comment: `A sample size of ${sampleSize} is somewhat small for ${paramCount} explanatory variable(s) (guideline: ${ideal}+). Adding more data would improve reliability`
 		};
 	}
 	return {
-		label: 'サンプル数',
+		label: 'Sample size',
 		level: 'poor',
-		comment: `サンプル数${sampleSize}件は説明変数${paramCount}個に対して不足しています（目安: ${ideal}件以上）。係数の信頼性が低い可能性があります`
+		comment: `A sample size of ${sampleSize} is insufficient for ${paramCount} explanatory variable(s) (guideline: ${ideal}+). Coefficient reliability may be low`
 	};
 }
 
-/** 個々のチェック結果から全体の妥当性レベル・総評コメントをまとめる */
+/** Summarizes the overall validity level and comment from individual check results */
 export function combineOverall(checks: ValidityCheckItem[], goodComment: string): { overallLevel: ValidityLevel; overallComment: string } {
 	if (checks.some((c) => c.level === 'poor')) {
 		return {
 			overallLevel: 'poor',
-			overallComment: 'この分析結果は参考程度に留め、重要な意思決定には別の裏付けも確認することを推奨します'
+			overallComment: 'Treat this analysis as a reference only, and confirm important decisions with other supporting evidence'
 		};
 	}
 	if (checks.some((c) => c.level === 'caution')) {
 		return {
 			overallLevel: 'caution',
-			overallComment: '基本的な妥当性は確保されていますが、一部の項目に注意点があります'
+			overallComment: 'Basic validity is established, but some items warrant caution'
 		};
 	}
 	return { overallLevel: 'good', overallComment: goodComment };

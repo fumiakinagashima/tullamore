@@ -1,233 +1,233 @@
 # Tullamore
 
-「未来シミュレーション」にフォーカスしたAI-nativeなDI（Decision Intelligence／意思決定インテリジェンス）ツール。過去を振り返るBI（ダッシュボード中心）とは異なり、AIがデータから回帰分析・機械学習モデルを作り、人間が変数を動かしてシナリオをシミュレーションし、次のアクション（レポート・KPI設定）に繋げる——意思決定のループを回す体験を提供する。
+An AI-native DI (Decision Intelligence) tool focused on "future simulation." Unlike BI (dashboard-centric, backward-looking), Tullamore has AI build regression/ML models from your data, lets you move variables to simulate scenarios, and turns that into your next action (a report, a KPI plan) — closing the decision-making loop.
 
-チャットでの自然言語分析（SQL自動生成・グラフ化）に加え、目的ごとの専用画面（回帰分析・相関分析・A/Bテスト等の分析モジュール、レポート作成、KPI管理）もチャットを介さず直接使える。詳細なプロダクトコンセプトは [`docs/concept.md`](docs/concept.md) を参照。
+Alongside natural-language chat analysis (automatic SQL generation and charting), purpose-built screens (regression, correlation, A/B testing, and other analysis modules, report creation, KPI management) are also available directly, without going through chat. See [`docs/concept.md`](docs/concept.md) for the full product concept.
 
-## 主な機能
+## Key features
 
-- **チャットAI**（`/`）— Claude API + MCP ツールによる自然言語でのデータ集計・グラフ生成、シミュレーター作成
-- **レポート作成**（`/report-create`）— 相関分析・回帰分析・記述統計・ロジスティック回帰（分類）・A/Bテストから好きな手法を選んで実行し、AIが結果を踏まえたレポートを作成
-- **KPI管理**（`/kpi`）— 目的変数の目標値からKPI候補（説明変数）の目標値を逆算してプランとして保存。保存後は対象期間の実績データに基づく達成率をゲージで確認できる
-- **分析モジュール**（`/analysis/*`）— チャットを介さず直接設定して都度実行する11種類の統計分析: 記述統計・相関分析・A/Bテスト・回帰分析・ロジスティック回帰（分類）・感度分析・シナリオ比較・ゴールシーク・トレンド予測・モンテカルロ・予算配分最適化。各画面の結果には妥当性チェックが自動表示され、右側のAIアシスタントに相談しながら設定できる
-- **シミュレーター**（`/simulators`）— チャットの依頼で作成される永続化された回帰モデル。スライダーで変数を動かして予測値の変化を確認、AIレビュー・左側AIチャット相談欄付き
-- **データベース管理**（`/database`）— データソースの登録・CSVインポート・スキーマ確認・データ品質チェック（欠損値・外れ値）・グローバルSQLクエリコンソール
-- **接続管理**（`/connections`、管理者のみ）— 外部Postgres/MySQL（Hyperdrive／TCP Sockets）からのテーブル取り込み。大規模テーブルはCloudflare Queueでバックグラウンド継続取り込み
-- **設定**（`/settings`）— 外部API連携、メール送信設定、AIモデル設定、自身のプロフィール編集
-- **通知** — 通知センター
-- **認証・権限** — ログイン必須（全ルートガード）、`general`/`admin` 権限による管理画面・APIのアクセス制御
+- **Chat AI** (`/chat`) — natural-language data aggregation, chart generation, and simulator creation via the Claude API + MCP tools
+- **Report creation** (`/report-create`) — pick any combination of correlation, regression, descriptive statistics, logistic regression (classification), and A/B testing, run them, and have AI write up a report based on the results
+- **KPI management** (`/kpi`) — back-solve target values for candidate driver variables from a target's goal value, save it as a plan, then track achievement against actuals for the target period with a gauge
+- **Analysis modules** (`/analysis/*`) — 11 statistical analyses you configure and run directly, without going through chat: descriptive statistics, correlation, A/B testing, regression, logistic regression (classification), sensitivity analysis, scenario comparison, goal seek, trend forecasting, Monte Carlo simulation, and budget allocation optimization. Every screen shows an automatic validity check on its results, and you can configure it while consulting the AI assistant on the right
+- **Simulators** (`/simulators`) — persisted regression models created from chat. Move variables with sliders to see how the prediction changes, with an AI review and a chat panel on the left
+- **Database management** (`/database`) — register data sources, import CSVs, inspect schemas, run data-quality checks (missing values, outliers), and query everything from a global SQL console
+- **Connections** (`/connections`, admin only) — import tables from external Postgres/MySQL databases (via Hyperdrive or TCP Sockets); large tables are ingested continuously in the background via a Cloudflare Queue
+- **Settings** (`/settings`) — external API integrations, email settings, AI model settings, your own profile
+- **Notifications** — a notification center
+- **Auth & permissions** — login required everywhere (all routes are guarded), with `general`/`admin` permissions gating admin screens and APIs
 
-## 技術スタック
+## Tech stack
 
-| 分類 | 技術 |
+| Category | Technology |
 |------|------|
-| パッケージマネージャー | Bun |
-| フロントエンド | SvelteKit, TypeScript |
-| バリデーション | Zod |
+| Package manager | Bun |
+| Frontend | SvelteKit, TypeScript |
+| Validation | Zod |
 | ORM | DrizzleORM |
-| インフラ | Cloudflare (Wrangler, D1, R2, KV, Queue, Hyperdrive) |
+| Infrastructure | Cloudflare (Wrangler, D1, R2, KV, Queue, Hyperdrive) |
 | AI | Claude API (Anthropic) |
-| プロトコル | MCP (Model Context Protocol) |
+| Protocol | MCP (Model Context Protocol) |
 | i18n | Paraglide-JS |
-| テスト | Vitest（ユニット・D1連携テストの2構成）, Playwright（E2E） |
+| Testing | Vitest (two projects: plain-node unit tests + D1-backed tests), Playwright (E2E) |
 
-## 開発環境のセットアップ
+## Setting up a dev environment
 
-### 必要なもの
+### Requirements
 
-- [Bun](https://bun.sh/) v1.x 以上
+- [Bun](https://bun.sh/) v1.x or later
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (`npm install -g wrangler`)
 
-### 1. インストール
+### 1. Install
 
 ```sh
-git clone https://github.com/alcogy/tullamore.git
+git clone https://github.com/fumiakinagashima/tullamore.git
 cd tullamore
 bun install
 ```
 
-### 2. 環境変数の設定
+### 2. Configure environment variables
 
-`.dev.vars.example` をコピーして `.dev.vars` を作成し、必要な値を入力する:
+Copy `.dev.vars.example` to `.dev.vars` and fill in the values you need:
 
 ```sh
 cp .dev.vars.example .dev.vars
 ```
 
-最低限必要な設定:
+At minimum:
 
 ```sh
-ANTHROPIC_API_KEY="sk-ant-..."  # Anthropic API キー
-MOCK_AI="false"                 # true にするとAPI不要でモックレスポンスで動作確認できる
+ANTHROPIC_API_KEY="sk-ant-..."  # Your Anthropic API key
+MOCK_AI="false"                 # Set to true to try the app with mocked AI responses, no API key needed
 ```
 
-メール機能を使う場合は `EMAIL_PROVIDER` と対応するキーも設定する（`resend` / `ses` / `smtp`）。
+If you want email, also set `EMAIL_PROVIDER` and the matching keys (`resend` / `ses` / `smtp`).
 
-### 3. データベースのマイグレーション
+### 3. Run database migrations
 
-D1 ローカルデータベースにマイグレーションを適用する（`.wrangler/state/` にSQLiteが作成される）:
+Apply migrations to the local D1 database (SQLite is created under `.wrangler/state/`):
 
 ```sh
 bunx wrangler d1 migrations apply tullamore --local
 ```
 
-### 4. 管理者アカウントの作成
+### 4. Create an admin account
 
-サインアップ画面は無い（ログイン必須・全ルートガード）ため、最初のアカウントはSQLで直接作成する:
-
-```sh
-bunx wrangler d1 execute tullamore --local --command "INSERT INTO accounts (id, name, email, permission, password_hash) VALUES ('local-admin-0001', '管理者', 'admin@example.com', 'admin', '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8')"
-```
-
-パスワードは `password`（上記ハッシュはSHA-256の仮フォーマットで、ログイン成功時に自動でPBKDF2形式へ移行される）。ログイン後、`/database` からデータソースを作成すればチャット・各分析モジュールが試せる。
-
-### 5. 開発サーバーの起動
+There's no sign-up screen (every route requires login), so create the first account directly via SQL:
 
 ```sh
-bun dev   # Vite + platformProxy で HMR 付き起動
+bunx wrangler d1 execute tullamore --local --command "INSERT INTO accounts (id, name, email, permission, password_hash) VALUES ('local-admin-0001', 'Admin', 'admin@example.com', 'admin', '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8')"
 ```
 
-ブラウザで `http://localhost:5173` を開き、`/signin` からログインする。
+The password is `password` (the hash above is a temporary SHA-256 format that gets automatically migrated to PBKDF2 on first successful login). After logging in, create a data source from `/database` to start exploring chat and the analysis modules.
 
-KV・R2・D1 はローカルでは `.wrangler/state/` に自動作成されるため、追加設定は不要。
-
-> **メール送信（SMTP）の注意**: `/settings/email` のSMTPプロバイダーは `cloudflare:sockets`（workerdランタイム専用API）を使うため、`bun dev`（Node.js上のVite）では動作しない。ローカルで確認する場合は Resend または AWS SES を使用すること。
-
-> **データ連携（Hyperdrive）の注意**: `/connections` はHyperdriveバインディングを使うため、`bun dev`（`getPlatformProxy`）では正しく動作しない。`getPlatformProxy`はHyperdriveを「単純なパススルー値」として返す仕様で、`wrangler dev`・本番の実際の値とは形が異なる（[Cloudflare公式ドキュメント](https://developers.cloudflare.com/workers/wrangler/api/#getplatformproxy)参照）。確認する場合は `bun run build && wrangler dev` を使うこと（`docs/DATA_CONNECTIONS.md` 参照）。
-
-> **バックグラウンド取り込み（Queue）の注意**: 大規模な外部テーブル取り込みの継続処理は `worker.ts` の `queue()` ハンドラでのみ動作する。`bun dev` は `worker.ts` を経由しない（Vite自身の開発サーバー）ため、確認する場合は同様に `bun run build && wrangler dev` を使うこと。
-
-### その他のコマンド
+### 5. Start the dev server
 
 ```sh
-bun run check          # 型チェック（svelte-check）
-bun run test:unit      # ユニットテスト（Vitest, plain node環境）+ D1連携テスト（@cloudflare/vitest-pool-workers, Miniflare上の実D1）
-bun run test:e2e       # E2Eテスト（Playwright）
-bun run db:studio      # Drizzle Studio でローカルDBを確認
+bun dev   # Vite + platformProxy, with HMR
 ```
 
-## UIコンポーネント
+Open `http://localhost:5173` in your browser and sign in from `/signin`.
 
-コンポーネントは3種類に分類される。
+KV, R2, and D1 are created automatically under `.wrangler/state/` locally — no extra setup needed.
 
-- **`src/lib/components/ui/`** — アプリ UI（デザインシステム）
-- **`src/lib/components/chat/`** — AI がノーコードとしてレスポンスに返すコンポーネント
-- **`src/lib/components/analysis/`** — 分析ワークベンチ専用（AIアシスタント、KPIフォーム、レポートモーダル）
+> **Note on sending email (SMTP)**: the SMTP provider on `/settings/email` uses `cloudflare:sockets` (a workerd-runtime-only API), so it doesn't work under `bun dev` (Vite on Node.js). Use Resend or AWS SES to test email locally.
 
-ライブデモは `/ui` ルートで確認できる。
+> **Note on data connections (Hyperdrive)**: `/connections` uses Hyperdrive bindings, which don't work correctly under `bun dev` (`getPlatformProxy`). `getPlatformProxy` returns Hyperdrive as a "plain passthrough value" whose shape differs from the real thing under `wrangler dev`/production (see [Cloudflare's docs](https://developers.cloudflare.com/workers/wrangler/api/#getplatformproxy)). Use `bun run build && wrangler dev` instead (see `docs/DATA_CONNECTIONS.md`).
+
+> **Note on background ingestion (Queue)**: continuous processing for large external-table imports only runs through the `queue()` handler in `worker.ts`. `bun dev` doesn't go through `worker.ts` (it's Vite's own dev server), so use `bun run build && wrangler dev` to test it as well.
+
+### Other commands
+
+```sh
+bun run check          # Type checking (svelte-check)
+bun run test:unit      # Unit tests (Vitest, plain Node) + D1-backed tests (@cloudflare/vitest-pool-workers, real D1 on Miniflare)
+bun run test:e2e       # E2E tests (Playwright)
+bun run db:studio      # Browse the local DB with Drizzle Studio
+```
+
+## UI components
+
+Components fall into three categories.
+
+- **`src/lib/components/ui/`** — app UI (design system)
+- **`src/lib/components/chat/`** — components the AI returns as no-code responses
+- **`src/lib/components/analysis/`** — analysis-workbench-only components (AI assistant, KPI form, report modal)
+
+A live demo is available at the `/ui` route.
 
 ---
 
-### アプリ UI コンポーネント
+### App UI components
 
 #### Textbox
 
-テキスト入力フィールド。
+A text input field.
 
 ```svelte
-<Textbox label="データソース名" bind:value={name} placeholder="月次売上..." required />
-<Textbox label="メール" bind:value={email} type="email" error="正しいメールアドレスを入力してください" />
+<Textbox label="Data source name" bind:value={name} placeholder="Monthly sales..." required />
+<Textbox label="Email" bind:value={email} type="email" error="Please enter a valid email address" />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `label` | `string?` | ラベルテキスト |
-| `value` | `string` (bindable) | 入力値 |
-| `type` | `string?` | input の type 属性（デフォルト `text`） |
-| `placeholder` | `string?` | プレースホルダー |
-| `required` | `boolean?` | 必須マーク表示 |
-| `disabled` | `boolean?` | 無効状態 |
-| `error` | `string?` | エラーメッセージ |
+| `label` | `string?` | Label text |
+| `value` | `string` (bindable) | Input value |
+| `type` | `string?` | The input's `type` attribute (default `text`) |
+| `placeholder` | `string?` | Placeholder text |
+| `required` | `boolean?` | Shows a required marker |
+| `disabled` | `boolean?` | Disabled state |
+| `error` | `string?` | Error message |
 
 ---
 
 #### Textarea
 
-複数行テキスト入力。
+A multi-line text input.
 
 ```svelte
-<Textarea label="メモ" bind:value={memo} rows={4} placeholder="自由記述..." />
+<Textarea label="Notes" bind:value={memo} rows={4} placeholder="Anything else..." />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `rows` | `number?` | 行数（デフォルト `3`） |
-| その他 | — | Textbox と同様 |
+| `rows` | `number?` | Number of rows (default `3`) |
+| others | — | Same as Textbox |
 
 ---
 
 #### Select
 
-ネイティブ select（カスタム矢印付き）。
+A native `<select>` with a custom arrow.
 
 ```svelte
-<Select label="期間の種類" bind:value={periodType} options={[
-  { value: 'year', label: '年次' },
-  { value: 'month', label: '月次' }
+<Select label="Period type" bind:value={periodType} options={[
+  { value: 'year', label: 'Yearly' },
+  { value: 'month', label: 'Monthly' }
 ]} />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `options` | `{ value: string; label: string }[]` | 選択肢 |
-| `placeholder` | `string?` | 未選択時の表示テキスト |
+| `options` | `{ value: string; label: string }[]` | The choices |
+| `placeholder` | `string?` | Text shown when nothing is selected |
 
 ---
 
 #### SearchSelect
 
-検索機能付きの Combobox。キーボードナビゲーション（↑↓ Enter Esc）対応。
+A combobox with search, supporting keyboard navigation (↑↓ Enter Esc).
 
 ```svelte
-<SearchSelect label="データソース" bind:value={dataSourceId} options={sourceOptions} placeholder="検索または選択..." />
+<SearchSelect label="Data source" bind:value={dataSourceId} options={sourceOptions} placeholder="Search or select..." />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `options` | `{ value: string; label: string }[]` | 選択肢 |
-| `placeholder` | `string?` | プレースホルダー |
+| `options` | `{ value: string; label: string }[]` | The choices |
+| `placeholder` | `string?` | Placeholder text |
 
 ---
 
 #### Toggle
 
-オン/オフ切り替えスイッチ。
+An on/off switch.
 
 ```svelte
-<Toggle label="モンテカルロ閾値を有効にする" bind:checked={thresholdEnabled} />
+<Toggle label="Enable Monte Carlo threshold" bind:checked={thresholdEnabled} />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `label` | `string?` | ラベルテキスト |
-| `checked` | `boolean` (bindable) | 状態 |
-| `disabled` | `boolean?` | 無効状態 |
+| `label` | `string?` | Label text |
+| `checked` | `boolean` (bindable) | State |
+| `disabled` | `boolean?` | Disabled state |
 
 ---
 
 #### MultiSelect
 
-複数選択ボタン（チェックボックスの代替）。値は `string[]`。
+Multi-select buttons (an alternative to checkboxes). Value is `string[]`.
 
 ```svelte
-<MultiSelect label="説明変数" bind:value={featureColumns} options={columnOptions} />
+<MultiSelect label="Feature variables" bind:value={featureColumns} options={columnOptions} />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `value` | `string[]` (bindable) | 選択中の値の配列 |
-| `options` | `{ value: string; label: string }[]` | 選択肢 |
+| `value` | `string[]` (bindable) | Currently selected values |
+| `options` | `{ value: string; label: string }[]` | The choices |
 
 ---
 
 #### SingleSelect
 
-単一選択ボタン（ラジオボタンの代替）。セグメントコントロール風。
+Single-select buttons (an alternative to radio buttons), styled as a segmented control.
 
 ```svelte
-<SingleSelect label="検定方法" bind:value={testType} options={[
-  { value: 'mean', label: '平均の差（t検定）' },
-  { value: 'proportion', label: '比率の差（z検定）' }
+<SingleSelect label="Test method" bind:value={testType} options={[
+  { value: 'mean', label: 'Difference in means (t-test)' },
+  { value: 'proportion', label: 'Difference in proportions (z-test)' }
 ]} />
 ```
 
@@ -235,98 +235,98 @@ bun run db:studio      # Drizzle Studio でローカルDBを確認
 
 #### DatePicker
 
-日付入力（ネイティブ `<input type="date">`）。
+A date input (native `<input type="date">`).
 
 ```svelte
-<DatePicker label="期間FROM" bind:value={periodFrom} max={periodTo} required />
+<DatePicker label="Period from" bind:value={periodFrom} max={periodTo} required />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `value` | `string` (bindable) | ISO 8601 形式の日付文字列 |
-| `min` / `max` | `string?` | 入力範囲 |
-| `required` | `boolean?` | 必須マーク表示 |
+| `value` | `string` (bindable) | Date string in ISO 8601 format |
+| `min` / `max` | `string?` | Allowed range |
+| `required` | `boolean?` | Shows a required marker |
 
 ---
 
 #### TimePicker
 
-時刻入力（ネイティブ `<input type="time">`）。
+A time input (native `<input type="time">`).
 
 ```svelte
-<TimePicker label="実行時刻" bind:value={time} />
+<TimePicker label="Run time" bind:value={time} />
 ```
 
 ---
 
 #### DateTimePicker
 
-日時入力（ネイティブ `<input type="datetime-local">`）。値はJSTのウォールクロックとして扱う（`src/lib/datetime.ts` の `parseJstDatetime` 等を参照）。
+A date-and-time input (native `<input type="datetime-local">`). Values are treated as JST wall-clock time (see `parseJstDatetime` etc. in `src/lib/datetime.ts`).
 
 ```svelte
-<DateTimePicker label="予定日時" bind:value={datetime} />
+<DateTimePicker label="Scheduled at" bind:value={datetime} />
 ```
 
 ---
 
 #### NumberInput
 
-数値入力（−/＋ ステッパーボタン付き）。ブラウザのスピンボタンは非表示。
+A number input with −/+ stepper buttons. The browser's native spin buttons are hidden.
 
 ```svelte
-<NumberInput label="サンプル数" bind:value={sampleCount} min={1000} max={10000} step={500} />
-<NumberInput label="予算総額" bind:value={totalBudget} prefix="¥" step={10000} />
+<NumberInput label="Sample count" bind:value={sampleCount} min={1000} max={10000} step={500} />
+<NumberInput label="Total budget" bind:value={totalBudget} prefix="$" step={10000} />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `value` | `number` (bindable) | 数値 |
-| `min` / `max` | `number?` | 範囲（上下限でボタン無効化） |
-| `step` | `number?` | ステップ量（デフォルト `1`） |
-| `prefix` / `suffix` | `string?` | 前後の単位表示 |
+| `value` | `number` (bindable) | The number |
+| `min` / `max` | `number?` | Range (disables the stepper buttons at the bounds) |
+| `step` | `number?` | Step size (default `1`) |
+| `prefix` / `suffix` | `string?` | A unit shown before/after the value |
 
 ---
 
 #### FileUpload
 
-ドラッグ&ドロップ対応のファイル選択エリア。
+A drag-and-drop file picker.
 
 ```svelte
-<FileUpload label="CSVファイル" accept=".csv" />
+<FileUpload label="CSV file" accept=".csv" />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `accept` | `string?` | 許可する拡張子 |
-| `multiple` | `boolean?` | 複数ファイル選択 |
+| `accept` | `string?` | Allowed file extensions |
+| `multiple` | `boolean?` | Allow multiple files |
 
 ---
 
 #### Table
 
-ソート・ページネーション付きのデータテーブル。
+A data table with sorting and pagination.
 
 ```svelte
 <Table
   columns={[
-    { key: 'label', label: 'KPI項目' },
-    { key: 'current', label: '現在値' }
+    { key: 'label', label: 'KPI' },
+    { key: 'current', label: 'Current value' }
   ]}
   rows={tableRows}
 />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `columns` | `{ key, label, sortable? }[]` | カラム定義 |
-| `rows` | `Record<string, unknown>[]` | データ |
-| `pageSize` | `number?` | 1ページの行数（デフォルト `10`） |
+| `columns` | `{ key, label, sortable? }[]` | Column definitions |
+| `rows` | `Record<string, unknown>[]` | The data |
+| `pageSize` | `number?` | Rows per page (default `10`) |
 
 ---
 
 #### Pagination
 
-ページネーションコントロール（Table 内でも使用）。一覧表示は `LIST_PAGE_SIZE`（`constants.ts`）ごとにページングするのが規約。
+Pagination controls (also used inside Table). The convention is to paginate list views by `LIST_PAGE_SIZE` (`constants.ts`).
 
 ```svelte
 <Pagination bind:page={currentPage} totalPages={20} />
@@ -336,7 +336,7 @@ bun run db:studio      # Drizzle Studio でローカルDBを確認
 
 #### List
 
-カード表示のリスト。ジェネリクス対応で型安全なスニペットを受け取る。
+A card-based list. Generic, so it accepts a type-safe snippet.
 
 ```svelte
 <List items={dataSources} columns={3}>
@@ -350,48 +350,48 @@ bun run db:studio      # Drizzle Studio でローカルDBを確認
 
 #### DataGrid
 
-スプレッドシート型のグリッド入力。Tab/Enter キーでセル移動。トレンド予測のグリッド編集等で使用。
+A spreadsheet-style grid input, with Tab/Enter cell navigation. Used for things like editing the grid in trend forecasting.
 
 ```svelte
 <DataGrid
   bind:rows={gridRows}
   columns={[
-    { key: 'date', label: '日付', type: 'date' },
-    { key: 'value', label: '値', type: 'number', width: 90 }
+    { key: 'date', label: 'Date', type: 'date' },
+    { key: 'value', label: 'Value', type: 'number', width: 90 }
   ]}
   maxHeight={400}
   onchange={(rows) => refit(rows)}
 />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `columns` | `GridColumn[]`（`key`/`label`/`type: 'text'\|'number'\|'date'\|'select'`/`options`/`width`/`readonly`） | カラム定義 |
-| `rows` | `GridRow[]` (bindable) | データ（`Record<string, string\|number\|null>`） |
-| `addable` / `deletable` | `boolean?` | 行追加・削除ボタン表示（デフォルト `true`） |
-| `maxHeight` | `number?` | 指定すると高さ固定で縦スクロールになる |
-| `onchange` | `(rows) => void?` | 変更コールバック |
+| `columns` | `GridColumn[]` (`key`/`label`/`type: 'text'\|'number'\|'date'\|'select'`/`options`/`width`/`readonly`) | Column definitions |
+| `rows` | `GridRow[]` (bindable) | The data (`Record<string, string\|number\|null>`) |
+| `addable` / `deletable` | `boolean?` | Show add/delete row buttons (default `true`) |
+| `maxHeight` | `number?` | When set, fixes the height and enables vertical scrolling |
+| `onchange` | `(rows) => void?` | Change callback |
 
 ---
 
 #### BarChart / LineChart / PieChart / ScatterChart
 
-チャットのグラフ生成・分析モジュールで使う基本チャート群（`--chart-1`〜`--chart-6` の配色）。
+The base chart set used for chat-generated charts and the analysis modules (colored with `--chart-1` through `--chart-6`).
 
 ```svelte
-<BarChart data={[{ label: '東京', value: 120 }]} mode="stacked" />
-<LineChart series={[{ name: '実績', data: historical }, { name: 'トレンド', data: trend }]} markerIndex={historicalCount} />
+<BarChart data={[{ label: 'Tokyo', value: 120 }]} mode="stacked" />
+<LineChart series={[{ name: 'Actual', data: historical }, { name: 'Trend', data: trend }]} markerIndex={historicalCount} />
 <PieChart data={[{ label: 'A', value: 40 }]} donut />
-<ScatterChart points={[{ x: 1, y: 2 }]} xLabel="広告費" yLabel="売上" />
+<ScatterChart points={[{ x: 1, y: 2 }]} xLabel="Ad spend" yLabel="Revenue" />
 ```
 
-LineChart は `height` で縦幅の上書き、`markerIndex`/`markerLabel` で実績/予測の境界線描画に対応。
+LineChart supports overriding the height with `height`, and drawing an actual/forecast boundary line with `markerIndex`/`markerLabel`.
 
 ---
 
 #### TornadoChart
 
-感度分析用のトルネードチャート（各説明変数の振れ幅をランキング表示）。
+A tornado chart for sensitivity analysis (ranks each feature variable by how much it swings the outcome).
 
 ```svelte
 <TornadoChart bars={sensitivityBars} base={baseline} />
@@ -401,24 +401,24 @@ LineChart は `height` で縦幅の上書き、`markerIndex`/`markerLabel` で�
 
 #### GaugeChart
 
-KPI達成率等、目標に対する現在値の比率を半円ゲージで表示。達成率に応じてgood(≥100%)/caution(≥70%)/poor(<70%)の3段階で色分け。
+Shows the current value as a ratio of a target (e.g. KPI achievement) as a semicircular gauge, color-coded good (≥100%) / caution (≥70%) / poor (<70%).
 
 ```svelte
 <GaugeChart value={achievement.current} target={achievement.targetValue} size={170} />
 ```
 
-| prop | 型 | 説明 |
+| prop | type | description |
 |------|----|------|
-| `value` / `target` | `number` | 現在値・目標値 |
-| `title` | `string?` | キャプション |
-| `size` | `number?` | 幅（px、デフォルト `160`） |
-| `showValues` | `boolean?` | 現在値/目標値の数値表示（デフォルト `true`） |
+| `value` / `target` | `number` | Current value / target value |
+| `title` | `string?` | Caption |
+| `size` | `number?` | Width in px (default `160`) |
+| `showValues` | `boolean?` | Show the current/target numbers (default `true`) |
 
 ---
 
 #### CorrelationHeatmap
 
-相関行列のヒートマップ（負=青・正=オレンジの発散配色）。
+A correlation-matrix heatmap (a diverging blue-to-orange color scale for negative/positive correlation).
 
 ```svelte
 <CorrelationHeatmap columns={heatmapColumns} matrix={correlationMatrix.matrix} />
@@ -428,7 +428,7 @@ KPI達成率等、目標に対する現在値の比率を半円ゲージで表�
 
 #### ValidityCard
 
-分析結果の妥当性チェック（サンプル数・当てはまりの良さ等）をgood/caution/poorの3段階で表示。全分析モジュール共通。
+Shows a good/caution/poor validity check for an analysis result (sample size, goodness of fit, etc.). Shared across all analysis modules.
 
 ```svelte
 <ValidityCard validity={result.validity} />
@@ -438,7 +438,7 @@ KPI達成率等、目標に対する現在値の比率を半円ゲージで表�
 
 #### TypingIndicator
 
-AIのタイピング中アニメーション（3点ドット）。
+A three-dot "AI is typing" animation.
 
 ```svelte
 {#if isLoading}
@@ -448,106 +448,104 @@ AIのタイピング中アニメーション（3点ドット）。
 
 ---
 
-### チャット UI コンポーネント（`src/lib/components/chat/`）
+### Chat UI components (`src/lib/components/chat/`)
 
-AI がレスポンスとして返す動的UIコンポーネント。システムプロンプトの仕様に従って AI が `<ui type="...">` タグを出力し、クライアント側でパースされて描画される。詳細な仕様は `src/lib/server/ai/` のシステムプロンプトで一元管理している。
+Dynamic UI components the AI returns in its responses. Per the system prompt's spec, the AI emits a `<ui type="...">` tag, which the client parses and renders. The full spec lives in the system prompts under `src/lib/server/ai/`.
 
-#### Form（チャット用）
+#### Form (chat)
 
 ```
-<ui type="form" title="メール送信">
-[{"key":"to","label":"宛先","type":"email","required":true},{"key":"body","label":"本文","type":"textarea"}]
+<ui type="form" title="Send email">
+[{"key":"to","label":"To","type":"email","required":true},{"key":"body","label":"Body","type":"textarea"}]
 </ui>
 ```
 
-フィールドタイプ: `text` / `email` / `number` / `textarea` / `select` / `date` / `datetime-local` / `hidden`。現状この経路を使う登録系ツールは `send_email` のみ。
+Field types: `text` / `email` / `number` / `textarea` / `select` / `date` / `datetime-local` / `hidden`. Currently the only registered tool using this path is `send_email`.
 
-#### Table（チャット用）
+#### Table (chat)
 
 ```
-<ui type="table" title="地域別売上">
-{"columns":[{"key":"region","label":"地域"},...],"rows":[...]}
+<ui type="table" title="Sales by region">
+{"columns":[{"key":"region","label":"Region"},...],"rows":[...]}
 </ui>
 ```
 
 #### ActionSelector
 
 ```
-<ui type="actions" title="どうしますか？">
-[{"id":"create_simulator","label":"シミュレーターを作る","description":"広告費と売上の関係をモデル化します"}]
+<ui type="actions" title="What would you like to do?">
+[{"id":"create_simulator","label":"Create a simulator","description":"Models the relationship between ad spend and revenue"}]
 </ui>
 ```
 
-ユーザーがアクションを選択すると、そのラベルがチャット入力として送信される。
+When the user picks an action, its label is sent as the next chat message.
 
-#### その他のコンポーネント
+#### Other components
 
-| コンポーネント | 用途 |
+| Component | Purpose |
 |------|------|
-| `Values` | キー・バリュー形式のサマリー表示 |
-| `Chart` | AIが生成した集計結果をBar/Line/Pie等で表示 |
-| `Simulator` | チャット作成の回帰シミュレーター（スライダー操作・AIレビュー） |
-| `Link` | レコードへのリンク。`newTab="true"` で別タブ表示（会話を中断させない） |
-| `Reply` | AIが質問・選択肢を提示する際のインライン回答UI |
-| `TurnHistoryDrawer` | 過去のチャットターンを右ドロワーで簡易表示（テキストはコピー可） |
+| `Values` | A key/value summary display |
+| `Chart` | Renders AI-generated aggregate results as a bar/line/pie chart, etc. |
+| `Simulator` | A chat-created regression simulator (slider controls, AI review) |
+| `Link` | A link to a record. `newTab="true"` opens it in a new tab (without interrupting the conversation) |
+| `Reply` | Inline UI for answering a question or choosing an option the AI presents |
 
 ---
 
-## ディレクトリ構成
+## Directory structure
 
 ```
 tullamore/
 ├── src/
 │   ├── routes/
-│   │   ├── +page.svelte          # チャット画面（/）
-│   │   ├── report-create/        # レポート作成（AIアシスタント付きレイアウト共有）
-│   │   ├── kpi/                  # KPI管理（一覧・新規登録・詳細・編集）
-│   │   ├── analysis/             # 11の分析モジュール（descriptive-stats, correlation, ab-test, regression, classification, sensitivity, scenario, goal-seek, trend, monte-carlo, budget-allocation）
-│   │   ├── simulators/           # チャット作成シミュレーターの一覧・詳細
-│   │   ├── database/             # データソース管理ワークベンチ
-│   │   ├── connections/          # 外部DB接続管理（管理者のみ）
-│   │   ├── settings/             # 設定画面
-│   │   ├── signin/               # ログイン・パスワードリセット
-│   │   └── api/                  # チャット・分析・データソース・KPI・接続 等のAPIエンドポイント
+│   │   ├── chat/                 # Chat screen (/chat)
+│   │   ├── report-create/        # Report creation (shares the AI-assistant layout)
+│   │   ├── kpi/                  # KPI management (list, create, detail, edit)
+│   │   ├── analysis/             # 11 analysis modules (descriptive-stats, correlation, ab-test, regression, classification, sensitivity, scenario, goal-seek, trend, monte-carlo, budget-allocation)
+│   │   ├── simulators/           # List/detail for chat-created simulators
+│   │   ├── database/             # Data source management workbench
+│   │   ├── connections/          # External DB connection management (admin only)
+│   │   ├── settings/             # Settings screens
+│   │   ├── signin/               # Sign in, password reset
+│   │   └── api/                  # API endpoints for chat, analysis, data sources, KPIs, connections, etc.
 │   └── lib/
-│       ├── analysis/             # 分析エンジン（isomorphic・DB非依存、線形回帰・相関・記述統計・A/Bテスト・KPI逆算 等）
+│       ├── analysis/             # Analysis engine (isomorphic, DB-independent: linear regression, correlation, descriptive stats, A/B testing, KPI back-solving, etc.)
 │       ├── components/
-│       │   ├── ui/               # アプリUIコンポーネント（デザインシステム）
-│       │   ├── chat/             # AI がレスポンスとして返すコンポーネント
-│       │   ├── analysis/         # 分析ワークベンチ専用コンポーネント
-│       │   ├── dialog/           # フォームダイアログ
-│       │   └── icon/             # SVGアイコンコンポーネント
+│       │   ├── ui/               # App UI components (design system)
+│       │   ├── chat/             # Components the AI returns as responses
+│       │   ├── analysis/         # Analysis-workbench-only components
+│       │   ├── dialog/           # Form dialogs
+│       │   └── icon/             # SVG icon components
 │       ├── server/
-│       │   ├── db/               # DrizzleORM スキーマ・クエリ
-│       │   ├── analysis/         # D1依存の分析処理（SQL集計・妥当性チェック・KPI達成率トラッキング 等）
-│       │   ├── mcp/              # MCP ツール定義
-│       │   ├── ai/               # Claude API 連携・システムプロンプト
-│       │   ├── auth/             # セッション・パスワードハッシュ
-│       │   ├── db-connections/   # 外部DB接続（Hyperdrive/TCP Sockets）
-│       │   ├── email/            # システムメール送信
-│       │   └── test-setup/       # D1連携テスト用のmigration適用
-│       ├── styles/               # グローバルスタイル・テーマ
-│       └── types/                # 共通型定義
-├── messages/                     # i18n リソース（ja.json）
-├── drizzle/                      # マイグレーションファイル
+│       │   ├── db/               # DrizzleORM schema & queries
+│       │   ├── analysis/         # D1-dependent analysis logic (SQL aggregation, validity checks, KPI achievement tracking, etc.)
+│       │   ├── mcp/               # MCP tool definitions
+│       │   ├── ai/               # Claude API integration, system prompts
+│       │   ├── auth/             # Sessions, password hashing
+│       │   ├── db-connections/   # External DB connections (Hyperdrive/TCP Sockets)
+│       │   ├── email/            # System email sending
+│       │   └── test-setup/       # Migration setup for D1-backed tests
+│       ├── styles/               # Global styles, theme
+│       └── types/                # Shared type definitions
+├── messages/                     # i18n resources (en.json)
+├── drizzle/                      # Migration files
 ├── docs/
-│   ├── concept.md                # プロダクトコンセプト
-│   ├── roadmap.md                # 開発ロードマップ
-│   └── DATA_CONNECTIONS.md       # 外部DB接続の仕組み
-├── vitest.workers.config.ts       # D1連携テスト用Vitest設定（@cloudflare/vitest-pool-workers）
-├── worker.ts                      # Cloudflare Workers エントリポイント
+│   ├── concept.md                # Product concept
+│   └── DATA_CONNECTIONS.md       # How external DB connections work
+├── vitest.workers.config.ts       # Vitest config for D1-backed tests (@cloudflare/vitest-pool-workers)
+├── worker.ts                      # Cloudflare Workers entry point
 ├── wrangler.toml
 └── wrangler.build.jsonc
 ```
 
-## テーマ
+## Theme
 
-ダーク / ライト / システム（OS 設定追従）の3択。サイドバー下部のスイッチで切り替え。CSS カスタムプロパティ（`--color-*`）でトークンを定義し `data-theme` 属性で切り替える。
+Dark / light / system (follows the OS setting), switchable from the sidebar. Tokens are defined as CSS custom properties (`--color-*`) and applied via the `data-theme` attribute.
 
 ## i18n
 
-`messages/ja.json` に日本語リソースを定義し `m.key()` 形式で参照する（Paraglide-JS）。デフォルト言語は日本語。
+English strings live in `messages/en.json` and are referenced via `m.key()` (Paraglide-JS). English is the default and only language for now; the i18n setup is in place to add more languages later.
 
-## ロードマップ
+## License
 
-開発の進行状況は [`docs/roadmap.md`](docs/roadmap.md) を参照。
+[MIT](LICENSE)

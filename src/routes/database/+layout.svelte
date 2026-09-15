@@ -9,8 +9,8 @@
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
-	// /database/accounts はアカウント管理（データソースとは無関係の別機能）のため、
-	// テーブル一覧サイドバーは表示しない
+	// /database/accounts is account management (a separate feature unrelated to data sources),
+	// so the table list sidebar is not shown there
 	const isAccountsPage = $derived(page.url.pathname.startsWith('/database/accounts'));
 </script>
 
@@ -21,18 +21,18 @@
 	{#if !isAccountsPage}
 		<aside class="db-sidebar">
 			<div class="db-sidebar-header">
-				<span class="db-sidebar-title">データベース</span>
-				<a href="/database/new" class="icon-btn" aria-label="新しいテーブル">
+				<span class="db-sidebar-title">Database</span>
+				<a href="/database/new" class="icon-btn" aria-label="New table">
 					<Plus size={14} />
 				</a>
 			</div>
 			<a href="/database/" class="sql-link" class:active={page.url.pathname === '/'}>
 				<Database size={13} />
-				データソース
+				Data sources
 			</a>
 			<a href="/database/sql" class="sql-link" class:active={page.url.pathname === '/database/'}>
 				<Search size={13} />
-				SQLクエリ
+				SQL query
 			</a>
 			<div class="table-list">
 				{#each data.sources as source (source.id)}
@@ -46,7 +46,7 @@
 					</a>
 				{/each}
 				{#if data.sources.length === 0}
-					<p class="table-list-empty">テーブルがありません</p>
+					<p class="table-list-empty">No tables</p>
 				{/if}
 			</div>
 		</aside>

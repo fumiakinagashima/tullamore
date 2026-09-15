@@ -1,8 +1,8 @@
-// A/Bテスト（有意差検定）で使う基礎的な確率分布計算。
-// pure-JSの統計ライブラリを新規依存として増やすほどの利用範囲ではないため、
-// 標準的な数値計算のアルゴリズム（Numerical Recipes由来のincomplete beta関数等）を自前実装する。
+// Basic probability distribution calculations used for A/B testing (significance tests).
+// The scope of usage doesn't justify adding a pure-JS statistics library as a new dependency,
+// so we implement standard numerical algorithms ourselves (e.g., the incomplete beta function from Numerical Recipes).
 
-/** 誤差関数 erf(x)。Abramowitz & Stegun 7.1.26（最大誤差 約1.5e-7） */
+/** Error function erf(x). Abramowitz & Stegun 7.1.26 (max error ~1.5e-7) */
 export function erf(x: number): number {
 	const sign = x < 0 ? -1 : 1;
 	const ax = Math.abs(x);
@@ -19,12 +19,12 @@ export function erf(x: number): number {
 	return sign * y;
 }
 
-/** 標準正規分布の累積分布関数 P(Z <= z) */
+/** Cumulative distribution function of the standard normal distribution, P(Z <= z) */
 export function normalCDF(z: number): number {
 	return 0.5 * (1 + erf(z / Math.SQRT2));
 }
 
-/** 対数ガンマ関数 ln(Γ(x))（Lanczos近似） */
+/** Log-gamma function ln(Γ(x)) (Lanczos approximation) */
 function logGamma(x: number): number {
 	const g = 7;
 	const coefficients = [
@@ -41,7 +41,7 @@ function logGamma(x: number): number {
 	return 0.5 * Math.log(2 * Math.PI) + (xx + 0.5) * Math.log(t) - t + Math.log(a);
 }
 
-/** 正則化不完全ベータ関数 I_x(a,b) の連分数展開（Numerical Recipes "betacf"） */
+/** Continued-fraction expansion of the regularized incomplete beta function I_x(a,b) (Numerical Recipes "betacf") */
 function betacf(x: number, a: number, b: number): number {
 	const MAXIT = 200;
 	const EPS = 3e-9;
@@ -80,7 +80,7 @@ function betacf(x: number, a: number, b: number): number {
 	return h;
 }
 
-/** 正則化不完全ベータ関数 I_x(a,b) */
+/** Regularized incomplete beta function I_x(a,b) */
 function regularizedIncompleteBeta(x: number, a: number, b: number): number {
 	if (x <= 0) return 0;
 	if (x >= 1) return 1;
@@ -92,7 +92,7 @@ function regularizedIncompleteBeta(x: number, a: number, b: number): number {
 	return 1 - (front * betacf(1 - x, b, a)) / b;
 }
 
-/** 自由度dfのStudentのt分布の累積分布関数 P(T <= t) */
+/** Cumulative distribution function of Student's t-distribution with df degrees of freedom, P(T <= t) */
 export function studentTCDF(t: number, df: number): number {
 	const x = df / (df + t * t);
 	const ib = regularizedIncompleteBeta(x, df / 2, 0.5);
@@ -100,8 +100,9 @@ export function studentTCDF(t: number, df: number): number {
 }
 
 /**
- * StudentのT分布のパーセント点関数（累積確率pに対応するt値）。解析的な逆関数が無いため、
- * 単調増加であるstudentTCDFに対する二分探索で求める（信頼区間の臨界値を得るために使う）。
+ * Percent-point function of Student's t-distribution (the t value corresponding to a cumulative
+ * probability p). Since there's no closed-form inverse, it's found via binary search against the
+ * monotonically increasing studentTCDF (used to obtain critical values for confidence intervals).
  */
 export function studentTInverseCDF(p: number, df: number): number {
 	if (p <= 0) return -Infinity;
@@ -118,21 +119,21 @@ export function studentTInverseCDF(p: number, df: number): number {
 	return (lo + hi) / 2;
 }
 
-/** 両側検定のp値（t統計量・自由度から） */
+/** Two-tailed p-value (from a t-statistic and degrees of freedom) */
 export function twoTailedPValueFromT(t: number, df: number): number {
 	const p = 2 * (1 - studentTCDF(Math.abs(t), df));
 	return Math.min(1, Math.max(0, p));
 }
 
-/** 両側検定のp値（z統計量から、標準正規分布） */
+/** Two-tailed p-value (from a z-statistic, standard normal distribution) */
 export function twoTailedPValueFromZ(z: number): number {
 	const p = 2 * (1 - normalCDF(Math.abs(z)));
 	return Math.min(1, Math.max(0, p));
 }
 
-/** 標準正規分布のパーセント点関数（近似）。95%信頼区間の1.959964...等を得るために使う */
+/** Percent-point function of the standard normal distribution (approximation). Used to obtain values like 1.959964... for a 95% confidence interval */
 export function normalInverseCDF(p: number): number {
-	// Acklam's algorithm（有理近似、絶対誤差 約1.15e-9）
+	// Acklam's algorithm (rational approximation, absolute error ~1.15e-9)
 	const a = [-3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.38357751867269e2, -3.066479806614716e1, 2.506628277459239];
 	const b = [-5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2, 6.680131188771972e1, -1.328068155288572e1];
 	const c = [-7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];

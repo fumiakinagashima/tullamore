@@ -5,14 +5,14 @@ export const tools: Tool[] = [
 	{
 		name: 'get_help',
 		description:
-			'使い方・機能説明を取得する。ユーザーが「使い方を教えて」「何ができる？」「ヘルプ」「〇〇機能の使い方は？」などと聞いた時に呼び出す。topic を省略すると全体概要を返す',
+			'Get usage instructions and feature explanations. Call this when the user asks things like "how do I use this?", "what can this do?", "help", or "how do I use feature X?". Omitting topic returns a general overview.',
 		input_schema: {
 			type: 'object',
 			properties: {
 				topic: {
 					type: 'string',
 					enum: ['overview', 'data_sources', 'analysis', 'simulator', 'report_create', 'kpi', 'email'],
-					description: '知りたいトピック（省略時は全体概要）'
+					description: 'The topic to learn about (omit for a general overview)'
 				}
 			}
 		}
@@ -25,142 +25,142 @@ const getHelpInputSchema = z.object({
 
 const HELP: Record<string, object> = {
 	overview: {
-		title: 'TULLAMORE 使い方ガイド',
+		title: 'TULLAMORE User Guide',
 		description:
-			'過去を振り返るBI（ダッシュボード）ではなく、AIが分析手法を使いこなして「次に何をすべきか」まで導くDI（意思決定インテリジェンス）ツールです。' +
-			'チャットで質問するだけの自然言語分析に加えて、AIに分析手法を選ばせてレポートにまとめさせたり、目標からKPIを逆算させたりできます',
+			'Not a BI (dashboard) tool that looks back at the past, but a DI (Decision Intelligence) tool where AI applies analytical methods to guide you toward "what to do next." ' +
+			'In addition to natural-language analysis where you simply ask questions in chat, you can have the AI choose analytical methods and compile a report, or work backward from a goal to derive KPIs.',
 		features: [
-			{ name: 'データソース管理', topic: 'data_sources', examples: ['CSVをインポートして登録したい', '新しいデータソースを作りたい'] },
+			{ name: 'Data Source Management', topic: 'data_sources', examples: ['I want to import and register a CSV', 'I want to create a new data source'] },
 			{
-				name: '分析・シミュレーション',
+				name: 'Analysis & Simulation',
 				topic: 'analysis',
-				examples: ['過去1年の売上トレンドを見せて', '広告費と売上の関係を回帰分析で調べたい', '施策Aと施策Bに差があるか検定したい']
+				examples: ['Show me the sales trend over the past year', 'I want to use regression analysis to examine the relationship between ad spend and sales', 'I want to test whether there is a difference between measure A and measure B']
 			},
-			{ name: 'レポート作成', topic: 'report_create', examples: ['売上とその要因についてまとめて分析してレポートにして'] },
-			{ name: 'KPI設定', topic: 'kpi', examples: ['来年度の売上を3,000万円にするためのKPIを作りたい', '今のKPI達成率を見せて'] },
-			{ name: 'シミュレーター作成（チャット）', topic: 'simulator', examples: ['広告費から売上を予測するシミュレーターを作って'] },
-			{ name: 'メール送信', topic: 'email', examples: ['レポートをメールで送って'] }
+			{ name: 'Report Creation', topic: 'report_create', examples: ['Analyze sales and its drivers together and turn it into a report'] },
+			{ name: 'KPI Setup', topic: 'kpi', examples: ['I want to create KPIs to reach 30 million yen in sales next year', 'Show me the current KPI achievement rate'] },
+			{ name: 'Simulator Creation (Chat)', topic: 'simulator', examples: ['Create a simulator that predicts sales from ad spend'] },
+			{ name: 'Sending Email', topic: 'email', examples: ['Send the report by email'] }
 		],
 		tips: [
-			'チャット（/chat）では自然な日本語のまま質問するとSQLを組み立てて集計・グラフ化する。決まった分析メニューに当てはまらない、その場限りの質問に向いている',
-			'特定の統計手法を明示的に使いたい場合はサイドバーの「分析」欄の各画面を直接使う。手法選びに迷ったときは、各分析画面右側のAIアシスタントに相談すると設定を代わりにセットしてくれる',
-			'データソースはサイドメニューの「データベース管理」から登録・管理できます'
+			'In chat (/chat), asking questions in plain natural language builds SQL and produces aggregations/charts. It is well suited to one-off questions that don\'t fit a fixed analysis menu.',
+			'If you want to explicitly use a specific statistical method, use the screens under the "Analysis" section of the sidebar directly. If you are unsure which method to choose, the AI assistant on the right of each analysis screen can set the configuration for you.',
+			'You can register and manage data sources from the "Database Management" item in the side menu.'
 		],
 		relatedPages: [
-			{ label: 'チャット', href: '/chat', description: '自然言語での質問・集計・シミュレーター作成' },
-			{ label: 'レポート作成', href: '/report-create', description: '分析手法を選んでAIにレポートを作らせられます' },
-			{ label: 'KPI管理', href: '/kpi', description: '目標からKPIを逆算し、達成率を確認できます' },
-			{ label: 'データベース管理', href: '/database', description: 'データの登録・CSV取り込みができます' },
-			{ label: '設定', href: '/settings', description: 'アプリの各種設定を変更できます' }
+			{ label: 'Chat', href: '/chat', description: 'Natural-language questions, aggregation, and simulator creation' },
+			{ label: 'Report Creation', href: '/report-create', description: 'Choose analytical methods and have the AI create a report' },
+			{ label: 'KPI Management', href: '/kpi', description: 'Work backward from a goal to derive KPIs and check achievement rates' },
+			{ label: 'Database Management', href: '/database', description: 'Register data and import CSVs' },
+			{ label: 'Settings', href: '/settings', description: 'Change various app settings' }
 		]
 	},
 	data_sources: {
-		title: 'データソース管理',
-		description: '分析対象のデータを登録・管理します。CSVインポート、外部DB接続、ノーコードUI、直接SQL実行に対応しています',
+		title: 'Data Source Management',
+		description: 'Register and manage the data you want to analyze. Supports CSV import, external DB connections, a no-code UI, and direct SQL execution.',
 		operations: [
-			{ action: 'データソースを新規作成する', examples: ['「データベース管理」ページで「新規作成」から列定義を入力します'] },
-			{ action: 'CSVをインポートする', examples: ['データソース詳細ページの「CSVインポート」セクションからアップロードします'] },
-			{ action: '外部DBから取り込む', examples: ['Supabaseやアプリケーション本体のPostgres/MySQLからテーブルを取り込みたい'] },
-			{ action: 'SQLを直接実行する', examples: ['「データベース管理」ページの「SQLクエリ」でSELECT文を実行できます'] },
-			{ action: 'データ品質を確認する', examples: ['このデータに欠損値や外れ値はある？'] }
+			{ action: 'Create a new data source', examples: ['Enter column definitions from "New" on the "Database Management" page'] },
+			{ action: 'Import a CSV', examples: ['Upload from the "CSV Import" section of the data source detail page'] },
+			{ action: 'Import from an external DB', examples: ['I want to import tables from Supabase or the app\'s own Postgres/MySQL'] },
+			{ action: 'Run SQL directly', examples: ['You can run SELECT statements from "SQL Query" on the "Database Management" page'] },
+			{ action: 'Check data quality', examples: ['Does this data have missing values or outliers?'] }
 		],
 		tips: [
-			'CSVの1行目はヘッダー行として読み込まれます（カラムキーと一致させてください）',
-			'各データソース詳細ページに、数値列ごとの欠損件数・外れ値候補・妥当性チェックが自動表示されます',
-			'外部DB接続の管理は「接続管理」（管理者のみ）から行います',
-			'AIはデータソース名・説明・列のラベルを参照して分析を行います'
+			'The first row of a CSV is read as the header row (make sure it matches the column keys)',
+			'Each data source detail page automatically shows the missing-value count, outlier candidates, and validity check for each numeric column',
+			'External DB connections are managed from "Connections" (admin only)',
+			'The AI refers to the data source name, description, and column labels when performing analysis'
 		],
 		relatedPages: [
-			{ label: 'データベース管理', href: '/database', description: 'データソースの一覧・登録・CSV取り込み・品質チェック' },
-			{ label: '接続管理', href: '/connections', description: '外部DBからのテーブル取り込み（管理者のみ）' }
+			{ label: 'Database Management', href: '/database', description: 'List, register, import CSVs, and check quality for data sources' },
+			{ label: 'Connections', href: '/connections', description: 'Import tables from an external DB (admin only)' }
 		]
 	},
 	analysis: {
-		title: '分析・シミュレーション',
+		title: 'Analysis & Simulation',
 		description:
-			'チャットで自然言語のまま質問して答えを得ることも、特定の統計手法を直接使ってAIに設定を手伝わせることもできます。' +
-			'目的はいずれも「このデータから何が言えるか」「変数を動かしたら結果がどう変わるか」を明らかにして次のアクションにつなげることです',
+			'You can get answers by asking natural-language questions in chat, or use a specific statistical method directly and have the AI help configure it. ' +
+			'Either way, the goal is to clarify "what can we say from this data" and "how would the outcome change if we moved a variable," and connect that to the next action.',
 		operations: [
-			{ action: 'チャットで自然言語のまま聞く', examples: ['過去1年の月別売上推移を見せて', '売上トップ10の地域は？', '棒グラフで見せて'] },
-			{ action: 'ドライバー分析（回帰分析）で要因を調べる', examples: ['広告費と来店数が売上にどれくらい効いているか調べたい'] },
-			{ action: '2群の差を検定する（A/Bテスト）', examples: ['施策Aと施策Bでコンバージョン率に差があるか調べたい'] },
-			{ action: '2値の結果を予測する（ロジスティック回帰・分類）', examples: ['広告費や来店数から購入するかどうかを予測したい'] },
-			{ action: '将来の値を予測する（トレンド予測）', examples: ['来月・来年の売上を予測して'] },
-			{ action: '効いている変数を調べる（感度分析）・逆算する（ゴールシーク）・比較する（シナリオ比較）・不確実性を見る（モンテカルロ）・予算を配分する（予算配分最適化）', examples: ['目標の売上を達成するには広告費をいくらにすべき？'] }
+			{ action: 'Ask in natural language via chat', examples: ['Show me monthly sales over the past year', 'What are the top 10 regions by sales?', 'Show it as a bar chart'] },
+			{ action: 'Investigate drivers with driver analysis (regression)', examples: ['I want to find out how much ad spend and store visits contribute to sales'] },
+			{ action: 'Test the difference between two groups (A/B test)', examples: ['I want to check whether there is a difference in conversion rate between measure A and measure B'] },
+			{ action: 'Predict a binary outcome (logistic regression / classification)', examples: ['I want to predict whether someone will make a purchase based on ad spend and store visits'] },
+			{ action: 'Forecast future values (trend forecasting)', examples: ['Forecast sales for next month / next year'] },
+			{ action: 'Find influential variables (sensitivity analysis) / work backward (goal seek) / compare (scenario comparison) / view uncertainty (Monte Carlo) / allocate budget (budget allocation optimization)', examples: ['How much should we spend on ads to hit our sales target?'] }
 		],
 		tips: [
-			'サイドバーの「分析」欄から、記述統計・相関分析・回帰分析・ロジスティック回帰・A/Bテスト・感度分析・シナリオ比較・ゴールシーク・トレンド予測・モンテカルロ・予算配分最適化の各画面に直接アクセスできます',
-			'どの手法を使えばいいか迷ったら、各画面右側のAIアシスタントに自然言語で伝えると、データソース・列・設定を代わりにセットしてくれます',
-			'結果には妥当性チェック（サンプル数・当てはまりの良さ等）が自動表示されるので、数値をそのまま鵜呑みにせず確認できます',
-			'複数の手法をまとめてAIにレポートさせたい場合は「レポート作成」を使ってください'
+			'From the "Analysis" section of the sidebar you can go directly to screens for descriptive statistics, correlation analysis, regression analysis, logistic regression, A/B testing, sensitivity analysis, scenario comparison, goal seek, trend forecasting, Monte Carlo simulation, and budget allocation optimization',
+			'If you are not sure which method to use, tell the AI assistant on the right side of each screen in natural language and it will set the data source, columns, and configuration for you',
+			'Results automatically show a validity check (sample size, goodness of fit, etc.) so you can verify the numbers rather than taking them at face value',
+			'If you want the AI to compile a report combining multiple methods, use "Report Creation"'
 		],
 		relatedPages: [
-			{ label: '分析', href: '/analysis', description: '記述統計・相関分析・回帰分析など専用の分析ツール一覧' },
-			{ label: 'チャット', href: '/chat', description: '自然言語のまま質問して集計・グラフ化する' }
+			{ label: 'Analysis', href: '/analysis', description: 'A list of dedicated analysis tools such as descriptive statistics, correlation analysis, and regression analysis' },
+			{ label: 'Chat', href: '/chat', description: 'Ask natural-language questions to aggregate and chart data' }
 		]
 	},
 	report_create: {
-		title: 'レポート作成',
+		title: 'Report Creation',
 		description:
-			'相関分析・回帰分析・記述統計・ロジスティック回帰（分類）・A/Bテストの中から好きな手法を選んで実行し、' +
-			'AIがその結果を根拠にビジネス向けのレポートにまとめます。1つの手法だけでも、複数を組み合わせても使えます',
+			'Choose the methods you want among correlation analysis, regression analysis, descriptive statistics, logistic regression (classification), and A/B testing, run them, ' +
+			'and the AI compiles a business-facing report grounded in the results. You can use a single method alone or combine several.',
 		operations: [
-			{ action: 'レポートを作成する', examples: ['売上とその要因についてまとめて分析してレポートにして', 'このデータの相関と回帰をレポートにして'] }
+			{ action: 'Create a report', examples: ['Analyze sales and its drivers together and turn it into a report', 'Turn the correlation and regression of this data into a report'] }
 		],
 		tips: [
-			'どの手法を選べばいいか迷った場合は右側のAIアシスタントに相談してください（自然言語で伝えると手法や設定を代わりにセットします）',
-			'複数手法を選んだ場合、AIは単一の合成スコアは出さず、手法間で結論が一致しているか矛盾していないかを解釈し、多重比較のリスクにも言及します',
-			'レポート自体の生成は画面上の専用ボタンから行います（AIアシスタントは設定のセットまで）'
+			'If you are unsure which method to choose, consult the AI assistant on the right (tell it in natural language and it will set the method and configuration for you)',
+			'When multiple methods are selected, the AI does not produce a single composite score; instead it interprets whether the conclusions agree or conflict across methods, and also notes the risk of multiple comparisons',
+			'The report itself is generated from the dedicated button on the screen (the AI assistant only sets up the configuration)'
 		],
-		relatedPages: [{ label: 'レポート作成', href: '/report-create', description: '分析手法を選んでレポートを作成' }]
+		relatedPages: [{ label: 'Report Creation', href: '/report-create', description: 'Choose analytical methods and create a report' }]
 	},
 	kpi: {
-		title: 'KPI設定',
+		title: 'KPI Setup',
 		description:
-			'目的変数（例: 売上）の目標値から、KPI候補（説明変数）の目標値を逆算し、KPIプランとして保存します。' +
-			'保存後は現在のデータに基づく達成率をゲージで確認できます',
+			'From a target value for the objective variable (e.g. sales), this works backward to derive target values for KPI candidates (explanatory variables) and saves them as a KPI plan. ' +
+			'After saving, you can check the achievement rate against current data with a gauge.',
 		operations: [
-			{ action: 'KPIを設定する', examples: ['来年度の売上を3,000万円にするためのKPIを作りたい'] },
-			{ action: '達成率を確認する', examples: ['今のKPIの達成状況を見せて'] }
+			{ action: 'Set up a KPI', examples: ['I want to create KPIs to reach 30 million yen in sales next year'] },
+			{ action: 'Check the achievement rate', examples: ['Show me the current KPI achievement status'] }
 		],
 		tips: [
-			'KPI候補は実測レンジを超えない範囲で目標値を逆算します（1つの変数だけに無理な負担がかからない設計）',
-			'選択したKPI候補だけでは目標に届かない場合は「届かない」ことを明示し、無理に外挿した数値は出しません',
-			'保存したプラン自体（モデル・逆算結果）は保存時点のまま変わりませんが、達成率はトップページと各プランの詳細ページで、データソースの最新の値をもとに都度再計算されます'
+			'KPI candidate targets are derived backward within the observed data range (designed so that no single variable is forced to carry an unreasonable burden)',
+			'If the selected KPI candidates alone cannot reach the target, this is stated explicitly, and no forced extrapolated figures are produced',
+			'The saved plan itself (model and backward-derivation results) stays fixed as of when it was saved, but the achievement rate is recalculated each time on the top page and each plan\'s detail page based on the latest values from the data source'
 		],
-		relatedPages: [{ label: 'KPI管理', href: '/kpi', description: 'KPIプランの一覧・新規作成・達成率確認' }]
+		relatedPages: [{ label: 'KPI Management', href: '/kpi', description: 'List, create, and check achievement rates for KPI plans' }]
 	},
 	simulator: {
-		title: 'シミュレーター作成（チャット）',
-		description: 'チャットで依頼すると、データから回帰モデル（シミュレーター）を生成し、変数を動かして将来のシナリオを試せます',
+		title: 'Simulator Creation (Chat)',
+		description: 'When you make a request in chat, a regression model (simulator) is generated from the data, and you can move variables around to try out future scenarios',
 		operations: [
-			{ action: 'シミュレーターを作成する', examples: ['広告費と来店数から売上を予測するシミュレーターを作って', '〇〇が変わったらどうなるか試したい'] },
-			{ action: '既存のシミュレーターを確認する', examples: ['作成済みのシミュレーターを見せて'] },
-			{ action: 'シナリオを比較する', examples: ['広告費を50万円にしたら？', '楽観的なケースと悲観的なケースを比較して'] }
+			{ action: 'Create a simulator', examples: ['Create a simulator that predicts sales from ad spend and store visits', 'I want to try what happens if XX changes'] },
+			{ action: 'Check an existing simulator', examples: ['Show me the simulators I\'ve already created'] },
+			{ action: 'Compare scenarios', examples: ['What if ad spend were 500,000 yen?', 'Compare an optimistic case with a pessimistic case'] }
 		],
 		tips: [
-			'AIが目的変数・説明変数の候補を提案してから生成します（design_variables）',
-			'生成後は自動でAIレビュー（当てはまり・サンプル数・多重共線性のチェック）を行います',
-			'現時点で対応している分析手法は重回帰（線形結合）のみです',
-			'決定係数（R²）が低い場合は、別の説明変数を試すか結果を参考程度に留めてください',
-			'サイドバーの「分析」欄の各画面（回帰分析・感度分析等）を直接使いたい場合は、チャットを介さずそちらにアクセスすることもできます',
-			'作成したシミュレーターは「シミュレーター」ページからスライダー操作で試せます。詳細ページでは左側のAIアシスタントに変数や係数について質問できます'
+			'The AI proposes candidate objective and explanatory variables before generating the simulator (design_variables)',
+			'After generation, an AI review (fit, sample size, and multicollinearity checks) runs automatically',
+			'Currently the only supported analytical method is multiple regression (linear combination)',
+			'If the coefficient of determination (R²) is low, try different explanatory variables or treat the result as a rough reference only',
+			'If you want to use the screens under the "Analysis" section of the sidebar directly (regression analysis, sensitivity analysis, etc.), you can access them without going through chat',
+			'Created simulators can be tried out with sliders from the "Simulators" page. On the detail page you can ask the AI assistant on the left about variables and coefficients'
 		],
 		relatedPages: [
-			{ label: 'シミュレーター', href: '/simulators', description: '作成済みシミュレーターの一覧・操作' }
+			{ label: 'Simulators', href: '/simulators', description: 'List and operate created simulators' }
 		]
 	},
 	email: {
-		title: 'メール送信',
+		title: 'Sending Email',
 		operations: [
-			{ action: 'メールを作成・送信する', examples: ['〇〇さんにメールを送って', '分析結果をメールで共有して'] }
+			{ action: 'Compose and send an email', examples: ['Send an email to XX', 'Share the analysis results by email'] }
 		],
 		tips: [
-			'AIが下書きを作成し、フォームで内容を確認・編集してから送信します',
-			'初回利用時はメール設定画面でメールサービスの設定が必要です'
+			'The AI drafts the email; you review and edit the content in a form before sending',
+			'The first time you use this, you need to configure the email service on the email settings screen'
 		],
 		relatedPages: [
-			{ label: 'メール設定', href: '/settings/email', description: 'メール送信サービスの設定ができます' }
+			{ label: 'Email Settings', href: '/settings/email', description: 'Configure the email sending service' }
 		]
 	}
 };

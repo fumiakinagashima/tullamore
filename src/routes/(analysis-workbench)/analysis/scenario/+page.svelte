@@ -37,11 +37,11 @@
 	}
 
 	const gridColumns = $derived([
-		{ key: 'name', label: 'シナリオ名', type: 'text' as const },
+		{ key: 'name', label: 'Scenario Name', type: 'text' as const },
 		...(model?.featureColumns ?? []).map((key) => ({ key, label: labelOf(key), type: 'number' as const }))
 	]);
 
-	// シナリオ行の値からpredict()で即時計算する（サーバー往復なし。Simulatorのスライダーと同じ考え方）
+	// Compute instantly from the scenario row values with predict() (no server round trip — same approach as the Simulator sliders)
 	const scenarios = $derived.by(() => {
 		const m = model;
 		if (!m) return [];
@@ -53,7 +53,7 @@
 			} catch {
 				value = null;
 			}
-			return { name: String(r.name || `シナリオ${i + 1}`), value };
+			return { name: String(r.name || `Scenario ${i + 1}`), value };
 		});
 	});
 
@@ -71,12 +71,12 @@
 		error = '';
 	});
 
-	// モデルを学習し直したらシナリオ行をベースケース（平均値）1行にリセットする。
-	// 平均値はSQL集計由来で長い小数になりがちなので、グリッドの初期表示用に丸める
+	// After retraining the model, reset the scenario rows to a single base case (average values) row.
+	// Averages come from SQL aggregation and tend to be long decimals, so round them for the grid's initial display
 	$effect(() => {
 		const m = model;
 		rows = m
-			? [{ name: 'ベースケース', ...Object.fromEntries(m.featureColumns.map((k) => [k, Math.round(m.featureRanges[k].mean * 100) / 100])) }]
+			? [{ name: 'Base Case', ...Object.fromEntries(m.featureColumns.map((k) => [k, Math.round(m.featureRanges[k].mean * 100) / 100])) }]
 			: [];
 	});
 
@@ -84,8 +84,9 @@
 		featureColumns = checked ? [...featureColumns, key] : featureColumns.filter((k) => k !== key);
 	}
 
-	// 目的変数を切り替えた時、それまで説明変数として選んでいた列が新しい目的変数と重複していたら除外する
-	// （featureCandidates からは自動的に消えるが、チェック状態自体は featureColumns に残ってしまうため）
+	// When the outcome variable is switched, exclude any column that was previously selected as an explanatory
+	// variable if it now duplicates the new outcome variable (it disappears from featureCandidates automatically,
+	// but its checked state would otherwise remain stuck in featureColumns)
 	$effect(() => {
 		if (featureColumns.includes(targetColumn)) {
 			featureColumns = featureColumns.filter((k) => k !== targetColumn);
@@ -142,7 +143,7 @@
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
 			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
-			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Analysis failed');
 			model = body.model ?? null;
 			validity = body.validity ?? null;
 		} catch (e) {
@@ -155,23 +156,23 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">シナリオ比較</h1>
-		<p class="page-sub">説明変数の組み合わせを複数パターン用意し、目的変数の予測値を横並びで比較します</p>
+		<h1 class="page-title">Scenario Comparison</h1>
+		<p class="page-sub">Prepare multiple combinations of explanatory variables and compare the predicted outcome values side by side</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+			<Select label="Data Source" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Outcome Variable" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 		</div>
 
 		<div class="feature-picker">
-			<span class="field-label">説明変数（複数選択可）</span>
+			<span class="field-label">Explanatory Variables (multiple selection allowed)</span>
 			{#if !targetColumn}
-				<p class="hint">先に目的変数を選択してください</p>
+				<p class="hint">Please select an outcome variable first</p>
 			{:else if featureCandidates.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
+				<p class="hint">There are no numeric columns available to select</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each featureCandidates as col (col.key)}
@@ -190,7 +191,7 @@
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '分析中…' : '分析を実行'}
+				{loading ? 'Analyzing…' : 'Run Analysis'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
@@ -198,7 +199,7 @@
 
 	<section class="results-panel">
 		{#if model && chartData.length > 0}
-			<BarChart data={chartData} title="シナリオ別の{labelOf(targetColumn)}予測値" />
+			<BarChart data={chartData} title="Predicted {labelOf(targetColumn)} by Scenario" />
 			{#if validity}
 				<div class="validity-row">
 					<ValidityCard {validity} />
@@ -206,14 +207,14 @@
 			{/if}
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソース・目的変数・説明変数を選び、「分析を実行」を押してください</p>
+				<p>Select a data source, outcome variable, and explanatory variables in the settings above, then click "Run Analysis"</p>
 			</div>
 		{/if}
 	</section>
 
 	{#if model}
 		<section class="grid-panel">
-			<p class="config-title">シナリオ（値を編集すると即グラフに反映されます）</p>
+			<p class="config-title">Scenarios (editing a value updates the chart instantly)</p>
 			<DataGrid columns={gridColumns} bind:rows />
 		</section>
 	{/if}

@@ -1,7 +1,7 @@
-# データ連携（/connections、Hyperdrive/TCP Sockets経由の外部DB取り込み）をローカルで
-# エンドツーエンドに確認するためのサンプルPostgres/MySQL。`docker compose up -d` で起動し、
-# wrangler.toml の HYPERDRIVE_LOCAL_SAMPLE / HYPERDRIVE_LOCAL_SAMPLE_MYSQL の
-# localConnectionString がこれらのDBを指す。
+# Sample Postgres/MySQL for verifying data connections (/connections, external DB ingestion via
+# Hyperdrive/TCP Sockets) end-to-end locally. Start with `docker compose up -d`; the
+# localConnectionString for HYPERDRIVE_LOCAL_SAMPLE / HYPERDRIVE_LOCAL_SAMPLE_MYSQL in wrangler.toml
+# points at these DBs.
 services:
   postgres:
     image: postgres:16
@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: tullamore
       POSTGRES_DB: tullamore_sample
     ports:
-      # ホスト側は55432（5432は他プロジェクトのPostgresと衝突することがあるため変更）
+      # Host side uses 55432 (changed because 5432 can conflict with Postgres from other projects)
       - '55432:5432'
     volumes:
       - tullamore_postgres_data:/var/lib/postgresql/data

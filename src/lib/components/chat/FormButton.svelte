@@ -10,15 +10,15 @@
 	let { form, onclick }: Props = $props();
 
 	const TOOL_LABELS: Record<string, string> = {
-		send_email: 'メールを送信'
+		send_email: 'Send email'
 	};
 
 	const TOOL_DESCS: Record<string, string> = {
-		send_email: 'メール作成フォームを表示します'
+		send_email: 'Shows the email composition form'
 	};
 
-	const label = $derived(form.title ?? TOOL_LABELS[form.tool] ?? '登録・編集フォームを開く');
-	const desc = $derived(TOOL_DESCS[form.tool] ?? '登録・編集ダイアログを表示します');
+	const label = $derived(form.title ?? TOOL_LABELS[form.tool] ?? 'Open form');
+	const desc = $derived(TOOL_DESCS[form.tool] ?? 'Shows the form dialog');
 </script>
 
 <button class="form-btn" {onclick}>

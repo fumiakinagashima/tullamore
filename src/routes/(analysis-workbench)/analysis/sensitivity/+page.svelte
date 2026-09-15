@@ -55,8 +55,9 @@
 		featureColumns = checked ? [...featureColumns, key] : featureColumns.filter((k) => k !== key);
 	}
 
-	// 目的変数を切り替えた時、それまで説明変数として選んでいた列が新しい目的変数と重複していたら除外する
-	// （featureCandidates からは自動的に消えるが、チェック状態自体は featureColumns に残ってしまうため）
+	// When the outcome variable is switched, exclude any column that was previously selected as an explanatory
+	// variable if it now duplicates the new outcome variable (it disappears from featureCandidates automatically,
+	// but its checked state would otherwise remain stuck in featureColumns)
 	$effect(() => {
 		if (featureColumns.includes(targetColumn)) {
 			featureColumns = featureColumns.filter((k) => k !== targetColumn);
@@ -114,7 +115,7 @@
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
 			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
-			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Analysis failed');
 			model = body.model ?? null;
 			validity = body.validity ?? null;
 		} catch (e) {
@@ -127,23 +128,23 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">感度分析</h1>
-		<p class="page-sub">各説明変数を実測レンジいっぱいに動かした時、目的変数がどれだけ振れるかをトルネードチャートで見ます</p>
+		<h1 class="page-title">Sensitivity Analysis</h1>
+		<p class="page-sub">See how much the outcome variable swings when each explanatory variable is moved across its full observed range, shown as a tornado chart</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+			<Select label="Data Source" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Outcome Variable" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 		</div>
 
 		<div class="feature-picker">
-			<span class="field-label">説明変数（複数選択可）</span>
+			<span class="field-label">Explanatory Variables (multiple selection allowed)</span>
 			{#if !targetColumn}
-				<p class="hint">先に目的変数を選択してください</p>
+				<p class="hint">Please select an outcome variable first</p>
 			{:else if featureCandidates.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
+				<p class="hint">There are no numeric columns available to select</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each featureCandidates as col (col.key)}
@@ -162,7 +163,7 @@
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '分析中…' : '分析を実行'}
+				{loading ? 'Analyzing…' : 'Run Analysis'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
@@ -170,8 +171,8 @@
 
 	<section class="results-panel">
 		{#if tornadoData}
-			<TornadoChart bars={tornadoData.bars} base={tornadoData.base} title="{labelOf(targetColumn)}への影響度（振れ幅が大きい順）" />
-			<p class="base-note">点線はベースライン（他の変数を平均値に固定した時の予測値: {tornadoData.base.toLocaleString('ja-JP', { maximumFractionDigits: 1 })}）</p>
+			<TornadoChart bars={tornadoData.bars} base={tornadoData.base} title="Impact on {labelOf(targetColumn)} (largest swing first)" />
+			<p class="base-note">The dashed line is the baseline (predicted value with other variables fixed at their average: {tornadoData.base.toLocaleString('en-US', { maximumFractionDigits: 1 })})</p>
 			{#if validity}
 				<div class="validity-row">
 					<ValidityCard {validity} />
@@ -179,7 +180,7 @@
 			{/if}
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソース・目的変数・説明変数を選び、「分析を実行」を押してください</p>
+				<p>Select a data source, outcome variable, and explanatory variables in the settings above, then click "Run Analysis"</p>
 			</div>
 		{/if}
 	</section>

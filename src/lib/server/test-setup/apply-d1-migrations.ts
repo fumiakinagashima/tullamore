@@ -1,9 +1,9 @@
 import { applyD1Migrations, env } from 'cloudflare:test';
 import type { D1Migration } from '@cloudflare/vitest-pool-workers';
 
-// このプロジェクトは wrangler types を実行しておらず（App.Platform.env を手書きしている、src/app.d.ts参照）、
-// `Cloudflare.Env` は @cloudflare/workers-types が提供する空の拡張可能インターフェースのまま。
-// cloudflare:test の env はこの型を参照するため、テスト用バインディングをここで追加しておく。
+// This project does not run wrangler types (App.Platform.env is hand-written; see src/app.d.ts),
+// so `Cloudflare.Env` remains the empty, extensible interface provided by @cloudflare/workers-types.
+// The env from cloudflare:test refers to this type, so the test bindings are added here.
 declare global {
 	namespace Cloudflare {
 		interface Env {

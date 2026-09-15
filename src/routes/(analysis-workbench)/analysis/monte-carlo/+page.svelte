@@ -24,10 +24,10 @@
 	const bridge = getContext<AnalysisBridge>(ANALYSIS_BRIDGE_KEY);
 
 	const DIST_KIND_OPTIONS = [
-		{ value: 'fixed', label: '固定値' },
-		{ value: 'uniform', label: '一様分布' },
-		{ value: 'normal', label: '正規分布' },
-		{ value: 'triangular', label: '三角分布' }
+		{ value: 'fixed', label: 'Fixed value' },
+		{ value: 'uniform', label: 'Uniform distribution' },
+		{ value: 'normal', label: 'Normal distribution' },
+		{ value: 'triangular', label: 'Triangular distribution' }
 	];
 
 	let dataSourceId = $state('');
@@ -38,8 +38,8 @@
 	let model = $state<LinearRegressionModel | null>(null);
 	let validity = $state<ValidityAssessment | null>(null);
 
-	// Select は string を bindable として扱うため kind は string で持ち、使用時に FeatureDistribution へ絞る
-	// （trend/+page.svelte の granularityValue と同じパターン）
+	// Select treats its value as a bindable string, so kind is kept as a string and narrowed to
+	// FeatureDistribution when used (same pattern as granularityValue in trend/+page.svelte)
 	type DistRowState = { kind: string; min: number; max: number; mean: number; stddev: number; mode: number };
 	let distRows = $state<Record<string, DistRowState>>({});
 
@@ -56,8 +56,8 @@
 
 	let sampleCount = $state(MONTE_CARLO_DEFAULT_SAMPLES);
 	let includeResidualNoise = $state(true);
-	// NumberInput の value は $bindable(0) でフォールバックを持つため bind:value={undefined} はできない
-	// （https://svelte.dev/e/props_invalid_value）。「任意」の閾値はトグルで有効/無効を切り替える
+	// NumberInput's value is $bindable(0) with a fallback, so bind:value={undefined} isn't possible
+	// (https://svelte.dev/e/props_invalid_value). The "optional" threshold is toggled on/off with a switch instead
 	let thresholdEnabled = $state(false);
 	let threshold = $state(0);
 	let result = $state<MonteCarloResult | null>(null);
@@ -86,8 +86,9 @@
 		featureColumns = checked ? [...featureColumns, key] : featureColumns.filter((k) => k !== key);
 	}
 
-	// 目的変数を切り替えた時、それまで説明変数として選んでいた列が新しい目的変数と重複していたら除外する
-	// （featureCandidates からは自動的に消えるが、チェック状態自体は featureColumns に残ってしまうため）
+	// When the target variable changes, drop any previously-selected explanatory variable that now
+	// duplicates the new target (it disappears from featureCandidates automatically, but the checked
+	// state itself would otherwise remain in featureColumns)
 	$effect(() => {
 		if (featureColumns.includes(targetColumn)) {
 			featureColumns = featureColumns.filter((k) => k !== targetColumn);
@@ -96,7 +97,8 @@
 
 	const canRun = $derived(!!dataSourceId && !!targetColumn && featureColumns.length > 0);
 
-	// 右側のAIアシスタントに現在の設定・結果を渡す（分布設定・サンプル数は画面側でのみ調整する）
+	// Pass the current config/results to the AI assistant on the right (distribution settings and
+	// sample count are only adjustable from this page)
 	$effect(() => {
 		bridge.analysisType = 'monte-carlo';
 		bridge.config = {
@@ -116,9 +118,9 @@
 			: null;
 	});
 
-	// AIアシスタントの set_config ツールから呼ばれる。dataSourceId を変えると
-	// 下の $effect が targetColumn/featureColumns をリセットしてしまうため、
-	// リセットが先に走るのを tick() で待ってから値をセットする（回帰分析ページと同じパターン）
+	// Called from the AI assistant's set_config tool. Changing dataSourceId causes the $effect below
+	// to reset targetColumn/featureColumns, so we wait for that reset to run first via tick() before
+	// setting the values (same pattern as the regression analysis page)
 	async function applyConfig(patch: Record<string, unknown>) {
 		if (typeof patch.data_source_id === 'string' && patch.data_source_id !== dataSourceId) {
 			dataSourceId = patch.data_source_id;
@@ -150,7 +152,7 @@
 				body: JSON.stringify({ dataSourceId, targetColumn, featureColumns })
 			});
 			const body = (await res.json()) as { model?: LinearRegressionModel; validity?: ValidityAssessment; error?: string };
-			if (!res.ok) throw new Error(body.error ?? '分析に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Analysis failed');
 			model = body.model ?? null;
 			validity = body.validity ?? null;
 			result = null;
@@ -190,7 +192,7 @@
 		});
 	}
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
@@ -204,23 +206,23 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">モンテカルロ・シミュレーション</h1>
-		<p class="page-sub">説明変数に幅（分布）を持たせて何度もサンプリングし、目的変数がとりうる値のばらつきをシミュレーションします</p>
+		<h1 class="page-title">Monte Carlo Simulation</h1>
+		<p class="page-sub">Give explanatory variables a range (distribution), sample repeatedly, and simulate the spread of possible values for the target variable</p>
 	</div>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
+		<p class="config-title">Settings</p>
 		<div class="config-row">
-			<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
-			<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+			<Select label="Data source" bind:value={dataSourceId} options={sourceOptions} />
+			<Select label="Target variable" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 		</div>
 
 		<div class="feature-picker">
-			<span class="field-label">説明変数（複数選択可）</span>
+			<span class="field-label">Explanatory variables (multiple selection allowed)</span>
 			{#if !targetColumn}
-				<p class="hint">先に目的変数を選択してください</p>
+				<p class="hint">Please select a target variable first</p>
 			{:else if featureCandidates.length === 0}
-				<p class="hint">選択できる数値列がありません</p>
+				<p class="hint">No numeric columns available to select</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each featureCandidates as col (col.key)}
@@ -239,31 +241,31 @@
 
 		<div class="run-row">
 			<button class="run-btn" onclick={fitModel} disabled={!canRun || loading}>
-				{loading ? 'モデル作成中…' : 'モデルを作成'}
+				{loading ? 'Building model…' : 'Build model'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>
 
 		{#if model}
 			<div class="dist-section">
-				<p class="config-title">説明変数の分布設定</p>
+				<p class="config-title">Explanatory variable distribution settings</p>
 				<div class="dist-rows">
 					{#each model.featureColumns as key (key)}
 						<div class="dist-row">
 							<span class="dist-label">{labelOf(key)}</span>
 							<Select bind:value={distRows[key].kind} options={DIST_KIND_OPTIONS} />
 							{#if distRows[key].kind === 'fixed'}
-								<NumberInput label="値" bind:value={distRows[key].mean} />
+								<NumberInput label="Value" bind:value={distRows[key].mean} />
 							{:else if distRows[key].kind === 'uniform'}
-								<NumberInput label="下限" bind:value={distRows[key].min} />
-								<NumberInput label="上限" bind:value={distRows[key].max} />
+								<NumberInput label="Lower bound" bind:value={distRows[key].min} />
+								<NumberInput label="Upper bound" bind:value={distRows[key].max} />
 							{:else if distRows[key].kind === 'normal'}
-								<NumberInput label="平均" bind:value={distRows[key].mean} />
-								<NumberInput label="標準偏差" bind:value={distRows[key].stddev} min={0} />
+								<NumberInput label="Mean" bind:value={distRows[key].mean} />
+								<NumberInput label="Standard deviation" bind:value={distRows[key].stddev} min={0} />
 							{:else}
-								<NumberInput label="下限" bind:value={distRows[key].min} />
-								<NumberInput label="最頻値" bind:value={distRows[key].mode} />
-								<NumberInput label="上限" bind:value={distRows[key].max} />
+								<NumberInput label="Lower bound" bind:value={distRows[key].min} />
+								<NumberInput label="Mode" bind:value={distRows[key].mode} />
+								<NumberInput label="Upper bound" bind:value={distRows[key].max} />
 							{/if}
 						</div>
 					{/each}
@@ -271,18 +273,18 @@
 			</div>
 
 			<div class="config-row">
-				<NumberInput label="サンプル数" bind:value={sampleCount} min={MONTE_CARLO_MIN_SAMPLES} max={MONTE_CARLO_MAX_SAMPLES} step={1000} />
+				<NumberInput label="Sample count" bind:value={sampleCount} min={MONTE_CARLO_MIN_SAMPLES} max={MONTE_CARLO_MAX_SAMPLES} step={1000} />
 			</div>
-			<Toggle bind:checked={thresholdEnabled} label="閾値を設定し、上回る確率を計算する" />
+			<Toggle bind:checked={thresholdEnabled} label="Set a threshold and compute the probability of exceeding it" />
 			{#if thresholdEnabled}
 				<div class="config-row">
-					<NumberInput label="閾値" bind:value={threshold} />
+					<NumberInput label="Threshold" bind:value={threshold} />
 				</div>
 			{/if}
-			<Toggle bind:checked={includeResidualNoise} label="モデルの残差ノイズを含める" />
+			<Toggle bind:checked={includeResidualNoise} label="Include the model's residual noise" />
 
 			<div class="run-row">
-				<button class="run-btn" onclick={runSimulation}>シミュレーションを実行</button>
+				<button class="run-btn" onclick={runSimulation}>Run simulation</button>
 			</div>
 		{/if}
 	</section>
@@ -292,11 +294,11 @@
 			<div class="results-card">
 				<div class="metrics-row">
 					<div class="metric">
-						<span class="metric-label">平均</span>
+						<span class="metric-label">Mean</span>
 						<span class="metric-value highlight">{fmt(result.summary.mean)}</span>
 					</div>
 					<div class="metric">
-						<span class="metric-label">標準偏差</span>
+						<span class="metric-label">Standard deviation</span>
 						<span class="metric-value">{fmt(result.summary.stddev)}</span>
 					</div>
 					{#each result.summary.percentiles as p (p.p)}
@@ -307,7 +309,7 @@
 					{/each}
 					{#if result.summary.probabilityAboveThreshold !== undefined}
 						<div class="metric">
-							<span class="metric-label">{fmt(threshold)}を上回る確率</span>
+							<span class="metric-label">Probability of exceeding {fmt(threshold)}</span>
 							<span class="metric-value highlight">{fmt(result.summary.probabilityAboveThreshold * 100)}%</span>
 						</div>
 					{/if}
@@ -315,7 +317,7 @@
 
 				<BarChart
 					data={histogramBars}
-					title="{labelOf(targetColumn)}の分布（N={result.summary.draws.toLocaleString()}）"
+					title="Distribution of {labelOf(targetColumn)} (N={result.summary.draws.toLocaleString()})"
 				/>
 
 				{#if validity}
@@ -324,7 +326,7 @@
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>上の設定欄でデータソース・目的変数・説明変数を選んでモデルを作成し、各変数の分布を設定してから「シミュレーションを実行」を押してください</p>
+				<p>Select a data source, target variable, and explanatory variables in the settings panel above, build a model, set each variable's distribution, then click "Run simulation"</p>
 			</div>
 		{/if}
 	</section>

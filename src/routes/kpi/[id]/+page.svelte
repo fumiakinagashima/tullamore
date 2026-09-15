@@ -9,23 +9,23 @@
 	let { data }: { data: PageData } = $props();
 	let { plan, snapshot, columns, dataSourceName, achievement } = $derived(data);
 
-	const PERIOD_TYPE_LABEL: Record<string, string> = { year: '年次', month: '月次', week: '週次', custom: '自由' };
+	const PERIOD_TYPE_LABEL: Record<string, string> = { year: 'Annual', month: 'Monthly', week: 'Weekly', custom: 'Custom' };
 
 	function labelOf(key: string): string {
 		return columns.find((c) => c.key === key)?.label ?? key;
 	}
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
 
 	const tableColumns = [
-		{ key: 'label', label: 'KPI項目' },
-		{ key: 'current', label: '現在値' },
-		{ key: 'target', label: '目標値' },
-		{ key: 'delta', label: '増減' },
-		{ key: 'range', label: '実測レンジ' }
+		{ key: 'label', label: 'KPI item' },
+		{ key: 'current', label: 'Current value' },
+		{ key: 'target', label: 'Target value' },
+		{ key: 'delta', label: 'Change' },
+		{ key: 'range', label: 'Observed range' }
 	];
 
 	const tableRows = $derived(
@@ -34,7 +34,7 @@
 			current: fmt(i.current),
 			target: fmt(i.target),
 			delta: (i.target - i.current >= 0 ? '+' : '') + fmt(i.target - i.current),
-			range: `${fmt(i.min)} 〜 ${fmt(i.max)}`
+			range: `${fmt(i.min)} to ${fmt(i.max)}`
 		}))
 	);
 
@@ -73,7 +73,7 @@
 				})
 			});
 			const body = (await res.json()) as { report?: string; error?: string };
-			if (!res.ok) throw new Error(body.error ?? 'レポートの作成に失敗しました');
+			if (!res.ok) throw new Error(body.error ?? 'Failed to create the report');
 			report = body.report ?? null;
 		} catch (e) {
 			reportError = e instanceof Error ? e.message : String(e);
@@ -83,7 +83,7 @@
 	}
 
 	async function deletePlan() {
-		if (!confirm(`「${plan.name}」を削除しますか？`)) return;
+		if (!confirm(`Delete "${plan.name}"?`)) return;
 		await fetch(`/api/kpi-plans/${plan.id}`, { method: 'DELETE' });
 		await goto('/kpi');
 	}
@@ -95,14 +95,14 @@
 			<h1 class="page-title">{plan.name}</h1>
 			<p class="page-sub">
 				<span class="period-badge">{PERIOD_TYPE_LABEL[plan.periodType] ?? plan.periodType}: {plan.periodLabel}</span>
-				{#if dataSourceName}データソース: {dataSourceName} ·{/if}
-				目的変数: {labelOf(snapshot.targetColumn)}
+				{#if dataSourceName}Data source: {dataSourceName} ·{/if}
+				Target variable: {labelOf(snapshot.targetColumn)}
 			</p>
 		</div>
 		<div class="header-actions">
-			<a href="/kpi/{plan.id}/build" class="btn-secondary">編集</a>
-			<button class="btn-secondary" onclick={createReport}>レポートを作成</button>
-			<button class="btn-danger" onclick={deletePlan}>削除</button>
+			<a href="/kpi/{plan.id}/build" class="btn-secondary">Edit</a>
+			<button class="btn-secondary" onclick={createReport}>Create report</button>
+			<button class="btn-danger" onclick={deletePlan}>Delete</button>
 		</div>
 	</div>
 
@@ -111,7 +111,7 @@
 
 		{#if !snapshot.plan.achievable}
 			<p class="warning-text">
-				選択したKPI候補の実測レンジ内だけでは目標に届きません（不足分: {fmt(snapshot.plan.gap - snapshot.plan.coveredGap)}）。
+				The target cannot be reached within the observed range of the selected KPI candidates alone (shortfall: {fmt(snapshot.plan.gap - snapshot.plan.coveredGap)}).
 			</p>
 		{/if}
 
@@ -120,24 +120,24 @@
 				<GaugeChart value={achievement.current} target={achievement.targetValue} size={170} />
 				<p class="achievement-note">
 					{#if !achievement.hasActuals}
-						対象期間（{achievement.periodLabel}）の実績データはまだありません。データが登録されると達成率が更新されます。
+						There is no actual data yet for the target period ({achievement.periodLabel}). The achievement rate will update once data is recorded.
 					{:else}
-						目的変数「{labelOf(achievement.targetColumn)}」の
+						This is the achievement rate calculated from
 						{#if achievement.periodScoped}
-							指定した期間内の平均値
+							the average value of the target variable "{labelOf(achievement.targetColumn)}" within the specified period
 						{:else}
-							現在の平均値（期間未設定のため全期間が対象）
+							the current average value of the target variable "{labelOf(achievement.targetColumn)}" (no period set, so all periods are used)
 						{/if}
-						と目標値から算出した達成率です（データソースの最新の値を都度再取得します）。
+						and the target value (the data source's latest values are refetched each time).
 					{/if}
 				</p>
 			</div>
 		{/if}
 
 		<div class="metrics-row">
-			<div class="metric"><span class="metric-label">現状の予測値</span><span class="metric-value">{fmt(snapshot.plan.baseline)}</span></div>
-			<div class="metric"><span class="metric-label">目標値</span><span class="metric-value highlight">{fmt(snapshot.plan.targetValue)}</span></div>
-			<div class="metric"><span class="metric-label">差分</span><span class="metric-value">{snapshot.plan.gap >= 0 ? '+' : ''}{fmt(snapshot.plan.gap)}</span></div>
+			<div class="metric"><span class="metric-label">Current predicted value</span><span class="metric-value">{fmt(snapshot.plan.baseline)}</span></div>
+			<div class="metric"><span class="metric-label">Target value</span><span class="metric-value highlight">{fmt(snapshot.plan.targetValue)}</span></div>
+			<div class="metric"><span class="metric-label">Difference</span><span class="metric-value">{snapshot.plan.gap >= 0 ? '+' : ''}{fmt(snapshot.plan.gap)}</span></div>
 		</div>
 
 		<Table columns={tableColumns} rows={tableRows} />

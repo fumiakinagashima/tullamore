@@ -5,11 +5,11 @@
 
 	let { data }: { data: PageData } = $props();
 
-	const PERIOD_TYPE_LABEL: Record<string, string> = { year: '年次', month: '月次', week: '週次', custom: '自由' };
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 });
+	const PERIOD_TYPE_LABEL: Record<string, string> = { year: 'Annual', month: 'Monthly', week: 'Weekly', custom: 'Custom' };
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 
 	async function deletePlan(id: string, name: string) {
-		if (!confirm(`「${name}」を削除しますか？`)) return;
+		if (!confirm(`Delete "${name}"?`)) return;
 		await fetch(`/api/kpi-plans/${id}`, { method: 'DELETE' });
 		await invalidateAll();
 	}
@@ -17,18 +17,18 @@
 
 <div class="page">
 	<div class="page-header">
-		<h1 class="page-title">KPI一覧</h1>
-		<a href="/kpi/new" class="btn-secondary-sm">新規登録</a>
+		<h1 class="page-title">KPI List</h1>
+		<a href="/kpi/new" class="btn-secondary-sm">New</a>
 	</div>
 	<p class="page-desc">
-		作成・保存したKPIプランの一覧です。年次・月次・週次など自由な期間単位で管理できます。
+		A list of created and saved KPI plans. Manage them by any period unit you like, such as annual, monthly, or weekly.
 	</p>
 
 	{#if data.plans.length === 0}
 		<div class="empty">
 			<Flag size={32} />
-			<p>保存されたKPIプランがまだありません</p>
-			<p class="empty-sub"><a href="/kpi/new">KPI新規登録</a>からKPIプランを作成し、保存してください。</p>
+			<p>No saved KPI plans yet</p>
+			<p class="empty-sub">Create a KPI plan from <a href="/kpi/new">New KPI</a> and save it.</p>
 		</div>
 	{:else}
 		<div class="plan-grid">
@@ -38,13 +38,13 @@
 						<div class="plan-name">{plan.name}</div>
 						<div class="plan-meta">
 							<span class="period-badge">{PERIOD_TYPE_LABEL[plan.periodType] ?? plan.periodType}: {plan.periodLabel}</span>
-							目的変数: {plan.targetColumn} · 目標値: {numberFmt.format(plan.targetValue)}
-							{#if !plan.achievable}<span class="achievable-badge">未達成見込み</span>{/if}
+							Target variable: {plan.targetColumn} · Target value: {numberFmt.format(plan.targetValue)}
+							{#if !plan.achievable}<span class="achievable-badge">Projected to fall short</span>{/if}
 						</div>
 					</div>
 					<div class="plan-actions">
-						<a href="/kpi/{plan.id}" class="btn-secondary-sm">詳細</a>
-						<button class="btn-danger-sm" onclick={() => deletePlan(plan.id, plan.name)}>削除</button>
+						<a href="/kpi/{plan.id}" class="btn-secondary-sm">Details</a>
+						<button class="btn-danger-sm" onclick={() => deletePlan(plan.id, plan.name)}>Delete</button>
 					</div>
 				</div>
 			{/each}

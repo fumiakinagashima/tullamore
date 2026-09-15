@@ -12,12 +12,12 @@ export function fitLinearRegression(
 	featureColumns: string[]
 ): LinearRegressionModel {
 	const k = featureColumns.length;
-	if (k === 0) throw new Error('説明変数が指定されていません');
+	if (k === 0) throw new Error('No feature variables were specified');
 	if (stats.n <= k) {
-		throw new Error(`サンプル数（${stats.n}件）が説明変数の数（${k}個）以下のため、モデルを学習できません`);
+		throw new Error(`Cannot train the model because the sample size (${stats.n}) is less than or equal to the number of feature variables (${k})`);
 	}
 
-	// XᵀX・Xᵀy を構築する（先頭行・列が切片項）
+	// Build XᵀX and Xᵀy (the first row/column is the intercept term)
 	const size = k + 1;
 	const xtx = Matrix.zeros(size, size);
 	const xty = Matrix.zeros(size, 1);
@@ -36,19 +36,19 @@ export function fitLinearRegression(
 
 	let beta: Matrix;
 	try {
-		// useSVD=true: 説明変数間の相関が強い（多重共線性）場合でも最小二乗解を返す
+		// useSVD=true: returns a least-squares solution even when feature variables are strongly correlated (multicollinearity)
 		beta = solve(xtx, xty, true);
 	} catch {
-		throw new Error('モデルの学習に失敗しました（説明変数間の相関が強すぎる可能性があります）');
+		throw new Error('Failed to train the model (the feature variables may be too strongly correlated with each other)');
 	}
 
 	const intercept = beta.get(0, 0);
 	const coefficients = featureColumns.map((_, i) => beta.get(i + 1, 0));
 	if (!Number.isFinite(intercept) || coefficients.some((c) => !Number.isFinite(c))) {
-		throw new Error('モデルの学習に失敗しました（説明変数間の相関が強すぎる可能性があります）');
+		throw new Error('Failed to train the model (the feature variables may be too strongly correlated with each other)');
 	}
 
-	// SSE = yᵀy - βᵀ(Xᵀy)（β は正規方程式の解であるため βᵀXᵀXβ = βᵀXᵀy が成り立つことを利用）
+	// SSE = yᵀy - βᵀ(Xᵀy) (uses the fact that, since β is the solution to the normal equations, βᵀXᵀXβ = βᵀXᵀy holds)
 	let betaDotXty = intercept * stats.targetSum;
 	for (let i = 0; i < k; i++) betaDotXty += coefficients[i] * stats.featureTargetSums[featureColumns[i]];
 	const sse = Math.max(stats.targetSumSq - betaDotXty, 0);
@@ -76,8 +76,9 @@ export function fitLinearRegression(
 }
 
 /**
- * 保存済みモデルの係数から予測値を計算する純粋関数。D1等への依存を持たないため、
- * サーバー（レビュー等）とクライアント（フロントエンドのリアルタイム再計算）の両方から使える。
+ * A pure function that computes a prediction from a saved model's coefficients. Since it has no
+ * dependency on D1 etc., it can be used both from the server (review, etc.) and the client
+ * (real-time recomputation in the frontend).
  */
 export function predictLinearRegression(model: LinearRegressionModel, vars: Record<string, number>): number {
 	let y = model.intercept;
@@ -85,7 +86,7 @@ export function predictLinearRegression(model: LinearRegressionModel, vars: Reco
 		const col = model.featureColumns[i];
 		const v = vars[col];
 		if (typeof v !== 'number' || !Number.isFinite(v)) {
-			throw new Error(`変数 ${col} の値が指定されていません`);
+			throw new Error(`No value was provided for variable ${col}`);
 		}
 		y += model.coefficients[i] * v;
 	}

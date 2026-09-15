@@ -18,20 +18,20 @@ export const tools: Tool[] = [
 	{
 		name: 'create_simulator',
 		description:
-			'目的変数・説明変数を指定してシミュレーター（回帰モデル）を生成し保存する。' +
-			'事前に design_variables で変数候補を、select_analysis_method で分析手法を確認してから呼び出すこと。' +
-			'生成後はチャットに simulator UI として表示され、ユーザーが変数を動かしてシミュレーションできるようになる。',
+			'Generates and saves a simulator (regression model) given a target variable and explanatory variables. ' +
+			'Call design_variables to check variable candidates and select_analysis_method to check the analysis method beforehand. ' +
+			'Once created, it is shown in the chat as a simulator UI, letting the user move variables to run simulations.',
 		input_schema: {
 			type: 'object',
 			properties: {
-				data_source_id: { type: 'string', description: 'データソースID' },
-				name: { type: 'string', description: 'シミュレーターの名前（例: 「売上予測シミュレーター」）' },
-				description: { type: 'string', description: 'シミュレーターの説明（任意）' },
-				target_column: { type: 'string', description: '目的変数の列名' },
+				data_source_id: { type: 'string', description: 'Data source ID' },
+				name: { type: 'string', description: 'Simulator name (e.g. "Sales Forecast Simulator")' },
+				description: { type: 'string', description: 'Simulator description (optional)' },
+				target_column: { type: 'string', description: 'Target variable column name' },
 				feature_columns: {
 					type: 'array',
 					items: { type: 'string' },
-					description: '説明変数の列名の配列（1個以上）'
+					description: 'Array of explanatory variable column names (one or more)'
 				}
 			},
 			required: ['data_source_id', 'name', 'target_column', 'feature_columns']
@@ -39,32 +39,32 @@ export const tools: Tool[] = [
 	},
 	{
 		name: 'list_simulators',
-		description: '保存済みのシミュレーター一覧を取得する。「シミュレーターを見せて」「作成済みのシミュレーターは？」等に使う。',
+		description: 'Retrieves the list of saved simulators. Use this for requests like "show me the simulators" or "what simulators have been created?"',
 		input_schema: { type: 'object', properties: {}, required: [] }
 	},
 	{
 		name: 'get_simulator',
-		description: '指定したシミュレーターの詳細（モデルの係数・精度指標・変数レンジ等）を取得する。',
+		description: 'Retrieves details of the specified simulator (model coefficients, accuracy metrics, variable ranges, etc.).',
 		input_schema: {
 			type: 'object',
-			properties: { simulator_id: { type: 'string', description: 'シミュレーターID' } },
+			properties: { simulator_id: { type: 'string', description: 'Simulator ID' } },
 			required: ['simulator_id']
 		}
 	},
 	{
 		name: 'update_simulator',
 		description:
-			'既存のシミュレーターの名前・説明を更新する。feature_columns を指定した場合は説明変数を変えて再学習する。',
+			'Updates the name/description of an existing simulator. If feature_columns is given, retrains with the new explanatory variables.',
 		input_schema: {
 			type: 'object',
 			properties: {
-				simulator_id: { type: 'string', description: 'シミュレーターID' },
-				name: { type: 'string', description: '新しい名前（任意）' },
-				description: { type: 'string', description: '新しい説明（任意）' },
+				simulator_id: { type: 'string', description: 'Simulator ID' },
+				name: { type: 'string', description: 'New name (optional)' },
+				description: { type: 'string', description: 'New description (optional)' },
 				feature_columns: {
 					type: 'array',
 					items: { type: 'string' },
-					description: '説明変数を変更して再学習する場合に指定'
+					description: 'Specify to retrain with different explanatory variables'
 				}
 			},
 			required: ['simulator_id']
@@ -73,16 +73,16 @@ export const tools: Tool[] = [
 	{
 		name: 'predict_simulator',
 		description:
-			'シミュレーターの説明変数に具体的な値を指定して予測値を計算する。' +
-			'「〇〇シナリオだとどうなる？」「楽観的/悲観的なケースを試して」等、' +
-			'複数シナリオを提示する場合はこのツールを複数回呼び出して比較する。',
+			'Computes a predicted value by specifying concrete values for the simulator\'s explanatory variables. ' +
+			'When presenting multiple scenarios (e.g. "what happens under scenario X?", "try an optimistic/pessimistic case"), ' +
+			'call this tool multiple times and compare the results.',
 		input_schema: {
 			type: 'object',
 			properties: {
-				simulator_id: { type: 'string', description: 'シミュレーターID' },
+				simulator_id: { type: 'string', description: 'Simulator ID' },
 				variables: {
 					type: 'object',
-					description: '説明変数の列名をキーにした値のマップ（全ての説明変数を指定すること）'
+					description: 'A map of values keyed by explanatory variable column name (all explanatory variables must be specified)'
 				}
 			},
 			required: ['simulator_id', 'variables']
@@ -91,11 +91,11 @@ export const tools: Tool[] = [
 	{
 		name: 'review_simulator',
 		description:
-			'シミュレーターの妥当性をチェックする（当てはまりの良さ・サンプル数の十分性・説明変数間の多重共線性）。' +
-			'シミュレーター生成直後や、精度について聞かれた時に使う。',
+			'Checks the validity of a simulator (goodness of fit, sample size adequacy, multicollinearity among explanatory variables). ' +
+			'Use this right after creating a simulator, or when asked about its accuracy.',
 		input_schema: {
 			type: 'object',
-			properties: { simulator_id: { type: 'string', description: 'シミュレーターID' } },
+			properties: { simulator_id: { type: 'string', description: 'Simulator ID' } },
 			required: ['simulator_id']
 		}
 	}
@@ -127,10 +127,10 @@ const createSimulatorInputSchema = z.object({
 
 export async function handleCreateSimulator(db: Db, input: unknown, env?: { DB?: D1Database; accountId?: string }) {
 	const data = createSimulatorInputSchema.parse(input);
-	if (!env?.DB) return { error: 'データベースに接続できません' };
+	if (!env?.DB) return { error: 'Could not connect to the database' };
 
 	const source = await getDataSource(db, data.data_source_id);
-	if (!source) return { error: 'データソースが見つかりません' };
+	if (!source) return { error: 'Data source not found' };
 
 	let model;
 	try {
@@ -185,7 +185,7 @@ const getSimulatorInputSchema = z.object({ simulator_id: z.string() });
 export async function handleGetSimulator(db: Db, input: unknown) {
 	const { simulator_id } = getSimulatorInputSchema.parse(input);
 	const row = await getSimulator(db, simulator_id);
-	if (!row) return { error: 'シミュレーターが見つかりません' };
+	if (!row) return { error: 'Simulator not found' };
 	return summarize(row);
 }
 
@@ -199,16 +199,16 @@ const updateSimulatorInputSchema = z.object({
 export async function handleUpdateSimulator(db: Db, input: unknown, env?: { DB?: D1Database }) {
 	const data = updateSimulatorInputSchema.parse(input);
 	const existing = await getSimulator(db, data.simulator_id);
-	if (!existing) return { error: 'シミュレーターが見つかりません' };
+	if (!existing) return { error: 'Simulator not found' };
 
 	const patch: Parameters<typeof updateSimulator>[2] = {};
 	if (data.name !== undefined) patch.name = data.name;
 	if (data.description !== undefined) patch.description = data.description;
 
 	if (data.feature_columns) {
-		if (!env?.DB) return { error: 'データベースに接続できません' };
+		if (!env?.DB) return { error: 'Could not connect to the database' };
 		const source = await getDataSource(db, existing.dataSourceId);
-		if (!source) return { error: 'データソースが見つかりません' };
+		if (!source) return { error: 'Data source not found' };
 
 		let model;
 		try {
@@ -236,11 +236,11 @@ const predictSimulatorInputSchema = z.object({
 export async function handlePredictSimulator(db: Db, input: unknown) {
 	const { simulator_id, variables } = predictSimulatorInputSchema.parse(input);
 	const row = await getSimulator(db, simulator_id);
-	if (!row) return { error: 'シミュレーターが見つかりません' };
+	if (!row) return { error: 'Simulator not found' };
 	const model = parseModel(row.modelJson);
 
 	const missing = model.featureColumns.filter((c) => !(c in variables));
-	if (missing.length > 0) return { error: `以下の説明変数の値が指定されていません: ${missing.join(', ')}` };
+	if (missing.length > 0) return { error: `The following explanatory variable values were not specified: ${missing.join(', ')}` };
 
 	let predictedValue: number;
 	try {
@@ -262,7 +262,7 @@ export async function handlePredictSimulator(db: Db, input: unknown) {
 		out_of_range_variables: outOfRangeVariables,
 		extrapolation_warning:
 			outOfRangeVariables.length > 0
-				? `${outOfRangeVariables.join(', ')} が実測データの範囲外です。予測の信頼性は低くなります`
+				? `${outOfRangeVariables.join(', ')} is outside the range of the observed data. The prediction's reliability is reduced`
 				: null
 	};
 }
@@ -272,10 +272,10 @@ const reviewSimulatorInputSchema = z.object({ simulator_id: z.string() });
 export async function handleReviewSimulator(db: Db, input: unknown, env?: { DB?: D1Database }) {
 	const { simulator_id } = reviewSimulatorInputSchema.parse(input);
 	const row = await getSimulator(db, simulator_id);
-	if (!row) return { error: 'シミュレーターが見つかりません' };
-	if (!env?.DB) return { error: 'データベースに接続できません' };
+	if (!row) return { error: 'Simulator not found' };
+	if (!env?.DB) return { error: 'Could not connect to the database' };
 	const source = await getDataSource(db, row.dataSourceId);
-	if (!source) return { error: 'データソースが見つかりません' };
+	if (!source) return { error: 'Data source not found' };
 
 	const model = parseModel(row.modelJson);
 	return reviewSimulator(env.DB, source.tableName, model);

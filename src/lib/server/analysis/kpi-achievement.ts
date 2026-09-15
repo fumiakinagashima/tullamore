@@ -11,22 +11,24 @@ export type KpiAchievement = {
 	periodType: string;
 	targetColumn: string;
 	targetValue: number;
-	/** 期間（date_column・period_from/to）で絞り込んだ実績から計算したか。falseは期間未設定の旧プランで、全期間の平均を使っている */
+	/** Whether this was computed from actuals scoped to a period (date_column and period_from/to). False means this is an older plan with no period set, using the all-time average instead */
 	periodScoped: boolean;
-	/** 対象期間に実績データが1件もまだ無い場合false（未来の期間を対象にしたKPIプラン作成直後等）。この場合current/achievementRateは0 */
+	/** False if there is no actuals data at all yet for the target period (e.g. right after creating a KPI plan targeting a future period). In that case current/achievementRate are 0 */
 	hasActuals: boolean;
-	/** 現在値（目的変数列の平均値。periodScopedがtrueなら期間内の行のみが対象。hasActualsがfalseなら0） */
+	/** Current value (the average of the outcome variable column; if periodScoped is true, scoped to rows within the period; 0 if hasActuals is false) */
 	current: number;
-	/** current / targetValue（100%を超えることもある。hasActualsがfalseなら0） */
+	/** current / targetValue (can exceed 100%; 0 if hasActuals is false) */
 	achievementRate: number;
 };
 
 /**
- * KPIプラン保存時点のスナップショット（targetValue）に対し、データソースの「今の」平均値を
- * 再取得して達成率を出す。プラン自体は作成時点のモデル・逆算結果のまま不変（達成率だけが都度変わる）。
- * モデルの学習は全期間のデータで行うが（関係性を学ぶには履歴データが必要）、達成率の現在値は
- * date_column・period_from/period_toが設定されていればその期間内の行だけに絞って計算する。
- * データソースが削除済み等で計算できない場合は null を返す（呼び出し側で1件ずつスキップできるように）。
+ * Re-fetches the data source's "current" average against the snapshot (targetValue) taken when the
+ * KPI plan was saved, to compute the achievement rate. The plan itself (the model and back-calculation
+ * results from creation time) stays unchanged — only the achievement rate is recomputed each time.
+ * Model training always uses the full history (learning the relationship requires historical data),
+ * but the achievement rate's current value is scoped to rows within date_column / period_from / period_to
+ * when those are set. Returns null if it can't be computed (e.g. the data source was deleted), so
+ * callers can skip individual plans one at a time.
  */
 export async function computeKpiAchievement(db: Db, d1: D1Database, plan: KpiPlan): Promise<KpiAchievement | null> {
 	try {

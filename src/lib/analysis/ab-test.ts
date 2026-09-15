@@ -30,8 +30,9 @@ export type ProportionTestResult = {
 };
 
 /**
- * Welchのt検定（等分散を仮定しない2標本の平均の差の検定）。A/Bテストで「施策Aと施策Bで
- * 平均値（購入額など連続値の指標）に有意差があるか」を調べるのに使う。
+ * Welch's t-test (a two-sample test of difference in means that does not assume equal variance).
+ * Used in A/B tests to check "is there a significant difference in the mean (e.g. a continuous
+ * metric like purchase amount) between treatment A and treatment B?"
  */
 export function welchTTest(a: GroupMeanStats, b: GroupMeanStats, alpha: number): TTestResult {
 	const seA2 = a.variance / a.n;
@@ -40,7 +41,7 @@ export function welchTTest(a: GroupMeanStats, b: GroupMeanStats, alpha: number):
 	const meanDiff = a.mean - b.mean;
 	const tStat = se === 0 ? 0 : meanDiff / se;
 
-	// Welch–Satterthwaite の自由度
+	// Welch–Satterthwaite degrees of freedom
 	const df =
 		seA2 === 0 && seB2 === 0
 			? a.n + b.n - 2
@@ -64,16 +65,18 @@ export function welchTTest(a: GroupMeanStats, b: GroupMeanStats, alpha: number):
 }
 
 /**
- * 2標本の比率のz検定（不等分散を仮定、Welchのt検定と対になる標準的な手法）。
- * 「施策Aと施策Bでコンバージョン率に有意差があるか」のような2値指標に使う。
- * z²はこの2群比較において2×2のカイ二乗検定の統計量と数学的に同値（p値も一致する）。
+ * Two-sample z-test for proportions (assumes unequal variance; the standard counterpart to
+ * Welch's t-test). Used for binary metrics such as "is there a significant difference in
+ * conversion rate between treatment A and treatment B?"
+ * In this two-group comparison, z² is mathematically equivalent to the 2x2 chi-squared test
+ * statistic (the p-values match as well).
  */
 export function twoProportionZTest(a: GroupProportionStats, b: GroupProportionStats, alpha: number): ProportionTestResult {
 	const propA = a.successes / a.n;
 	const propB = b.successes / b.n;
 	const diff = propA - propB;
 
-	// 不等分散（unpooled）の標準誤差を使う（信頼区間はこちらが標準的）
+	// Use the unpooled (unequal-variance) standard error (this is the standard choice for the confidence interval)
 	const seA2 = (propA * (1 - propA)) / a.n;
 	const seB2 = (propB * (1 - propB)) / b.n;
 	const se = Math.sqrt(seA2 + seB2);
@@ -98,27 +101,28 @@ export function twoProportionZTest(a: GroupProportionStats, b: GroupProportionSt
 }
 
 /**
- * 検定結果の妥当性を評価する。サンプル数の十分性（目安: グループごとに30件以上）に加え、
- * 比率の検定では正規近似が成り立つ条件（各グループで成功/失敗の期待件数がともに5件以上、
- * 二項分布を正規分布で近似する際の標準的な経験則）もチェックする。
+ * Assesses the validity of a test result. In addition to sample size adequacy (rule of thumb:
+ * at least 30 per group), for proportion tests it also checks the condition needed for the
+ * normal approximation to hold (expected count of successes/failures at least 5 in each group —
+ * the standard heuristic for approximating a binomial distribution with a normal distribution).
  */
 export function assessAbTestValidity(result: TTestResult | ProportionTestResult): ValidityAssessment {
 	const checks: ValidityCheckItem[] = [];
 	const minN = Math.min(result.groupA.n, result.groupB.n);
 
 	if (minN >= 30) {
-		checks.push({ label: 'サンプル数', level: 'good', comment: `両グループとも十分なサンプル数があります（最小n=${minN}）` });
+		checks.push({ label: 'Sample size', level: 'good', comment: `Both groups have a sufficient sample size (minimum n=${minN})` });
 	} else if (minN >= 10) {
 		checks.push({
-			label: 'サンプル数',
+			label: 'Sample size',
 			level: 'caution',
-			comment: `サンプル数がやや少なめです（最小n=${minN}）。目安はグループごとに30件以上です`
+			comment: `Sample size is somewhat small (minimum n=${minN}). The recommended minimum is 30 per group`
 		});
 	} else {
 		checks.push({
-			label: 'サンプル数',
+			label: 'Sample size',
 			level: 'poor',
-			comment: `サンプル数が不足しています（最小n=${minN}）。検定結果の信頼性が低い可能性があります（目安: グループごとに30件以上）`
+			comment: `Sample size is insufficient (minimum n=${minN}). The reliability of the test result may be low (recommended minimum: 30 per group)`
 		});
 	}
 
@@ -127,22 +131,22 @@ export function assessAbTestValidity(result: TTestResult | ProportionTestResult)
 		const bOk = result.groupB.n * result.propB >= 5 && result.groupB.n * (1 - result.propB) >= 5;
 		if (aOk && bOk) {
 			checks.push({
-				label: '正規近似の妥当性',
+				label: 'Validity of normal approximation',
 				level: 'good',
-				comment: '両グループとも正規近似が有効な条件（成功・失敗ともに期待件数5件以上）を満たしています'
+				comment: 'Both groups meet the condition for a valid normal approximation (expected count of successes and failures both at least 5)'
 			});
 		} else {
 			checks.push({
-				label: '正規近似の妥当性',
+				label: 'Validity of normal approximation',
 				level: 'caution',
-				comment: '成功または失敗の件数が少なく、正規近似に基づくp値の精度が低下している可能性があります'
+				comment: 'The count of successes or failures is low, which may reduce the accuracy of the p-value based on the normal approximation'
 			});
 		}
 	}
 
 	const { overallLevel, overallComment } = combineOverall(
 		checks,
-		'この検定は妥当性チェックの主要な観点で問題は見つかりませんでした'
+		'No issues were found on the main validity check criteria for this test'
 	);
 	return { overallLevel, overallComment, checks };
 }

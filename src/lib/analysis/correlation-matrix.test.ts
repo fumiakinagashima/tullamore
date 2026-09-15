@@ -6,7 +6,7 @@ function sum(values: number[]): number {
 	return values.reduce((a, b) => a + b, 0);
 }
 
-/** テスト用に、生データの列（columns[0]がtarget、それ以外がfeatures）からSufficientStatsを組み立てる */
+/** Builds a SufficientStats for testing from raw data columns (columns[0] is the target, the rest are features) */
 function buildStats(data: Record<string, number[]>, columns: string[]): SufficientStats {
 	const target = columns[0];
 	const features = columns.slice(1);
@@ -38,7 +38,7 @@ function buildStats(data: Record<string, number[]>, columns: string[]): Sufficie
 	};
 }
 
-/** リファレンス実装（生データから直接計算するピアソン相関係数） */
+/** Reference implementation (Pearson correlation coefficient computed directly from raw data) */
 function referencePearson(a: number[], b: number[]): number {
 	const n = a.length;
 	const meanA = sum(a) / n;

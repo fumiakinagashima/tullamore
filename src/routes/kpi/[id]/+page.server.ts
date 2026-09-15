@@ -8,7 +8,7 @@ import { computeKpiAchievement } from '$lib/server/analysis/kpi-achievement';
 export const load: PageServerLoad = async ({ params, platform }) => {
 	const db = createDb(platform!.env.DB);
 	const plan = await getKpiPlan(db, params.id);
-	if (!plan) throw error(404, 'KPIプランが見つかりません');
+	if (!plan) throw error(404, 'KPI plan not found');
 
 	const snapshot = parseKpiPlanSnapshot(plan.planJson);
 	const dataSource = await getDataSource(db, snapshot.dataSourceId);

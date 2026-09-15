@@ -13,11 +13,11 @@ import { errors } from '$lib/server/errors';
 
 const patchSchema = z.object({
 	columns: z.array(z.object({
-		// 既存列の場合は変更前のキー（リネーム検出用）。新規追加列は省略
+		// For existing columns, the key before the change (used to detect renames). Omitted for newly added columns
 		originalKey: z.string().optional(),
 		key: z.string().min(1),
 		label: z.string().min(1),
-		// 新規追加列のみ必須。既存列は元の型を維持するためここでは無視する
+		// Required only for newly added columns. Ignored here for existing columns since they keep their original type
 		type: z.enum(['text', 'number', 'date', 'boolean']).optional()
 	})).min(1)
 });
@@ -27,15 +27,15 @@ export const PATCH: RequestHandler = async ({ params, request, platform }) => {
 	const body = patchSchema.parse(await request.json());
 
 	if (body.columns.some((c) => !isValidColumnKey(c.key))) {
-		return errors.badRequest('カラムキーは英字で始まる英数字・アンダースコアのみ使用できます');
+		return errors.badRequest('Column keys may only contain alphanumeric characters and underscores, and must start with a letter');
 	}
 	if (new Set(body.columns.map((c) => c.key)).size !== body.columns.length) {
-		return errors.badRequest('カラムキーが重複しています');
+		return errors.badRequest('Column keys must be unique');
 	}
 
 	const db = createDb(platform.env.DB);
 	const source = await getDataSource(db, params.id);
-	if (!source) return errors.notFound('データソースが見つかりません');
+	if (!source) return errors.notFound('Data source not found');
 
 	const current = parseSchema(source.schemaJson);
 	const currentByKey = new Map(current.map((c) => [c.key, c]));
@@ -47,7 +47,7 @@ export const PATCH: RequestHandler = async ({ params, request, platform }) => {
 	for (const col of body.columns) {
 		if (col.originalKey) {
 			const original = currentByKey.get(col.originalKey);
-			if (!original) return errors.badRequest(`元のカラムが見つかりません: ${col.originalKey}`);
+			if (!original) return errors.badRequest(`Original column not found: ${col.originalKey}`);
 			survivingOriginalKeys.add(col.originalKey);
 			if (col.key !== col.originalKey) {
 				stmts.push(
@@ -56,7 +56,7 @@ export const PATCH: RequestHandler = async ({ params, request, platform }) => {
 					)
 				);
 			}
-			// 型は既存列では変更不可。常に元の型を引き継ぐ
+			// The type of an existing column cannot be changed. Always carry over the original type
 			finalColumns.push({ key: col.key, label: col.label, type: original.type });
 		} else {
 			const type = col.type ?? 'text';
@@ -77,7 +77,7 @@ export const PATCH: RequestHandler = async ({ params, request, platform }) => {
 	try {
 		if (stmts.length > 0) await platform.env.DB.batch(stmts);
 	} catch (e) {
-		return errors.badRequest(`スキーマ変更に失敗しました: ${e instanceof Error ? e.message : String(e)}`);
+		return errors.badRequest(`Failed to change schema: ${e instanceof Error ? e.message : String(e)}`);
 	}
 
 	await updateDataSource(db, params.id, { schemaJson: JSON.stringify(finalColumns) });

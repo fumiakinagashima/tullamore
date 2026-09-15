@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const db = createDb(platform.env.DB);
 	const source = await getDataSource(db, params.id);
-	if (!source) return errors.notFound('データソースが見つかりません');
+	if (!source) return errors.notFound('Data source not found');
 	return json(source);
 };
 
@@ -30,7 +30,7 @@ export const DELETE: RequestHandler = async ({ params, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const db = createDb(platform.env.DB);
 	const source = await getDataSource(db, params.id);
-	if (!source) return errors.notFound('データソースが見つかりません');
+	if (!source) return errors.notFound('Data source not found');
 
 	await platform.env.DB.prepare(`DROP TABLE IF EXISTS \`${source.tableName}\``).run();
 	await deleteDataSource(db, params.id);

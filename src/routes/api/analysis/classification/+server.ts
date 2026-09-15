@@ -20,7 +20,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 	const db = createDb(platform.env.DB);
 	const source = await getDataSource(db, body.dataSourceId);
-	if (!source) return errors.notFound('データソースが見つかりません');
+	if (!source) return errors.notFound('Data source not found');
 
 	try {
 		const { model, truncated } = await fitClassifierFromDataSource(platform.env.DB, source, {

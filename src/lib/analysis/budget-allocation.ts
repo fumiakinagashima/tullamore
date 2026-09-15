@@ -5,13 +5,13 @@ export type ChannelBounds = { min: number; max: number };
 
 export type ChannelAllocation = {
 	key: string;
-	/** 回帰係数（このチャネルへの1単位の予算増加あたりの目的変数の増分） */
+	/** Regression coefficient (increment in the outcome variable per one unit of budget added to this channel) */
 	coefficient: number;
-	/** 実測平均（現在の配分とみなす基準値） */
+	/** Observed average (used as the baseline for the current allocation) */
 	current: number;
-	/** 最適化後の配分額 */
+	/** Allocated amount after optimization */
 	allocated: number;
-	/** 係数がほぼ0で、配分を増やしても目的変数にほぼ影響しないチャネル */
+	/** A channel whose coefficient is nearly 0, so increasing its allocation has almost no effect on the outcome variable */
 	isNegligible: boolean;
 };
 
@@ -21,18 +21,22 @@ export type BudgetAllocationResult = {
 	predictedCurrent: number;
 	predictedOptimal: number;
 	uplift: number;
-	/** 予算総額がチャネルの上下限の合計に収まらない場合 true。この場合の配分は目安値 */
+	/** True if the total budget doesn't fit within the sum of the channels' lower/upper bounds. The allocation in this case is only a rough approximation */
 	infeasible: boolean;
 };
 
 /**
- * 線形回帰モデルの係数を「チャネルごとの限界効果（予算1単位あたりの目的変数の増分）」とみなし、
- * 予算総額を各チャネルの上下限（既定は実測レンジ）内に配分して目的変数を最大化する。
+ * Treats the linear regression model's coefficients as each channel's marginal effect (increment
+ * in the outcome variable per unit of budget), and allocates the total budget within each channel's
+ * lower/upper bounds (defaulting to its observed range) to maximize the outcome variable.
  *
- * 線形結合＋区間制約＋合計一定というLP（目的関数 Σ(coef_i * x_i) を Σx_i = budget, min_i <= x_i <= max_i で最大化）は、
- * まず全チャネルを下限まで割り当てた上で、残りの予算を係数の大きいチャネルから順に上限まで詰めていく貪欲法で
- * 厳密に最適解が求まる（各チャネルへの追加1円は常に係数分の一定の効果を生むため、効果が最大のチャネルから
- * 使い切るのが最適という単純な理由による。非線形の逓減効果を織り込みたい場合は将来的に手法を追加する）。
+ * This is an LP problem — linear objective, interval constraints, and a fixed total (maximize
+ * Σ(coef_i * x_i) subject to Σx_i = budget, min_i <= x_i <= max_i) — which can be solved exactly with
+ * a greedy approach: first assign every channel its lower bound, then fill the remaining budget into
+ * channels in descending order of coefficient, up to their upper bounds. This works because each
+ * additional unit of budget to a channel always produces the same constant effect (that channel's
+ * coefficient), so it's optimal to simply exhaust the highest-effect channel first. If diminishing
+ * (non-linear) returns need to be modeled, a different method should be added in the future.
  */
 export function optimizeBudgetAllocation(
 	model: LinearRegressionModel,
@@ -54,11 +58,11 @@ export function optimizeBudgetAllocation(
 	const byCoefDesc = [...channels].sort((a, b) => coefficientOf(b) - coefficientOf(a));
 
 	if (totalBudget < sumMin) {
-		// 下限の合計すら賄えない場合、下限を予算に収まるよう按分する（あくまで目安表示のため）
+		// If the budget doesn't even cover the sum of the lower bounds, scale the lower bounds down proportionally to fit (for display purposes only)
 		const scale = sumMin > 0 ? totalBudget / sumMin : 0;
 		for (const key of channels) allocated[key] = bounds[key].min * scale;
 	} else if (totalBudget > sumMax) {
-		// 上限の合計を超える場合、全チャネルを上限まで割り当て、余りは最も効果の大きいチャネルに積み増す
+		// If the budget exceeds the sum of the upper bounds, assign every channel its upper bound and pile the remainder onto the highest-effect channel
 		for (const key of channels) allocated[key] = bounds[key].max;
 		const overflow = totalBudget - sumMax;
 		if (byCoefDesc.length > 0) allocated[byCoefDesc[0]] += overflow;
@@ -106,7 +110,7 @@ export function optimizeBudgetAllocation(
 	};
 }
 
-/** 説明変数のレンジ（featureRanges）から、既定の上下限（下限は0未満にならないようクランプ）を組み立てる */
+/** Build the default lower/upper bounds from the explanatory variable's range (featureRanges), clamping the lower bound to be no less than 0 */
 export function defaultChannelBounds(model: LinearRegressionModel, key: string): ChannelBounds {
 	const range = model.featureRanges[key];
 	return { min: Math.max(0, range.min), max: Math.max(range.max, 0) };

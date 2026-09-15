@@ -15,8 +15,8 @@
 		sqlError = null;
 		sqlResult = null;
 
-		// /tables はSQLを実行せず、data_sources（ds_*テーブルのみ）から一覧を組み立てるメタコマンド。
-		// sqlite_master 等のカタログテーブルはSQLガードで塞いでいるため、テーブル一覧はこちらで代替する。
+		// /tables is a meta-command that doesn't execute SQL — it builds the list from data_sources (ds_* tables only).
+		// Catalog tables like sqlite_master are blocked by the SQL guard, so this serves as the substitute for a table list.
 		if (/^\/tables$/i.test(trimmed)) {
 			sqlResult = {
 				columns: ['table_name', 'name', 'description', 'columns', 'row_count'],
@@ -40,7 +40,7 @@
 			});
 			const json = (await res.json()) as { columns?: string[]; rows?: Record<string, unknown>[]; message?: string };
 			if (!res.ok) {
-				sqlError = json.message ?? '実行に失敗しました';
+				sqlError = json.message ?? 'Execution failed';
 				return;
 			}
 			sqlResult = { columns: json.columns ?? [], rows: json.rows ?? [] };
@@ -60,17 +60,17 @@
 
 <div class="page">
 	<div class="page-header">
-		<h1 class="page-title">SQLクエリ</h1>
+		<h1 class="page-title">SQL Query</h1>
 		<div class="run-row">
 			<button class="btn-primary" onclick={runSql} disabled={sqlRunning || !sqlInput.trim()}>
-				実行<span class="short-cut">⌘/Ctrl + Enter</span>
+				Run<span class="short-cut">⌘/Ctrl + Enter</span>
 			</button>
 		</div>
 	</div>
 
 	{#if data.sources.length > 0}
 		<div class="tables-ref">
-			<span class="tables-ref-label">テーブル一覧コマンド:</span>
+			<span class="tables-ref-label">Table list command:</span>
 			<span class="table-chip mono">/tables</span>
 		</div>
 	{/if}
@@ -90,9 +90,9 @@
 
 	{#if sqlResult}
 		<div class="result-wrap">
-			<p class="result-count">{sqlResult.rows.length}件</p>
+			<p class="result-count">{sqlResult.rows.length} rows</p>
 			{#if sqlResult.rows.length === 0}
-				<p class="empty-text">結果がありません</p>
+				<p class="empty-text">No results</p>
 			{:else}
 				<div class="table-wrap">
 					<table class="data-table">

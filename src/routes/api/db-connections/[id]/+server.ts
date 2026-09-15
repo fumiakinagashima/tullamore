@@ -9,8 +9,9 @@ import { errors } from '$lib/server/errors';
 const patchSchema = z.object({
 	name: z.string().min(1).optional(),
 	description: z.string().optional(),
-	// tcp_socket接続の編集用。part分更新（例: パスワードだけ変更）を想定し全フィールド任意にする。
-	// マスク値（********）のまま送られてきたフィールドは mergeAuthConfig で既存値を保持する
+	// For editing a tcp_socket connection. All fields are optional to support partial updates
+	// (e.g. changing only the password). Fields still sent as the mask value (********) keep
+	// their existing value via mergeAuthConfig
 	config: z.record(z.string(), z.unknown()).optional()
 });
 
@@ -44,8 +45,8 @@ export const DELETE: RequestHandler = async ({ params, platform }) => {
 	const db = createDb(platform.env.DB);
 	const existing = await getDbConnection(db, params.id);
 	if (!existing) return errors.notFound();
-	// db_connections 行のみ削除する。取り込み済みの data_sources / external_table_syncs は
-	// CSVインポートと同様「取り込んだデータは連携元が消えても残る」設計のため残す
+	// Only delete the db_connections row. Ingested data_sources / external_table_syncs are kept,
+	// just like with CSV imports — the design intent is that ingested data survives even if its source is removed
 	await deleteDbConnection(db, params.id);
 	return json({ deleted: true });
 };

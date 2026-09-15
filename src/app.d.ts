@@ -29,12 +29,13 @@ declare global {
 				SMTP_SECURE?: string;
 				SMTP_USERNAME?: string;
 				SMTP_PASSWORD?: string;
-				// 外部DB接続（Hyperdrive）。1接続 = 1バインディング（wrangler.tomlに事前登録・再デプロイが必要）。
-				// 複数接続に対応するため、`HYPERDRIVE_`で始まる名前のバインディングを実行時にスキャンして使う
-				// （src/lib/server/db-connections/hyperdrive.ts の listAvailableHyperdriveBindings 参照）
+				// External DB connections (Hyperdrive). 1 connection = 1 binding (must be pre-registered in
+				// wrangler.toml and requires a redeploy). To support multiple connections, bindings whose
+				// name starts with `HYPERDRIVE_` are scanned at runtime and used
+				// (see listAvailableHyperdriveBindings in src/lib/server/db-connections/hyperdrive.ts)
 				[key: `HYPERDRIVE_${string}`]: Hyperdrive | undefined;
-				// 外部DB接続の大規模テーブル継続取り込み用Queue（worker.tsのqueue()ハンドラが消費する。
-				// src/lib/server/db-connections/queue-consumer.ts 参照）
+				// Queue for large-table continuation ingest of external DB connections (consumed by worker.ts's
+				// queue() handler; see src/lib/server/db-connections/queue-consumer.ts)
 				INGEST_QUEUE?: Queue<import('$lib/server/db-connections/queue-consumer').IngestQueueMessage>;
 			};
 		}

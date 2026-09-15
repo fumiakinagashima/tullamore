@@ -5,38 +5,43 @@ compatibility_flags = ["nodejs_compat"]
 main = "worker.ts"
 assets = { directory = ".svelte-kit/cloudflare/", binding = "ASSETS" }
 
+# Replace these with your own D1 database, created via `wrangler d1 create tullamore`.
 [[d1_databases]]
 binding = "DB"
 database_name = "tullamore"
-database_id = "c0c65eba-4eaa-464c-9294-40e25e63d5dc"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 migrations_dir = "drizzle"
 
+# Replace with your own KV namespace, created via `wrangler kv namespace create KV`.
 [[kv_namespaces]]
 binding = "KV"
-id = "fabfbf60a3a444a89992788d512910a7"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
 
+# Replace with your own R2 bucket, created via `wrangler r2 bucket create tullamore`.
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "tullamore"
 
-# 外部DB接続（データ連携、/connections）。PostgreSQL/MySQL両対応（バインディングの形
-# （connectionStringの有無）からエンジンを自動判別する。src/lib/server/db-connections/hyperdrive.ts 参照）。
-# Hyperdriveはバインディングが静的なため、接続を追加するには実際に
-# `wrangler hyperdrive create <name> --connection-string="postgres://..."`（またはmysql://）を実行してIDを発行し、
-# ここにバインディングを追加してデプロイし直す必要がある（docs/DATA_CONNECTIONS.md 参照）。
-# バインディング名は必ず `HYPERDRIVE_` で始めること（実行時にこのプレフィックスでスキャンして一覧化している）。
+# External DB connections (data ingestion, /connections). Supports both PostgreSQL and MySQL
+# (the engine is auto-detected from the binding shape — presence of connectionString — see
+# src/lib/server/db-connections/hyperdrive.ts). Hyperdrive bindings are static, so adding a
+# connection requires actually running
+# `wrangler hyperdrive create <name> --connection-string="postgres://..."` (or mysql://) to
+# issue an ID, then adding the binding here and redeploying (see docs/DATA_CONNECTIONS.md).
+# Binding names must always start with `HYPERDRIVE_` (the app scans for this prefix at runtime
+# to build the list).
 #
-# ローカル開発用（docker-compose.yml のPostgres/MySQLサンプル接続）の [[hyperdrive]] ブロックはここには置かない。
-# `id` にプレースホルダー文字列を使うと `wrangler dev`/`bun dev`（localConnectionString経由）は動くが、
-# `wrangler deploy` は `id` を実在のHyperdrive Config UUIDとして検証するため
-# "Invalid hyperdrive database ID '...'. It must be a valid UUID. [code: 10156]" で本番デプロイが失敗する
-# （2026-07-06に実際にこれで初回デプロイが失敗した）。ローカルで docker-compose のサンプルDBを試す場合は
-# `docs/DATA_CONNECTIONS.md`「ローカル開発」記載のブロックを一時的にこのファイルに追加し、コミットしない。
+# Don't put the local-dev [[hyperdrive]] block (for the Postgres/MySQL sample connections in
+# docker-compose.yml) here. Using a placeholder string for `id` works for `wrangler dev`/`bun dev`
+# (via localConnectionString), but `wrangler deploy` validates `id` as a real Hyperdrive Config
+# UUID, so production deploys fail with "Invalid hyperdrive database ID '...'. It must be a valid
+# UUID. [code: 10156]". To try the docker-compose sample DBs locally, temporarily add the block
+# described under "Local development" in docs/DATA_CONNECTIONS.md to this file, and don't commit it.
 
-# 外部DB接続（データ連携）の大規模テーブル継続取り込み用Queue。SYNC_ROW_BUDGET（ingest.ts）を超えた分を
-# バックグラウンドで処理する（src/lib/server/db-connections/queue-consumer.ts、docs/DATA_CONNECTIONS.md 参照）。
-# 本番へデプロイする前に `wrangler queues create tullamore-ingest` を実行しておくこと
-# （`wrangler dev` のローカル実行時はMiniflareがメモリ内でシミュレートするため事前作成不要）。
+# Queue for background ingestion of large external tables (data connections). Handles rows beyond
+# SYNC_ROW_BUDGET (ingest.ts) asynchronously (see src/lib/server/db-connections/queue-consumer.ts
+# and docs/DATA_CONNECTIONS.md). Run `wrangler queues create tullamore-ingest` before deploying to
+# production (not needed for local `wrangler dev`, since Miniflare simulates it in memory).
 [[queues.producers]]
 binding = "INGEST_QUEUE"
 queue = "tullamore-ingest"

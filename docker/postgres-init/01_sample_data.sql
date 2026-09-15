@@ -1,5 +1,5 @@
--- ローカル開発用のサンプルテーブル。/settings/data-connections の取り込みフローを
--- 実際のPostgresに対してエンドツーエンドで確認するためのもの（本番データではない）。
+-- Sample table for local development. Used to verify the /settings/data-connections
+-- ingestion flow end-to-end against a real Postgres instance (not production data).
 CREATE TABLE IF NOT EXISTS external_sales (
 	id SERIAL PRIMARY KEY,
 	sale_month DATE NOT NULL,

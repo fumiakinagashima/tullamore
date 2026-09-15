@@ -22,7 +22,7 @@
 <div class="chat" bind:this={s.chatEl}>
 	<div class="greeting" class:hidden={s.hasStarted} aria-hidden={s.hasStarted}>
 		<h1>TULLAMORE</h1>
-		<p>データについて質問してください</p>
+		<p>Ask a question about your data</p>
 	</div>
 
 	<div class="messages" class:visible={s.hasStarted} bind:this={s.listEl}>
@@ -115,7 +115,7 @@
 					class="send-btn"
 					onclick={s.handleSubmit}
 					disabled={s.loading || !s.input.trim()}
-					aria-label="送信"
+					aria-label="Send"
 				>
 					<ArrowUp size={16} />
 				</button>
@@ -261,8 +261,9 @@
 	.input-wrap {
 		position: absolute;
 		left: 50%;
-		/* 未開始時の初期配置はCSSで中央寄せ（JS不要・SSR時点で正位置）。
-		   開始後はJS(repositionInput)が top(px)/translateX(-50%) を設定して下部へスライドする。 */
+		/* Before the chat starts, the initial position is centered via CSS (no JS needed, correct
+		   position already at SSR time). After it starts, JS (repositionInput) sets top(px)/translateX(-50%)
+		   to slide it down toward the bottom. */
 		top: 50%;
 		transform: translate(-50%, -50%);
 		width: min(var(--chat-width), calc(100% - 48px));

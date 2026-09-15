@@ -9,7 +9,7 @@
 
 	let { bars, base, title }: Props = $props();
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
@@ -37,7 +37,7 @@
 <figure class="chart">
 	{#if title}<figcaption>{title}</figcaption>{/if}
 	<svg viewBox="0 0 {W} {H}" role="img" aria-label={title}>
-		<!-- ベースライン（他の変数を平均値に固定した時の予測値） -->
+		<!-- Baseline (predicted value when all other variables are fixed at their mean) -->
 		<line x1={baseX} y1={PT - 2} x2={baseX} y2={PT + bars.length * ROW_H} stroke="var(--color-text-muted)" stroke-width="1" stroke-dasharray="3 3" />
 
 		{#each bars as b, i}
@@ -47,7 +47,7 @@
 			{@const x2 = xOf(b.high)}
 			<text x={PL - 10} y={y + barH / 2 + 4} text-anchor="end" fill="var(--color-text)" font-size="8">{b.label}</text>
 			<rect x={Math.min(x1, x2)} y={y} width={Math.max(Math.abs(x2 - x1), 1)} height={barH} fill="var(--chart-1)" opacity="0.85" rx="3" />
-			<text x={Math.max(x1, x2) + 8} y={y + barH / 2 + 4} fill="var(--color-text-muted)" font-size="8">{fmt(b.low)} 〜 {fmt(b.high)}</text>
+			<text x={Math.max(x1, x2) + 8} y={y + barH / 2 + 4} fill="var(--color-text-muted)" font-size="8">{fmt(b.low)} – {fmt(b.high)}</text>
 		{/each}
 	</svg>
 </figure>

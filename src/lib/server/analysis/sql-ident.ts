@@ -1,4 +1,4 @@
-/** SQL識別子として埋め込む前にバッククォート自体をエスケープする（SQLite標準の `` `` `` 記法） */
+/** Escapes backticks before embedding a name as a SQL identifier (SQLite's standard `` `` `` notation) */
 export function quoteIdent(name: string): string {
 	return `\`${name.replace(/`/g, '``')}\``;
 }

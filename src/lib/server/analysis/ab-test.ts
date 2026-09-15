@@ -19,14 +19,14 @@ export async function runAbTestFromDataSource(
 	const columns = parseSchema(dataSource.schemaJson);
 
 	if (spec.groupColumn === spec.metricColumn) {
-		throw new Error('グループ列と指標列に同じ列を指定することはできません');
+		throw new Error('The group column and metric column cannot be the same column');
 	}
 	if (!columns.some((c) => c.key === spec.groupColumn)) {
-		throw new Error(`グループ列 "${spec.groupColumn}" がデータソースに存在しません`);
+		throw new Error(`Group column "${spec.groupColumn}" does not exist in the data source`);
 	}
 	const usableMetric = new Set(continuousColumns(columns).map((c) => c.key));
 	if (!usableMetric.has(spec.metricColumn)) {
-		throw new Error(`指標列 "${spec.metricColumn}" は数値列ではないか、データソースに存在しません`);
+		throw new Error(`Metric column "${spec.metricColumn}" is not a numeric column, or does not exist in the data source`);
 	}
 
 	if (spec.testType === 'proportion') {

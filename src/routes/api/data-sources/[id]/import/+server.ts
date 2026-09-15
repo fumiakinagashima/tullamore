@@ -34,13 +34,13 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
 
 	const formData = await request.formData();
 	const file = formData.get('file') as File | null;
-	if (!file) return errors.badRequest('ファイルが指定されていません');
+	if (!file) return errors.badRequest('No file was provided');
 	const replace = formData.get('replace') === 'true';
 
 	const text = await file.text();
 	const { rows } = parseCSV(text);
 	const columns = parseSchema(source.schemaJson);
-	if (columns.length === 0) return errors.badRequest('スキーマが設定されていません');
+	if (columns.length === 0) return errors.badRequest('No schema is configured');
 
 	const colKeys = columns.map((c) => c.key);
 	const placeholders = colKeys.map(() => '?').join(', ');
@@ -62,7 +62,7 @@ export const POST: RequestHandler = async ({ params, request, platform }) => {
 			});
 			return platform.env!.DB!.prepare(insertSql).bind(...values);
 		});
-		// 全件置き換えの削除は、最初のバッチに含めて一緒にコミットする（db.batch()は原子的に実行される）
+		// The delete for a full replace is bundled into the first batch and committed together (db.batch() runs atomically)
 		await platform.env.DB.batch(replace && i === 0 ? [deleteStmt, ...stmts] : stmts);
 		inserted += batch.length;
 	}

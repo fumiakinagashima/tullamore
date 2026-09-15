@@ -48,9 +48,9 @@
 </script>
 
 <div class="page">
-	<h1>設定</h1>
+	<h1>Settings</h1>
 	<nav class="subnav">
-		<a href="/settings">一般</a>
+		<a href="/settings">General</a>
 		{#if data.account.permission === 'admin'}
 			<a href="/settings/integrations">{m.integrations()}</a>
 			<a href="/settings/email">{m.email_settings()}</a>

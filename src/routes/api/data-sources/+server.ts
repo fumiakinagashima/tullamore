@@ -26,10 +26,10 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	if (!platform?.env?.DB) return errors.serviceUnavailable();
 	const body = createSchema.parse(await request.json());
 	if (body.columns.some((c) => !isValidColumnKey(c.key))) {
-		return errors.badRequest('カラムキーは英字で始まる英数字・アンダースコアのみ使用できます');
+		return errors.badRequest('Column keys may only contain alphanumeric characters and underscores, and must start with a letter');
 	}
 	if (new Set(body.columns.map((c) => c.key)).size !== body.columns.length) {
-		return errors.badRequest('カラムキーが重複しています');
+		return errors.badRequest('Duplicate column keys');
 	}
 	const db = createDb(platform.env.DB);
 	const id = crypto.randomUUID();

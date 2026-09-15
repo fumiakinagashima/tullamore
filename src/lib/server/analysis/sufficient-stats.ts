@@ -2,9 +2,10 @@ import type { SufficientStats } from '$lib/analysis/types';
 import { quoteIdent } from './sql-ident';
 
 /**
- * 回帰分析に必要なサマリー統計量（Σx, Σy, Σxᵢxⱼ 等）を1本のSQL集計クエリでD1から取得する。
- * 行データを全件Workersに読み込まないため、元データの件数に対して計算コストがスケールしない
- * （詳細は docs/ROADMAP.md の「既存のSQL集計・可視化とシミュレーターの処理フロー・CPU時間について」参照）。
+ * Fetches the summary statistics needed for regression analysis (Σx, Σy, Σxᵢxⱼ, etc.) from D1 with a
+ * single SQL aggregate query. Since this avoids loading all row data into the Worker, the compute
+ * cost doesn't scale with the size of the source data (see "About the existing SQL aggregation/
+ * visualization and simulator processing flow and CPU time" in docs/ROADMAP.md for details).
  */
 export async function computeSufficientStats(
 	db: D1Database,
@@ -32,7 +33,7 @@ export async function computeSufficientStats(
 
 	const row = await db.prepare(sql).first<Record<string, number | null>>();
 	if (!row || !row.n) {
-		throw new Error('分析対象の欠損値のない行が見つかりませんでした');
+		throw new Error('No rows without missing values were found for the analysis target');
 	}
 
 	const n = Number(row.n);

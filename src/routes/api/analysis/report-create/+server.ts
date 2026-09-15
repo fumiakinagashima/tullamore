@@ -9,30 +9,30 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 	const body = (await request.json()) as { analyses?: AnalysisReportInput[] };
 	if (!body.analyses || body.analyses.length === 0) {
-		return errors.badRequest('analyses が必要です');
+		return errors.badRequest('analyses is required');
 	}
 
 	if (mockMode) {
 		const report = [
-			'# レポート（モック）',
+			'# Report (mock)',
 			'',
-			'## 概要',
-			'モックモードのため簡易レポートを返しています。',
+			'## Overview',
+			'Returning a simplified report because mock mode is enabled.',
 			'',
-			'## 主な発見',
-			'- (モック)',
+			'## Key findings',
+			'- (mock)',
 			'',
-			'## 統計的な妥当性',
-			'- (モック)',
+			'## Statistical validity',
+			'- (mock)',
 			'',
-			'## 推奨される次のアクション',
-			'- (モック)'
+			'## Recommended next actions',
+			'- (mock)'
 		].join('\n');
 		return json({ report });
 	}
 
 	const apiKey = platform?.env?.ANTHROPIC_API_KEY ?? env.ANTHROPIC_API_KEY ?? '';
-	if (!apiKey) return errors.internal(new Error('ANTHROPIC_API_KEY が設定されていません'));
+	if (!apiKey) return errors.internal(new Error('ANTHROPIC_API_KEY is not set'));
 
 	try {
 		const report = await generateReport(apiKey, body.analyses);

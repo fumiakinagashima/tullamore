@@ -6,22 +6,22 @@ import type { DataSource } from '../db/schema';
 import { computeSufficientStats } from './sufficient-stats';
 
 /**
- * データソース＋分析仕様（目的変数・説明変数・手法）からモデルを学習する。
- * MCPツール（Phase 3の create_simulator 等）から呼び出すエントリポイント。
+ * Trains a model from a data source and an analysis spec (target variable, feature variables, method).
+ * This is the entry point called from MCP tools (e.g., Phase 3's create_simulator).
  */
 export async function fitModelFromDataSource(db: D1Database, dataSource: DataSource, spec: ModelSpec): Promise<Model> {
 	const columns = parseSchema(dataSource.schemaJson);
 	const usable = new Set(continuousColumns(columns).map((c) => c.key));
 
 	if (!usable.has(spec.targetColumn)) {
-		throw new Error(`目的変数 "${spec.targetColumn}" は数値列ではないか、データソースに存在しません`);
+		throw new Error(`Target variable "${spec.targetColumn}" is not a numeric column or does not exist in the data source`);
 	}
 	const invalidFeatures = spec.featureColumns.filter((c) => !usable.has(c));
 	if (invalidFeatures.length > 0) {
-		throw new Error(`説明変数に数値列でないものが含まれています: ${invalidFeatures.join(', ')}`);
+		throw new Error(`The feature variables include columns that are not numeric: ${invalidFeatures.join(', ')}`);
 	}
 	if (spec.featureColumns.includes(spec.targetColumn)) {
-		throw new Error('目的変数と説明変数に同じ列を指定することはできません');
+		throw new Error('The target variable and a feature variable cannot be the same column');
 	}
 
 	const stats = await computeSufficientStats(db, dataSource.tableName, spec.targetColumn, spec.featureColumns);

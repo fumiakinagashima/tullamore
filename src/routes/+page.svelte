@@ -8,7 +8,7 @@
 
 <div class="main">
 	<section class="kpi">
-		<p class="section-title">KPI達成状況</p>
+		<p class="section-title">KPI Achievement Status</p>
 		{#if data.kpiAchievements.length > 0}
 			<div class="kpi-gauges">
 				{#each data.kpiAchievements as a (a.planId)}
@@ -16,16 +16,16 @@
 						<GaugeChart title={a.name} value={a.current} target={a.targetValue} size={150} />
 						<span class="kpi-gauge-period">{a.periodLabel}</span>
 						{#if !a.hasActuals}
-							<span class="kpi-gauge-note">この期間の実績データはまだありません</span>
+							<span class="kpi-gauge-note">No actual data is available for this period yet</span>
 						{:else if !a.periodScoped}
-							<span class="kpi-gauge-note">期間未設定のため全期間のデータで計算</span>
+							<span class="kpi-gauge-note">No period set, so calculated using data from the entire period</span>
 						{/if}
 					</a>
 				{/each}
 			</div>
 		{:else}
 			<p class="kpi-empty">
-				KPIプランを作成すると、目的変数の実績と目標の達成率がここに表示されます。<a href="/kpi/new">KPIを作成する</a>
+				Once you create a KPI plan, the objective variable's actuals and target achievement rate will appear here. <a href="/kpi/new">Create a KPI</a>
 			</p>
 		{/if}
 	</section>

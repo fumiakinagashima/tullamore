@@ -11,10 +11,10 @@
 
 <div class="page">
 	<div class="page-header">
-		<h1 class="page-title">データベース管理</h1>
+		<h1 class="page-title">Database Management</h1>
 		<a href="/database/new" class="btn-primary">
 			<Plus size={14} />
-			新規作成
+			New
 		</a>
 	</div>
 
@@ -22,9 +22,9 @@
 		<table class="data-table">
 			<thead>
 				<tr>
-					<th>物理名</th>
-					<th>テーブル名</th>
-					<th>説明</th>
+					<th>Physical Name</th>
+					<th>Table Name</th>
+					<th>Description</th>
 				</tr>
 			</thead>
 			<tbody>

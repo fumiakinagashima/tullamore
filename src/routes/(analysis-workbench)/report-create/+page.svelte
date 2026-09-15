@@ -22,30 +22,30 @@
 	type MethodKey = 'correlation' | 'regression' | 'descriptive-stats' | 'classification' | 'ab-test';
 
 	const METHOD_OPTIONS: { key: MethodKey; label: string }[] = [
-		{ key: 'correlation', label: '相関分析' },
-		{ key: 'regression', label: '回帰分析' },
-		{ key: 'descriptive-stats', label: '記述統計' },
-		{ key: 'classification', label: 'ロジスティック回帰（分類）' },
-		{ key: 'ab-test', label: 'A/Bテスト・有意差検定' }
+		{ key: 'correlation', label: 'Correlation Analysis' },
+		{ key: 'regression', label: 'Regression Analysis' },
+		{ key: 'descriptive-stats', label: 'Descriptive Statistics' },
+		{ key: 'classification', label: 'Logistic Regression (Classification)' },
+		{ key: 'ab-test', label: 'A/B Test (Significance Test)' }
 	];
 
 	const TEST_TYPE_OPTIONS = [
-		{ value: 'mean', label: '平均の差を検定（t検定・連続値の指標）' },
-		{ value: 'proportion', label: '比率の差を検定（z検定・0/1の指標）' }
+		{ value: 'mean', label: 'Test difference in means (t-test, continuous metric)' },
+		{ value: 'proportion', label: 'Test difference in proportions (z-test, 0/1 metric)' }
 	];
 
 	let dataSourceId = $state('');
 	let methods = $state<Set<MethodKey>>(new Set());
 
-	// 相関分析・回帰分析・記述統計は同じ「目的変数+説明変数」の設定形状を共有する
+	// Correlation, regression, and descriptive stats share the same "target variable + feature variables" configuration shape
 	let targetColumn = $state('');
 	let featureColumns = $state<string[]>([]);
 
-	// ロジスティック回帰は目的変数が2値である必要があるため、独立した変数として扱う
+	// Logistic regression requires the target variable to be binary, so it is handled as a separate set of variables
 	let classifTargetColumn = $state('');
 	let classifFeatureColumns = $state<string[]>([]);
 
-	// A/Bテストはグループ列・指標列という別形状の設定を持つ
+	// A/B testing has a different configuration shape: group column + metric column
 	let groupColumn = $state('');
 	let metricColumn = $state('');
 	let testType = $state<'mean' | 'proportion'>('mean');
@@ -77,7 +77,7 @@
 	const featureCandidates = $derived(numericColumns.filter((c) => c.key !== targetColumn));
 	const sourceOptions = $derived(data.sources.map((s) => ({ value: s.id, label: s.name })));
 
-	// 分類の目的変数は2値であれば数値・カテゴリどちらの列でもよい（id/date列は除外）。classification/+page.svelte と同じ判定
+	// The classification target variable can be either numeric or categorical as long as it is binary (id/date columns are excluded). Same logic as classification/+page.svelte
 	const classifTargetCandidates = $derived(
 		selectedSource?.columns.filter((c) => {
 			const t = inferAnalysisColumnType(c);
@@ -133,8 +133,8 @@
 
 	const canRun = $derived(!!dataSourceId && methods.size > 0);
 
-	// このページの「レポートを作成」はAIアシスタント欄の汎用ボタンではなく画面上の専用ボタンを使う
-	// （選択手法の組み合わせを都度束ねるため resultSummary は単一分析用のレポート生成に流用しない。null のままにしてボタンを非表示にする）
+	// The "Create Report" action on this page uses a dedicated on-screen button rather than the AI assistant panel's generic button
+	// (since the combination of selected methods is bundled together each time, resultSummary is not reused for single-analysis report generation; keep it null to hide the button)
 	$effect(() => {
 		bridge.analysisType = 'report-create';
 		bridge.config = {
@@ -177,7 +177,7 @@
 	async function postJson(url: string, body: unknown): Promise<Record<string, unknown>> {
 		const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 		const json = (await res.json()) as Record<string, unknown>;
-		if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'リクエストに失敗しました');
+		if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Request failed');
 		return json;
 	}
 
@@ -209,7 +209,7 @@
 							validity,
 							entry: {
 								analysisType: 'correlation',
-								label: '相関分析',
+								label: 'Correlation Analysis',
 								config: { data_source_id: dataSourceId, feature_columns: [targetColumn, ...featureColumns] },
 								resultSummary: {
 									columns: matrix.columns,
@@ -238,7 +238,7 @@
 							validity,
 							entry: {
 								analysisType: 'regression',
-								label: '回帰分析',
+								label: 'Regression Analysis',
 								config: { data_source_id: dataSourceId, target_column: targetColumn, feature_columns: featureColumns },
 								resultSummary: {
 									r2: model.metrics.r2,
@@ -266,7 +266,7 @@
 							stats,
 							entry: {
 								analysisType: 'descriptive-stats',
-								label: '記述統計',
+								label: 'Descriptive Statistics',
 								config: { data_source_id: dataSourceId, feature_columns: [targetColumn] },
 								resultSummary: {
 									target_column: targetColumn,
@@ -302,7 +302,7 @@
 							validity,
 							entry: {
 								analysisType: 'classification',
-								label: 'ロジスティック回帰・分類',
+								label: 'Logistic Regression / Classification',
 								config: { data_source_id: dataSourceId, target_column: classifTargetColumn, feature_columns: classifFeatureColumns },
 								resultSummary: {
 									positive_class: model.positiveClassLabel,
@@ -334,7 +334,7 @@
 							validity,
 							entry: {
 								analysisType: 'ab-test',
-								label: 'A/Bテスト・有意差検定',
+								label: 'A/B Test (Significance Test)',
 								config: { data_source_id: dataSourceId, group_column: groupColumn, target_column: metricColumn, test_type: testType },
 								resultSummary: {
 									test_type: result.kind,
@@ -358,7 +358,7 @@
 			}
 		});
 
-		// カードは METHOD_OPTIONS の並び順に揃える（Promise.allSettled の完了順ではなく）
+		// Sort cards to match the order of METHOD_OPTIONS (not the completion order of Promise.allSettled)
 		const order = METHOD_OPTIONS.map((m) => m.key);
 		cards.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
 
@@ -406,7 +406,7 @@
 		}
 	}
 
-	const numberFmt = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 });
+	const numberFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
 	function fmt(n: number): string {
 		return numberFmt.format(n);
 	}
@@ -419,8 +419,8 @@
 
 <div class="module-page">
 	<div class="page-header">
-		<h1 class="page-title">レポート作成</h1>
-		<p class="page-sub">選んだ分析手法を同じデータソースに対して実行し、結果を踏まえたレポートを作成します（1手法だけでも、複数を組み合わせても使えます）</p>
+		<h1 class="page-title">Create Report</h1>
+		<p class="page-sub">Runs the selected analysis methods against the same data source and creates a report based on the results (works with a single method or a combination of several)</p>
 	</div>
 
 	<section class="results-panel">
@@ -434,7 +434,7 @@
 							{#if strongestPairOf(card.matrix)}
 								{@const pair = strongestPairOf(card.matrix)}
 								{#if pair}
-									<p class="mini-note">最も相関が強いのは「{labelOf(pair.a)}」と「{labelOf(pair.b)}」（r = {fmt(pair.value)}）</p>
+									<p class="mini-note">The strongest correlation is between "{labelOf(pair.a)}" and "{labelOf(pair.b)}" (r = {fmt(pair.value)})</p>
 								{/if}
 							{/if}
 							<CorrelationHeatmap columns={heatmapColumnsOf(card.matrix)} matrix={card.matrix.matrix} />
@@ -442,7 +442,7 @@
 							<ValidityCard validity={card.validity} />
 							<div class="metrics-row">
 								<div class="metric"><span class="metric-label">R²</span><span class="metric-value highlight">{fmt(card.model.metrics.r2)}</span></div>
-								<div class="metric"><span class="metric-label">サンプル数</span><span class="metric-value">{card.model.metrics.sampleSize}</span></div>
+								<div class="metric"><span class="metric-label">Sample Size</span><span class="metric-value">{card.model.metrics.sampleSize}</span></div>
 							</div>
 							<ul class="coef-list">
 								{#each card.model.featureColumns as key, i (key)}
@@ -452,26 +452,26 @@
 						{:else if card.key === 'descriptive-stats'}
 							<ValidityCard validity={card.stats.validity} />
 							<div class="metrics-row">
-								<div class="metric"><span class="metric-label">件数</span><span class="metric-value">{card.stats.n.toLocaleString()}</span></div>
-								<div class="metric"><span class="metric-label">平均</span><span class="metric-value highlight">{fmt(card.stats.mean)}</span></div>
-								<div class="metric"><span class="metric-label">中央値</span><span class="metric-value">{fmt(card.stats.median)}</span></div>
-								<div class="metric"><span class="metric-label">標準偏差</span><span class="metric-value">{fmt(card.stats.stddev)}</span></div>
+								<div class="metric"><span class="metric-label">Count</span><span class="metric-value">{card.stats.n.toLocaleString()}</span></div>
+								<div class="metric"><span class="metric-label">Mean</span><span class="metric-value highlight">{fmt(card.stats.mean)}</span></div>
+								<div class="metric"><span class="metric-label">Median</span><span class="metric-value">{fmt(card.stats.median)}</span></div>
+								<div class="metric"><span class="metric-label">Std. Deviation</span><span class="metric-value">{fmt(card.stats.stddev)}</span></div>
 							</div>
 						{:else if card.key === 'classification'}
 							<ValidityCard validity={card.validity} />
-							<p class="mini-note">正例として扱った値: <strong>{card.model.positiveClassLabel}</strong></p>
+							<p class="mini-note">Value treated as the positive class: <strong>{card.model.positiveClassLabel}</strong></p>
 							<div class="metrics-row">
-								<div class="metric"><span class="metric-label">正解率</span><span class="metric-value highlight">{fmtPct(card.model.metrics.accuracy)}</span></div>
-								<div class="metric"><span class="metric-label">適合率</span><span class="metric-value">{fmtPct(card.model.metrics.precision)}</span></div>
-								<div class="metric"><span class="metric-label">再現率</span><span class="metric-value">{fmtPct(card.model.metrics.recall)}</span></div>
-								<div class="metric"><span class="metric-label">疑似R²</span><span class="metric-value">{fmt(card.model.metrics.pseudoR2)}</span></div>
+								<div class="metric"><span class="metric-label">Accuracy</span><span class="metric-value highlight">{fmtPct(card.model.metrics.accuracy)}</span></div>
+								<div class="metric"><span class="metric-label">Precision</span><span class="metric-value">{fmtPct(card.model.metrics.precision)}</span></div>
+								<div class="metric"><span class="metric-label">Recall</span><span class="metric-value">{fmtPct(card.model.metrics.recall)}</span></div>
+								<div class="metric"><span class="metric-label">Pseudo R²</span><span class="metric-value">{fmt(card.model.metrics.pseudoR2)}</span></div>
 							</div>
 						{:else if card.key === 'ab-test'}
 							<ValidityCard validity={card.validity} />
 							<p class="verdict" class:significant={card.result.significant}>
 								{card.result.significant
-									? `統計的に有意な差があります（p = ${fmt(card.result.pValue)} < ${AB_TEST_SIGNIFICANCE_ALPHA}）`
-									: `統計的に有意な差は見られません（p = ${fmt(card.result.pValue)} ≥ ${AB_TEST_SIGNIFICANCE_ALPHA}）`}
+									? `Statistically significant difference (p = ${fmt(card.result.pValue)} < ${AB_TEST_SIGNIFICANCE_ALPHA})`
+									: `No statistically significant difference (p = ${fmt(card.result.pValue)} ≥ ${AB_TEST_SIGNIFICANCE_ALPHA})`}
 							</p>
 							<div class="metrics-row">
 								<div class="metric">
@@ -487,7 +487,7 @@
 									</span>
 								</div>
 								<div class="metric">
-									<span class="metric-label">差</span>
+									<span class="metric-label">Difference</span>
 									<span class="metric-value highlight">
 										{card.result.kind === 'mean' ? fmt(card.result.meanDiff) : fmtPct(card.result.diff)}
 									</span>
@@ -501,32 +501,32 @@
 			{#if skippedMethods.length > 0 || failedMethods.length > 0}
 				<div class="notice-list">
 					{#each skippedMethods as key (key)}
-						<p class="hint">「{METHOD_LABEL[key]}」は必要な列が未設定のためスキップしました</p>
+						<p class="hint">"{METHOD_LABEL[key]}" was skipped because required columns are not set</p>
 					{/each}
 					{#each failedMethods as f (f.key)}
-						<p class="error-text">「{METHOD_LABEL[f.key]}」の実行に失敗しました: {f.message}</p>
+						<p class="error-text">"{METHOD_LABEL[f.key]}" failed to run: {f.message}</p>
 					{/each}
 				</div>
 			{/if}
 
 			<div class="report-row">
-				<button class="run-btn" onclick={createReport}>レポートを作成</button>
+				<button class="run-btn" onclick={createReport}>Create Report</button>
 			</div>
 		{:else}
 			<div class="empty-results">
-				<p>下の設定欄でデータソース・分析手法を選び、「分析を実行」を押してください。手法に迷う場合は右のAIアシスタントに相談してください</p>
+				<p>Select a data source and analysis method in the settings panel below, then click "Run Analysis". If you're unsure which method to use, consult the AI assistant on the right</p>
 			</div>
 		{/if}
 	</section>
 
 	<section class="config-panel">
-		<p class="config-title">設定</p>
-		<Select label="データソース" bind:value={dataSourceId} options={sourceOptions} />
+		<p class="config-title">Settings</p>
+		<Select label="Data Source" bind:value={dataSourceId} options={sourceOptions} />
 
 		<div class="method-picker">
-			<span class="field-label">分析手法（複数選択可）</span>
+			<span class="field-label">Analysis Method (multiple selection allowed)</span>
 			{#if !dataSourceId}
-				<p class="hint">先にデータソースを選択してください</p>
+				<p class="hint">Please select a data source first</p>
 			{:else}
 				<div class="checkbox-list">
 					{#each METHOD_OPTIONS as opt (opt.key)}
@@ -541,16 +541,16 @@
 
 		{#if needsTargetFeatureGroup}
 			<div class="method-config">
-				<p class="method-config-title">相関分析・回帰分析・記述統計の設定</p>
+				<p class="method-config-title">Correlation / Regression / Descriptive Statistics Settings</p>
 				<div class="config-row">
-					<Select label="目的変数" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
+					<Select label="Target Variable" bind:value={targetColumn} options={targetOptions} disabled={!dataSourceId} />
 				</div>
 				<div class="feature-picker">
-					<span class="field-label">説明変数（複数選択可）</span>
+					<span class="field-label">Feature Variables (multiple selection allowed)</span>
 					{#if !targetColumn}
-						<p class="hint">先に目的変数を選択してください</p>
+						<p class="hint">Please select a target variable first</p>
 					{:else if featureCandidates.length === 0}
-						<p class="hint">選択できる数値列がありません</p>
+						<p class="hint">No numeric columns available to select</p>
 					{:else}
 						<div class="checkbox-list">
 							{#each featureCandidates as col (col.key)}
@@ -567,16 +567,16 @@
 
 		{#if needsClassification}
 			<div class="method-config">
-				<p class="method-config-title">ロジスティック回帰（分類）の設定</p>
+				<p class="method-config-title">Logistic Regression (Classification) Settings</p>
 				<div class="config-row">
-					<Select label="目的変数（2値）" bind:value={classifTargetColumn} options={classifTargetOptions} disabled={!dataSourceId} />
+					<Select label="Target Variable (binary)" bind:value={classifTargetColumn} options={classifTargetOptions} disabled={!dataSourceId} />
 				</div>
 				<div class="feature-picker">
-					<span class="field-label">説明変数（複数選択可）</span>
+					<span class="field-label">Feature Variables (multiple selection allowed)</span>
 					{#if !classifTargetColumn}
-						<p class="hint">先に目的変数を選択してください</p>
+						<p class="hint">Please select a target variable first</p>
 					{:else if classifFeatureCandidates.length === 0}
-						<p class="hint">選択できる数値列がありません</p>
+						<p class="hint">No numeric columns available to select</p>
 					{:else}
 						<div class="checkbox-list">
 							{#each classifFeatureCandidates as col (col.key)}
@@ -597,23 +597,23 @@
 
 		{#if needsAbTest}
 			<div class="method-config">
-				<p class="method-config-title">A/Bテストの設定</p>
+				<p class="method-config-title">A/B Test Settings</p>
 				<div class="config-row">
-					<Select label="グループ列（値が2種類である列）" bind:value={groupColumn} options={groupOptions} disabled={!dataSourceId} />
-					<Select label="指標列（数値）" bind:value={metricColumn} options={metricOptions} disabled={!dataSourceId} />
+					<Select label="Group Column (a column with exactly two distinct values)" bind:value={groupColumn} options={groupOptions} disabled={!dataSourceId} />
+					<Select label="Metric Column (numeric)" bind:value={metricColumn} options={metricOptions} disabled={!dataSourceId} />
 				</div>
 				<div class="config-row">
-					<Select label="検定方法" bind:value={testType} options={TEST_TYPE_OPTIONS} />
+					<Select label="Test Method" bind:value={testType} options={TEST_TYPE_OPTIONS} />
 				</div>
 				{#if testType === 'proportion'}
-					<p class="hint">比率のz検定を選ぶ場合、指標列の値は0または1である必要があります（例: コンバージョンの有無）</p>
+					<p class="hint">If you choose the z-test for proportions, the metric column values must be 0 or 1 (e.g., whether a conversion occurred)</p>
 				{/if}
 			</div>
 		{/if}
 
 		<div class="run-row">
 			<button class="run-btn" onclick={run} disabled={!canRun || loading}>
-				{loading ? '分析中…' : '分析を実行'}
+				{loading ? 'Analyzing…' : 'Run Analysis'}
 			</button>
 			{#if error}<p class="error-text">{error}</p>{/if}
 		</div>

@@ -1,6 +1,7 @@
-// レイアウト（右側のAIアシスタント）と各分析ページ（回帰分析・トレンド予測）の間で
-// 現在の設定値・結果・setterをやり取りするための共有状態。SvelteKitの `{@render children()}` は
-// レイアウトから子ページへ任意のpropsを渡せないため、Svelteのcontextで橋渡しする。
+// Shared state for passing the current config, results, and setters back and forth between the
+// layout (the right-side AI assistant) and each analysis page (regression, trend forecasting, etc.).
+// Since SvelteKit's `{@render children()}` can't pass arbitrary props from a layout down to a
+// child page, we bridge them via Svelte context instead.
 
 export const ANALYSIS_BRIDGE_KEY = 'analysis-bridge';
 
@@ -20,11 +21,11 @@ export type AnalysisBridge = {
 		| 'report-create'
 		| 'kpi-planning'
 		| null;
-	/** 現在の設定値（スネークケース。AIアシスタントのツール呼び出しと同じキー形式に揃える） */
+	/** The current config values (snake_case, matching the key format used by the AI assistant's tool calls) */
 	config: Record<string, unknown>;
-	/** 現在のモデルの精度指標等。AIアシスタントが妥当性について答える際の材料にする */
+	/** The current model's accuracy metrics, etc. Used as material for the AI assistant to answer questions about validity */
 	resultSummary: Record<string, unknown> | null;
-	/** AIアシスタントが `set_config` ツールを呼んだ時に、ページ側のstateへ反映するための関数。ページが登録する */
+	/** Function for applying a patch to the page's state when the AI assistant calls the `set_config` tool. Registered by the page */
 	applyConfig: ((patch: Record<string, unknown>) => void) | null;
 };
 

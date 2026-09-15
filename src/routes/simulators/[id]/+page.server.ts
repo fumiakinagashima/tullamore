@@ -9,10 +9,10 @@ import { reviewSimulator } from '$lib/server/analysis/review';
 export const load: PageServerLoad = async ({ params, platform }) => {
 	const db = createDb(platform!.env.DB);
 	const simulator = await getSimulator(db, params.id);
-	if (!simulator) throw error(404, 'シミュレーターが見つかりません');
+	if (!simulator) throw error(404, 'Simulator not found');
 
 	const dataSource = await getDataSource(db, simulator.dataSourceId);
-	if (!dataSource) throw error(404, '生成元のデータソースが見つかりません');
+	if (!dataSource) throw error(404, 'The source data source was not found');
 
 	const content = toSimulatorContent(simulator, dataSource);
 	const model = parseModel(simulator.modelJson);

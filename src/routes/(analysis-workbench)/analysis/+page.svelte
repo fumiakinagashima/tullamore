@@ -14,68 +14,68 @@
 	const modules = [
 		{
 			href: '/analysis/descriptive-stats',
-			label: '記述統計',
-			desc: '選択した列の平均・中央値・標準偏差・四分位数とヒストグラムを見ます。データの分布や外れ値をまず把握したいときに使います。',
+			label: 'Descriptive Statistics',
+			desc: 'View the mean, median, standard deviation, quartiles, and histogram of a selected column. Use this to first understand the distribution of your data and spot outliers.',
 			icon: Sigma
 		},
 		{
 			href: '/analysis/correlation',
-			label: '相関分析',
-			desc: '選択した列どうしのピアソン相関係数をヒートマップで見ます。「どの変数とどの変数が関係していそうか」を、回帰分析の前に探索的に把握したいときに使います。',
+			label: 'Correlation Analysis',
+			desc: 'View the Pearson correlation coefficients between selected columns as a heatmap. Use this to explore "which variables seem related to which" before running a regression analysis.',
 			icon: Grid
 		},
 		{
 			href: '/analysis/ab-test',
-			label: 'A/Bテスト・有意差検定',
-			desc: '2つのグループ間で指標に統計的な有意差があるかを検定します（平均はt検定、比率はz検定）。「施策Aと施策Bでどちらが良いと言えるか」を確かめたいときに使います。',
+			label: 'A/B Test & Significance Testing',
+			desc: 'Test whether there is a statistically significant difference in a metric between two groups (t-test for means, z-test for proportions). Use this to check "which is better, treatment A or treatment B."',
 			icon: Flask
 		},
 		{
 			href: '/analysis/regression',
-			label: '回帰分析',
-			desc: '説明変数を動かすと目的変数がどう変化するかをシミュレーションします。「広告費を増やしたら売上はどうなるか」のような、ドライバーの影響度を調べたいときに使います。',
+			label: 'Regression Analysis',
+			desc: 'Simulate how the target variable changes as you move the explanatory variables. Use this to investigate the impact of drivers, such as "what happens to sales if we increase ad spend."',
 			icon: Scatter
 		},
 		{
 			href: '/analysis/classification',
-			label: 'ロジスティック回帰・分類',
-			desc: '目的変数が2値（購入した/しない等）の場合に、説明変数からその確率を予測するモデルを作ります。「どんな顧客が購入・解約しやすいか」を知りたいときに使います。',
+			label: 'Logistic Regression & Classification',
+			desc: 'Build a model that predicts a probability from explanatory variables when the target variable is binary (e.g. purchased / did not purchase). Use this to find out "which customers are likely to buy or churn."',
 			icon: Split
 		},
 		{
 			href: '/analysis/sensitivity',
-			label: '感度分析',
-			desc: '各説明変数を実測レンジいっぱいに動かした時、目的変数がどれだけ振れるかをトルネードチャートで見ます。「一番効いている変数はどれか」を最初に把握したいときに使います。',
+			label: 'Sensitivity Analysis',
+			desc: 'See how much the target variable swings when each explanatory variable is moved across its full observed range, shown as a tornado chart. Use this to first identify which variable has the biggest effect.',
 			icon: Tornado
 		},
 		{
 			href: '/analysis/scenario',
-			label: 'シナリオ比較',
-			desc: '説明変数の組み合わせを複数パターン用意し、目的変数の予測値を横並びで比較します。「楽観ケースと悲観ケースでどれだけ差が出るか」を見たいときに使います。',
+			label: 'Scenario Comparison',
+			desc: 'Prepare several combinations of explanatory variables and compare the predicted target variable side by side. Use this to see how much difference there is between an optimistic case and a pessimistic case.',
 			icon: Compare
 		},
 		{
 			href: '/analysis/goal-seek',
-			label: 'ゴールシーク',
-			desc: '目的変数を目標値にするために、説明変数がいくつであるべきかを逆算します。「売上目標を達成するには広告費をいくらにすべきか」を知りたいときに使います。',
+			label: 'Goal Seek',
+			desc: 'Work backward to find what the explanatory variables need to be in order to hit a target value for the target variable. Use this to find out, for example, "how much ad spend is needed to hit a sales target."',
 			icon: Target
 		},
 		{
 			href: '/analysis/trend',
-			label: 'トレンド予測',
-			desc: '時系列データから将来の推移を線で予測します。「半年後・1年後・5年後の見込み」のような、時間の経過に沿った推移を見たいときに使います。',
+			label: 'Trend Forecasting',
+			desc: 'Project a future trend line from time-series data. Use this to see a trajectory over time, such as "the outlook in six months, one year, or five years."',
 			icon: TrendingUp
 		},
 		{
 			href: '/analysis/monte-carlo',
-			label: 'モンテカルロ・シミュレーション',
-			desc: '説明変数に幅（分布）を持たせて大量にサンプリングし、目的変数がとりうる値のばらつきを見ます。「どのくらいの確率で目標を超えるか」のような不確実性を織り込みたいときに使います。',
+			label: 'Monte Carlo Simulation',
+			desc: 'Give explanatory variables a range (distribution), sample a large number of times, and see the spread of possible values for the target variable. Use this to factor in uncertainty, such as "what is the probability of exceeding the target."',
 			icon: Dice
 		},
 		{
 			href: '/analysis/budget-allocation',
-			label: '予算配分最適化',
-			desc: '説明変数を予算配分するチャネル（広告費等）とみなし、予算総額を目的変数が最大になるよう配分します。「限られた予算をどのチャネルにいくら振るべきか」を知りたいときに使います。',
+			label: 'Budget Allocation Optimization',
+			desc: 'Treat explanatory variables as channels to allocate a budget to (e.g. ad spend) and distribute the total budget to maximize the target variable. Use this to find out how much of a limited budget should go to each channel.',
 			icon: Coins
 		}
 	];
@@ -83,8 +83,8 @@
 
 <div class="page">
 	<div class="page-header">
-		<h1 class="page-title">分析</h1>
-		<p class="page-sub">目的に合わせて分析手法を選択してください</p>
+		<h1 class="page-title">Analysis</h1>
+		<p class="page-sub">Select an analysis method based on your goal</p>
 	</div>
 
 	<div class="module-cards">

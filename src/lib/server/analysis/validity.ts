@@ -10,14 +10,17 @@ import {
 import { computeSufficientStats } from './sufficient-stats';
 
 /**
- * 回帰結合モデル（線形/ロジスティック回帰の派生を含む線形結合モデル全般）の妥当性を評価する。
- * 当てはまり（R²）・サンプル数の十分性・説明変数どうしの多重共線性をチェックする。
- * `review.ts`（chat経由で作成する永続シミュレーター向け）と判定ロジックは共通（$lib/analysis/validity.ts）だが、
- * こちらはサイドバーの `/analysis/*` 分析モジュール向けに汎用の ValidityAssessment 形式で返す。
+ * Assess the validity of a regression-based model (any linear combination model, including
+ * derivatives of linear/logistic regression). Checks fit (R²), sample size adequacy, and
+ * multicollinearity between feature variables.
+ * The judgment logic is shared with `review.ts` (for persistent simulators created via chat)
+ * through `$lib/analysis/validity.ts`, but this one returns the generic ValidityAssessment
+ * format used by the sidebar `/analysis/*` analysis modules.
  *
- * 多重共線性は「係数の解釈」の信頼性に関わる問題であり、当てはまり・サンプル数（＝予測そのものの
- * 信頼性）とは性質が異なるため、総合判定を最も厳しい 'poor' まで引き上げず 'caution' に留める
- * （review.ts の既存の重み付けを踏襲）。
+ * Multicollinearity is a concern about the reliability of "coefficient interpretation," which
+ * is a different kind of issue from fit/sample size (i.e. the reliability of the prediction
+ * itself), so it caps the overall assessment at 'caution' rather than raising it to the
+ * strictest 'poor' (following the existing weighting in review.ts).
  */
 export async function assessRegressionValidity(
 	db: D1Database,
@@ -36,25 +39,25 @@ export async function assessRegressionValidity(
 			const abs = Math.abs(pair.correlation);
 			if (abs >= 0.9) {
 				checks.push({
-					label: '多重共線性',
+					label: 'Multicollinearity',
 					level: 'caution',
-					comment: `説明変数「${pair.columnA}」と「${pair.columnB}」の相関が非常に強く（r=${pair.correlation.toFixed(3)}）、多重共線性の疑いがあります。どちらか一方を除外するか、係数の解釈には注意してください`
+					comment: `The feature variables "${pair.columnA}" and "${pair.columnB}" are very strongly correlated (r=${pair.correlation.toFixed(3)}), suggesting possible multicollinearity. Consider excluding one of them, or interpret the coefficients with caution`
 				});
 			} else if (abs >= 0.7) {
 				checks.push({
-					label: '多重共線性',
+					label: 'Multicollinearity',
 					level: 'caution',
-					comment: `説明変数「${pair.columnA}」と「${pair.columnB}」の相関がやや強めです（r=${pair.correlation.toFixed(3)}）。多重共線性に注意してください`
+					comment: `The feature variables "${pair.columnA}" and "${pair.columnB}" are somewhat strongly correlated (r=${pair.correlation.toFixed(3)}). Watch out for multicollinearity`
 				});
 			} else {
-				checks.push({ label: '多重共線性', level: 'good', comment: '説明変数間に強い相関は見られません' });
+				checks.push({ label: 'Multicollinearity', level: 'good', comment: 'No strong correlation was found between the feature variables' });
 			}
 		}
 	}
 
 	const { overallLevel, overallComment } = combineOverall(
 		checks,
-		'この分析結果は妥当性チェックの主要な観点で問題は見つかりませんでした'
+		'No issues were found in the main aspects of the validity check for this analysis result'
 	);
 	return { overallLevel, overallComment, checks };
 }

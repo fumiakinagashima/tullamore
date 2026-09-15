@@ -1,4 +1,4 @@
--- シミュレーター（回帰モデル）の永続化
+-- Persistence for simulators (regression models)
 CREATE TABLE `simulators` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
